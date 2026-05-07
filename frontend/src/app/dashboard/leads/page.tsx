@@ -14,11 +14,69 @@ import { Search, Filter, ChevronLeft, ChevronRight, Eye, Download } from "lucide
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGES: Record<string, { label: string; color: string }> = {
-// ...
+  nuevo: { label: "Nuevo", color: "bg-indigo-500/15 text-indigo-400" },
+  contactado: { label: "Contactado", color: "bg-cyan-500/15 text-cyan-400" },
+  en_calificacion: {
+    label: "En Calificación",
+    color: "bg-amber-500/15 text-amber-400",
+  },
+  propuesta_enviada: {
+    label: "Propuesta",
+    color: "bg-purple-500/15 text-purple-400",
+  },
+  cierre_ganado: {
+    label: "Ganado",
+    color: "bg-emerald-500/15 text-emerald-400",
+  },
+  cierre_perdido: {
+    label: "Perdido",
+    color: "bg-red-500/15 text-red-400",
+  },
 };
 
 export default function LeadsListPage() {
-// ...
+  const { token } = useAuth();
+  const router = useRouter();
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
+
+  const fetchLeads = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", page.toString());
+      if (search) params.set("search", search);
+      if (statusFilter) params.set("status", statusFilter);
+      if (sourceFilter) params.set("first_source", sourceFilter);
+
+      const data = await getLeads(token, params.toString());
+      setLeads(data.results);
+      setTotalCount(data.count);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [token, page, search, statusFilter, sourceFilter]);
+
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
+  useEffect(() => {
+    if (!token) return;
+    getSources(token).then((d) => setSources(d.results)).catch(console.error);
+  }, [token]);
+
+  const totalPages = Math.ceil(totalCount / 20);
+
   const handleExportCSV = async () => {
     if (!token) return;
     try {
@@ -157,14 +215,14 @@ export default function LeadsListPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12">
+                  <td colSpan={8} className="text-center py-12">
                     <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center py-12 text-[var(--color-text-muted)]"
                   >
                     No se encontraron leads
