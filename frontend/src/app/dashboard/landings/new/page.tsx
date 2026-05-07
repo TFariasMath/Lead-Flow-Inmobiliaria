@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import LandingLayout, { type LandingData } from "@/components/LandingLayout";
+import BenefitEditor from "@/components/BenefitEditor";
 import { ChevronLeft, Save, Loader2, Monitor, Smartphone, Layout as LayoutIcon, Eye, Zap as ZapIcon } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -20,12 +21,15 @@ export default function NewLandingPage() {
     slug: "",
     subtitle: "Descubre una oportunidad única en el corazón de la ciudad.",
     description: "Déjanos tus datos y un asesor experto te contactará en menos de 5 minutos.",
-    benefit_1_icon: "Building",
-    benefit_1_title: "Entrega Inmediata",
-    benefit_2_icon: "User",
-    benefit_2_title: "Asesoría Gratuita",
-    benefit_3_icon: "TrendingUp",
-    benefit_3_title: "Plusvalía Asegurada",
+    benefits: [
+      { id: "1", icon: "Building", title: "Entrega Inmediata" },
+      { id: "2", icon: "User", title: "Asesoría Gratuita" },
+      { id: "3", icon: "TrendingUp", title: "Plusvalía Asegurada" },
+    ],
+    form_config: {
+      fields: ["first_name", "last_name", "email", "phone", "company"],
+      required: ["first_name", "email"],
+    },
     cta_text: "Quiero más información →",
     success_message: "¡Listo! Hemos recibido tu información. Uno de nuestros asesores se pondrá en contacto contigo a la brevedad.",
     primary_color: "#3b82f6",

@@ -172,21 +172,26 @@ class ReprocessSerializer(serializers.Serializer):
     edited_body = serializers.DictField()
 
 
+class MediaAssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MediaAsset
+        fields = ["id", "title", "file", "alt_text", "created_at"]
+
+
 class LandingPageSerializer(serializers.ModelSerializer):
-    """Serializer público para Landing Pages."""
-    campaign_name = serializers.CharField(source="campaign.name", read_only=True, default="")
-    source_name = serializers.CharField(source="source.name", read_only=True, default="")
+    campaign_name = serializers.ReadOnlyField(source="campaign.name")
+    source_name = serializers.ReadOnlyField(source="source.name")
+    conversion_rate = serializers.ReadOnlyField()
 
     class Meta:
         model = LandingPage
         fields = [
             "id", "title", "slug", "subtitle", "description",
-            "benefit_1_icon", "benefit_1_title",
-            "benefit_2_icon", "benefit_2_title",
-            "benefit_3_icon", "benefit_3_title",
+            "benefits", "form_config",
             "cta_text", "success_message",
-            "primary_color", "image_url",
+            "primary_color", "image_url", "image_asset",
             "campaign", "campaign_name", "source", "source_name",
+            "visits_count", "conversion_rate",
             "is_active", "created_at",
         ]
 

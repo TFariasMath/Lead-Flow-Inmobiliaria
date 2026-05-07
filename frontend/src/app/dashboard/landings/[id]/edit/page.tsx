@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import LandingLayout, { type LandingData } from "@/components/LandingLayout";
-import { ChevronLeft, Save, Loader2, Eye, Layout as LayoutIcon, Smartphone, Monitor } from "lucide-react";
+import { ChevronLeft, Save, Loader2, Eye, Layout as LayoutIcon, Smartphone, Monitor, Zap as ZapIcon } from "lucide-react";
+import BenefitEditor from "@/components/BenefitEditor";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -23,12 +24,11 @@ export default function LandingBuilderPage() {
     slug: "",
     subtitle: "",
     description: "",
-    benefit_1_icon: "Building",
-    benefit_1_title: "",
-    benefit_2_icon: "User",
-    benefit_2_title: "",
-    benefit_3_icon: "TrendingUp",
-    benefit_3_title: "",
+    benefits: [],
+    form_config: {
+      fields: ["first_name", "last_name", "email", "phone", "company"],
+      required: ["first_name", "email"],
+    },
     cta_text: "Quiero más información →",
     success_message: "",
     primary_color: "#3b82f6",

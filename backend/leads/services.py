@@ -26,13 +26,14 @@ logger = logging.getLogger(__name__)
 
 class WebhookProcessor:
     """
-    Procesa payloads de webhook para crear/actualizar leads.
+    Orquestador principal para la ingesta de datos externos.
+    Diseñado para ser resiliente a fallos y concurrencia.
 
-    Flujo:
-    1. Se crea un WebhookLog con status=PENDING.
-    2. Se valida el payload y se extrae email + source_type.
-    3. Se ejecuta un upsert atómico con select_for_update.
-    4. Se actualiza el WebhookLog a SUCCESS o FAILED.
+    Flujo detallado:
+    1. Registro: Crea un WebhookLog en estado 'pending'.
+    2. Identificación: Busca el email del contacto.
+    3. Resolución de Entidad (Upsert): Aplica política de merge o crea nuevo.
+    4. Automatización: Activa Round Robin y Nurturing.
     """
 
     # Campos que se actualizan si llegan datos nuevos y los existentes están vacíos
@@ -212,8 +213,9 @@ class WebhookProcessor:
 
     def _merge_fields(self, lead: Lead, data: dict):
         """
-        Actualiza campos del lead SOLO si están vacíos.
-        Respeta los datos que el vendedor ya haya editado manualmente.
+        Implementa una política de 'llenado de huecos'.
+        Si un campo en el lead está vacío y el webhook trae un valor, se actualiza.
+        Esto protege los datos corregidos manualmente por el vendedor.
         """
         updated = False
         for field in self.MERGEABLE_FIELDS:
@@ -252,8 +254,8 @@ class ReprocessWebhook:
 
 class LeadDistributionService:
     """
-    Servicio encargado de distribuir los leads nuevos a los vendedores
-    utilizando una estrategia de Round Robin.
+    Motor de asignación automática de prospectos.
+    Utiliza el patrón Singleton State para persistir el turno del carrusel.
     """
 
     @staticmethod

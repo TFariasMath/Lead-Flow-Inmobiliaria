@@ -3,21 +3,24 @@
 import React from "react";
 import * as LucideIcons from "lucide-react";
 
+export interface Benefit {
+  icon: string;
+  title: string;
+}
+
 export interface LandingData {
   title: string;
   subtitle: string;
   description: string;
-  benefit_1_icon: string;
-  benefit_1_title: string;
-  benefit_2_icon: string;
-  benefit_2_title: string;
-  benefit_3_icon: string;
-  benefit_3_title: string;
+  benefits: Benefit[];
+  form_config?: any;
   cta_text: string;
   success_message: string;
   primary_color: string;
   image_url: string;
   campaign_name?: string;
+  visits_count?: number;
+  conversion_rate?: number;
 }
 
 interface LandingLayoutProps {
@@ -114,9 +117,9 @@ export default function LandingLayout({
           </p>
           
           <div className="space-y-4 mb-10">
-            <FeatureItem icon={data.benefit_1_icon} title={data.benefit_1_title} />
-            <FeatureItem icon={data.benefit_2_icon} title={data.benefit_2_title} />
-            <FeatureItem icon={data.benefit_3_icon} title={data.benefit_3_title} />
+            {data.benefits?.map((benefit, idx) => (
+              <FeatureItem key={idx} icon={benefit.icon} title={benefit.title} />
+            ))}
           </div>
 
           {data.image_url && (
@@ -139,14 +142,24 @@ export default function LandingLayout({
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Input name="first_name" placeholder="Nombre" icon="User" value={form.first_name} onChange={(v: string) => setForm(f => ({...f, first_name: v}))} />
-                <Input name="last_name" placeholder="Apellido" icon="User" value={form.last_name} onChange={(v: string) => setForm(f => ({...f, last_name: v}))} />
+              <div className="grid grid-cols-1 @[30rem]:grid-cols-2 gap-4">
+                {data.form_config?.fields.includes("first_name") && (
+                  <Input name="first_name" placeholder="Nombre" icon="User" value={form.first_name} onChange={(v: string) => setForm(f => ({...f, first_name: v}))} />
+                )}
+                {data.form_config?.fields.includes("last_name") && (
+                  <Input name="last_name" placeholder="Apellido" icon="User" value={form.last_name} onChange={(v: string) => setForm(f => ({...f, last_name: v}))} />
+                )}
               </div>
               
               <Input name="email" type="email" placeholder="Correo electrónico" icon="Mail" value={form.email} onChange={(v: string) => setForm(f => ({...f, email: v}))} required />
-              <Input name="phone" type="tel" placeholder="Teléfono" icon="Phone" value={form.phone} onChange={(v: string) => setForm(f => ({...f, phone: v}))} />
-              <Input name="company" placeholder="Empresa (Opcional)" icon="Building" value={form.company} onChange={(v: string) => setForm(f => ({...f, company: v}))} />
+              
+              {data.form_config?.fields.includes("phone") && (
+                <Input name="phone" type="tel" placeholder="Teléfono" icon="Phone" value={form.phone} onChange={(v: string) => setForm(f => ({...f, phone: v}))} />
+              )}
+              
+              {data.form_config?.fields.includes("company") && (
+                <Input name="company" placeholder="Empresa (Opcional)" icon="Building" value={form.company} onChange={(v: string) => setForm(f => ({...f, company: v}))} />
+              )}
 
               <button
                 type="submit"

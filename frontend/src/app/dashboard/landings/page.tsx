@@ -90,12 +90,14 @@ export default function LandingsListPage() {
               <p className="text-xs text-slate-500 font-mono mb-4">/l/{lp.slug}</p>
               
               <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
-                <span className="text-xs text-slate-400">
-                    {lp.campaign_name || "Sin Campaña"}
-                </span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${lp.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                  {lp.is_active ? 'Activa' : 'Inactiva'}
-                </span>
+                <div className="flex flex-col gap-1">
+                   <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Conversión</span>
+                   <span className="text-sm font-bold text-blue-400">{lp.conversion_rate}%</span>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                   <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Visitas</span>
+                   <span className="text-sm font-bold text-white">{lp.visits_count}</span>
+                </div>
               </div>
             </div>
           ))

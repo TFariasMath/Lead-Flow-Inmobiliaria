@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #1e293b;
+            background-color: #ffffff;
+        }
+        .header {
+            background-color: {{ primary_color }};
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32pt;
+            letter-spacing: -1px;
+        }
+        .header p {
+            margin: 10px 0 0;
+            font-size: 14pt;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px 60px;
+        }
+        .personalized-greeting {
+            font-size: 18pt;
+            font-weight: bold;
+            color: {{ primary_color }};
+            margin-bottom: 20px;
+        }
+        .intro-text {
+            font-size: 12pt;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .features-grid {
+            margin-top: 40px;
+        }
+        .feature-item {
+            margin-bottom: 15px;
+            font-size: 11pt;
+            color: #475569;
+        }
+        .feature-item span {
+            color: {{ primary_color }};
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background-color: #f8fafc;
+            padding: 30px 60px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .footer-content {
+            display: table;
+            width: 100%;
+        }
+        .footer-col {
+            display: table-cell;
+            vertical-align: middle;
+        }
+        .vendor-info {
+            font-size: 10pt;
+            color: #64748b;
+        }
+        .vendor-name {
+            font-weight: bold;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ brochure_title|default:campaign.name }}</h1>
+        <p>Propuesta Exclusiva de Inversión</p>
+    </div>
+
+    <div class="content">
+        <div class="personalized-greeting">
+            Hola {{ lead.first_name|default:"Inversionista" }},
+        </div>
+        
+        <div class="intro-text">
+            {{ brochure_description|default:"Hemos preparado esta selección especial de propiedades pensando en tus objetivos de inversión. Nuestro equipo ha analizado cada detalle para asegurar la mejor rentabilidad." }}
+        </div>
+
+        <h2 style="font-size: 16pt; border-bottom: 2px solid {{ primary_color }}; padding-bottom: 5px;">
+            Características Destacadas
+        </h2>
+        
+        <div class="features-grid">
+            {% for feature in brochure_features %}
+            <div class="feature-item">
+                <span>✓</span> {{ feature }}
+            </div>
+            {% empty %}
+            <div class="feature-item"><span>✓</span> Alta Rentabilidad</div>
+            <div class="feature-item"><span>✓</span> Ubicación Estratégica</div>
+            <div class="feature-item"><span>✓</span> Plusvalía Garantizada</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-col">
+                <div class="vendor-info">
+                    Tu Asesor Asignado:<br>
+                    <span class="vendor-name">{{ lead.assigned_to.get_full_name|default:lead.assigned_to.username|default:"Asesor Experto" }}</span><br>
+                    Email: {{ lead.assigned_to.email|default:"contacto@leadflow.com" }}
+                </div>
+            </div>
+            <div class="footer-col" style="text-align: right;">
+                <img src="https://via.placeholder.com/120x40?text=LEAD+FLOW" alt="Logo" style="height: 30px;">
+            </div>
+        </div>
+    </div>
+</body>
+</html>

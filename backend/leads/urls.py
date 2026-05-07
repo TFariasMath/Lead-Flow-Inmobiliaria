@@ -19,6 +19,9 @@ from .api import (
     LandingPageDetailView,
     LandingPageSubmitView,
     SentEmailViewSet,
+    LeadBrochureView,
+    LandingPageViewSet,
+    MediaAssetViewSet,
 )
 
 router = DefaultRouter()
@@ -26,6 +29,8 @@ router.register(r"leads", LeadViewSet, basename="lead")
 router.register(r"webhook-logs", WebhookLogViewSet, basename="webhooklog")
 router.register(r"sources", SourceViewSet, basename="source")
 router.register(r"campaigns", CampaignViewSet, basename="campaign")
+router.register(r"landings", LandingPageViewSet, basename="landings")
+router.register(r"media-assets", MediaAssetViewSet, basename="media-assets")
 router.register(r"interactions", InteractionViewSet, basename="interaction")
 router.register(r"sent-emails", SentEmailViewSet, basename="sentemail")
 
@@ -42,6 +47,8 @@ urlpatterns = [
     # Landing Pages públicas
     path("landings/<slug:slug>/", LandingPageDetailView.as_view(), name="landing-detail"),
     path("landings/<slug:slug>/submit/", LandingPageSubmitView.as_view(), name="landing-submit"),
+    # Brochure dinámico
+    path("leads/<uuid:lead_id>/brochure/", LeadBrochureView.as_view(), name="lead-brochure"),
     # Router DRF
     path("", include(router.urls)),
 ]

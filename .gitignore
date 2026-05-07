@@ -34,3 +34,7 @@ Thumbs.db
 
 # Test outputs
 backend/*.txt
+
+# Obsidian
+obsidian_vault/
+.obsidian/

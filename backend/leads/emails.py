@@ -31,7 +31,7 @@ WELCOME_HTML = """
             <p>Hemos recibido tus datos y uno de nuestros asesores expertos se pondrá en contacto contigo muy pronto para brindarte toda la información que necesitas.</p>
             <p>Mientras tanto, puedes revisar nuestro brochure exclusivo de propiedades destacadas haciendo clic en el botón de abajo:</p>
             <div style="text-align: center;">
-                <a href="#" class="btn">Descargar Brochure</a>
+                <a href="{brochure_url}" class="btn">Descargar Brochure Personalizado</a>
             </div>
             <p style="margin-top: 30px;">Si tienes alguna urgencia, puedes responder directamente a este correo.</p>
             <p>Saludos cordiales,<br>El equipo de CRM Inmobiliaria.</p>
@@ -87,13 +87,18 @@ VENDOR_ALERT_HTML = """
 </html>
 """
 
-def send_welcome_email(lead_email: str, first_name: str):
-    """Envía el correo de bienvenida al cliente."""
+def send_welcome_email(lead_email: str, first_name: str, lead_id: str):
+    """Envía el correo de bienvenida al cliente con link al brochure dinámico."""
     subject = "¡Gracias por tu interés! - Descarga tu Brochure"
+    
+    # URL del generador de PDF (esto debería ser configurable en settings)
+    # Por ahora usamos localhost para la demo.
+    brochure_url = f"http://localhost:8000/api/v1/leads/{lead_id}/brochure/"
     
     # Preparar el HTML
     html_content = WELCOME_HTML.format(
-        first_name=first_name or "futuro propietario"
+        first_name=first_name or "futuro propietario",
+        brochure_url=brochure_url
     )
     text_content = strip_tags(html_content)
 

@@ -20,7 +20,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage, SentEmail
+from django.http import HttpResponse
+from .models import (
+    Lead, Source, Interaction, WebhookLog, Campaign, 
+    LandingPage, SentEmail, MediaAsset, LandingPageVisit
+)
+from .utils_pdf import generate_personalized_brochure
 from .serializers import (
     LeadListSerializer,
     LeadDetailSerializer,
@@ -33,6 +38,7 @@ from .serializers import (
     ReprocessSerializer,
     LandingPageSerializer,
     LandingPageSubmitSerializer,
+    MediaAssetSerializer,
     SentEmailSerializer,
     UserSerializer,
     DashboardStatsSerializer,
@@ -46,16 +52,27 @@ logger = logging.getLogger(__name__)
 # ─── Auth / JWT ──────────────────────────────────────────────────────────────
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    """Vista de login que retorna el token customizado (con is_staff)."""
+    """
+    Controlador de autenticación JWT.
+    
+    Responsabilidades:
+    - Generar tokens de acceso y actualización.
+    - Capturar metadatos de la sesión (IP, User Agent).
+    - Registrar una auditoría de inicio de sesión vinculada al usuario.
+    """
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
+        """
+        Sobreescribe el método POST para inyectar la lógica de auditoría
+        solo si la autenticación fue exitosa.
+        """
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
             from django.contrib.auth.models import User
             from .models import SessionAudit
             
-            # SimpleJWT Serializer expects username and password
+            # Extraer IP y User Agent de los meta-datos de la petición
             username = request.data.get("username")
             user = User.objects.filter(username=username).first()
             if user:
@@ -67,6 +84,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 
                 user_agent = request.META.get('HTTP_USER_AGENT', '')
                 
+                # Crear registro de auditoría persistente
                 SessionAudit.objects.create(
                     user=user,
                     ip_address=ip,
@@ -80,27 +98,29 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class WebhookReceiveView(APIView):
     """
     POST /api/v1/webhooks/receive/
-    Endpoint público que recibe webhooks de fuentes externas.
-    Responde 200 OK inmediatamente y procesa en el mismo request.
+    Puerta de entrada para el tráfico externo (Zapier, Calendly, formularios).
+    
+    Características:
+    - AllowAny: No requiere autenticación (validación por IP/Token externo en el futuro).
+    - Asíncrono: Delega el procesamiento pesado a Django-Q2.
+    - Fail-Safe: Acepta casi cualquier JSON para evitar que la fuente externa falle.
     """
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
 
     def post(self, request):
-        # Extraemos el payload completo para no perder nada
+        """
+        Recibe el payload, crea un log de auditoría y dispara la tarea asíncrona.
+        """
         raw_payload = request.data
-        
-        # Si no envían 'source_type', le asignamos 'unknown'
         source_type = raw_payload.get("source_type", "unknown")
-        
-        # Si no viene anidado en 'data', asumimos que todo el JSON es la data
         data = raw_payload.get("data", raw_payload)
 
-        # Crear log de inmediato con PENDING
+        # Registro persistente de la petición cruda
         processor = WebhookProcessor(source_type=source_type, raw_body=data)
         webhook_log = processor.create_log()
 
-        # Enviar tarea a Django-Q2
+        # Delegación a la cola de tareas
         from django_q.tasks import async_task
         async_task('leads.tasks.process_webhook_task', str(webhook_log.id))
 
@@ -108,7 +128,7 @@ class WebhookReceiveView(APIView):
             {
                 "status": "received",
                 "webhook_log_id": str(webhook_log.id),
-                "processing_status": "pending", # Siempre devolvemos pending al cliente externo
+                "processing_status": "pending",
             },
             status=status.HTTP_200_OK,
         )
@@ -410,12 +430,42 @@ class PerformanceAnalyticsView(APIView):
         return Response(data)
 
 
+# ─── Media & Landings (Pro) ──────────────────────────────────────────────────
+
+class MediaAssetViewSet(viewsets.ModelViewSet):
+    """
+    CRUD para la biblioteca de medios.
+    Permite subir y listar imágenes para las landings.
+    """
+    queryset = MediaAsset.objects.all()
+    serializer_class = MediaAssetSerializer
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+
+class LandingPageViewSet(viewsets.ModelViewSet):
+    """
+    CRUD completo para Landing Pages (Dashboard).
+    """
+    queryset = LandingPage.objects.all().select_related('campaign', 'source')
+    serializer_class = LandingPageSerializer
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+
+    @action(detail=True, methods=['get'])
+    def analytics(self, request, pk=None):
+        """Analíticas específicas de una landing."""
+        landing = self.get_object()
+        return Response({
+            "visits": landing.visits_count,
+            "leads": Lead.objects.filter(source=landing.source).count(),
+            "conversion_rate": landing.conversion_rate
+        })
+
 # ─── Landing Pages (Públicas) ─────────────────────────────────────────────────
 
 class LandingPageDetailView(APIView):
     """
     GET /api/v1/landings/<slug>/
     Endpoint público para obtener los datos de una Landing Page.
+    Registra una visita automáticamente.
     """
     permission_classes = [permissions.AllowAny]
 
@@ -429,6 +479,22 @@ class LandingPageDetailView(APIView):
                 {"error": "Landing Page no encontrada."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        
+        # Registrar visita (Asíncrono opcionalmente, pero aquí directo para simplicidad)
+        landing.visits_count += 1
+        landing.save(update_fields=['visits_count'])
+        
+        # Log de visita detallado
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+        
+        LandingPageVisit.objects.create(
+            landing_page=landing,
+            ip_address=ip,
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            referer=request.META.get('HTTP_REFERER', '')
+        )
+
         return Response(LandingPageSerializer(landing).data)
 
 
@@ -493,6 +559,11 @@ class LandingPageSubmitView(APIView):
 
 
 class SentEmailViewSet(viewsets.ReadOnlyModelViewSet):
+    # ... (existing code)
+    pass
+
+
+class SentEmailViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet para visualizar los correos enviados desde el CRM.
     Solo lectura para auditoría.
@@ -501,4 +572,31 @@ class SentEmailViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SentEmailSerializer
     filterset_fields = ["lead", "to_email", "status"]
     search_fields = ["subject", "to_email", "body_text"]
+
+
+class LeadBrochureView(APIView):
+    """
+    GET /api/v1/leads/<id>/brochure/
+    Genera y sirve el PDF personalizado para el lead.
+    """
+    permission_classes = [permissions.AllowAny] # Público para que el cliente lo baje desde el mail
+
+    def get(self, request, lead_id):
+        try:
+            lead = Lead.objects.select_related('campaign', 'assigned_to').get(id=lead_id)
+        except Lead.DoesNotExist:
+            return Response({"error": "Lead no encontrado"}, status=404)
+        
+        if not lead.campaign:
+            return Response({"error": "El lead no está asociado a ninguna campaña"}, status=400)
+            
+        pdf_content = generate_personalized_brochure(lead, lead.campaign)
+        
+        if pdf_content:
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            filename = f"Brochure_{lead.first_name or 'Inversionista'}_{lead.campaign.slug}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+            
+        return Response({"error": "Error generando el PDF"}, status=500)
 

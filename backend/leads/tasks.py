@@ -36,7 +36,8 @@ def task_send_welcome_email(lead_id: str):
         if lead.contact_email:
             send_welcome_email(
                 lead_email=lead.contact_email,
-                first_name=lead.first_name
+                first_name=lead.first_name,
+                lead_id=str(lead.id)
             )
         else:
             logger.warning(f"No contact email found for lead {lead_id} to send welcome email.")
