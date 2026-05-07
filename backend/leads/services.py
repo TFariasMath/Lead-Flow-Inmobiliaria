@@ -96,7 +96,11 @@ class WebhookProcessor:
         body = self.webhook_log.edited_body or self.raw_body
         for key in ("email", "Email", "EMAIL", "correo", "mail"):
             if key in body and body[key]:
-                return body[key].strip().lower()
+                val = body[key]
+                if isinstance(val, str):
+                    val = val.strip().lower()
+                    if len(val) <= 254:
+                        return val
         return None
 
     def _resolve_source(self) -> Source:
@@ -109,15 +113,34 @@ class WebhookProcessor:
         )
         return source
 
+    def _safe_str(self, value, max_length=None) -> str:
+        """Convierte de forma segura cualquier valor a string y trunca si se excede."""
+        if value is None:
+            return ""
+        
+        # Si es estructura compleja (ej. un teléfono enviado como lista)
+        if isinstance(value, (dict, list)):
+            import json
+            try:
+                val_str = json.dumps(value, ensure_ascii=False)
+            except Exception:
+                val_str = str(value)
+        else:
+            val_str = str(value).strip()
+            
+        if max_length and len(val_str) > max_length:
+            return val_str[:max_length]
+        return val_str
+
     def _extract_lead_data(self) -> dict:
-        """Extrae campos del lead desde el payload con mapeo flexible."""
+        """Extrae campos del lead desde el payload con mapeo flexible y sanitización."""
         body = self.webhook_log.edited_body or self.raw_body
         return {
-            "first_name": body.get("first_name", body.get("nombre", "")),
-            "last_name": body.get("last_name", body.get("apellido", "")),
-            "phone": body.get("phone", body.get("telefono", body.get("tel", ""))),
-            "address": body.get("address", body.get("direccion", "")),
-            "company": body.get("company", body.get("empresa", "")),
+            "first_name": self._safe_str(body.get("first_name", body.get("nombre", "")), 150),
+            "last_name": self._safe_str(body.get("last_name", body.get("apellido", "")), 150),
+            "phone": self._safe_str(body.get("phone", body.get("telefono", body.get("tel", ""))), 50),
+            "address": self._safe_str(body.get("address", body.get("direccion", ""))), # TextField, no max_length
+            "company": self._safe_str(body.get("company", body.get("empresa", "")), 200),
         }
 
     def _upsert_lead(self, email: str, source: Source, data: dict):

@@ -93,3 +93,38 @@ class WebhookTests(APITestCase):
         self.assertEqual(lead.first_name, "Original") # Mantuvo el nombre
         self.assertEqual(lead.phone, "999999") # Agregó el teléfono
         self.assertEqual(Interaction.objects.count(), 2) # Tiene 2 interacciones
+
+    def test_webhook_sanitization_and_truncation(self):
+        """
+        Prueba que datos extremadamente largos se trunquen y que tipos
+        incorrectos (como listas o dicts en campos de texto) se conviertan a string.
+        """
+        long_name = "A" * 300 # El límite es 150
+        phone_array = ["8095551234", "8095555678"] # Llega como Array, debe ser String
+        
+        payload = {
+            "source_type": "web",
+            "data": {
+                "email": "sanitized@test.com",
+                "first_name": long_name,
+                "phone": phone_array
+            }
+        }
+        
+        response = self.client.post(self.url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        lead = Lead.objects.get(original_email="sanitized@test.com")
+        
+        # 1. Truncado de nombre (300 -> 150)
+        self.assertEqual(len(lead.first_name), 150)
+        self.assertTrue(lead.first_name.startswith("AAAAA"))
+        
+        # 2. Conversión de Array a String JSON
+        # El ORM no debe explotar y el dato debe guardarse como texto
+        import json
+        self.assertEqual(lead.phone, json.dumps(phone_array))
+        
+        # 3. El log debe ser exitoso
+        self.assertEqual(WebhookLog.objects.get(lead=lead).status, WebhookLog.Status.SUCCESS)
+
