@@ -18,6 +18,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import Lead, Source, Interaction, WebhookLog
 from .serializers import (
@@ -31,10 +32,18 @@ from .serializers import (
     ReprocessSerializer,
     UserSerializer,
     DashboardStatsSerializer,
+    CustomTokenObtainPairSerializer,
 )
 from .services import WebhookProcessor, ReprocessWebhook
 
 logger = logging.getLogger(__name__)
+
+
+# ─── Auth / JWT ──────────────────────────────────────────────────────────────
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """Vista de login que retorna el token customizado (con is_staff)."""
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 # ─── Webhook Receive (público) ───────────────────────────────────────────────
@@ -146,8 +155,10 @@ class LeadViewSet(viewsets.ModelViewSet):
 class WebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Vista de logs de webhook. Incluye acción para re-procesar fallidos.
+    Solo para administradores.
     """
     serializer_class = WebhookLogSerializer
+    permission_classes = [permissions.IsAdminUser]
     filterset_fields = ["status", "source_type"]
     ordering_fields = ["created_at", "status"]
 

@@ -14,10 +14,11 @@ Decisiones de diseño:
 import logging
 from typing import Optional
 
+from django.contrib.auth.models import User
 from django.db import transaction, IntegrityError
 from django.utils import timezone
 
-from .models import Lead, Source, Interaction, WebhookLog
+from .models import Lead, Source, Interaction, WebhookLog, RoundRobinState
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,9 @@ class WebhookProcessor:
                         first_source=source,
                         **{k: v for k, v in data.items() if v},
                     )
+                    
+                    # Distribuir mediante Round Robin
+                    LeadDistributionService.assign(lead)
 
                 # Crear interacción en el timeline
                 interaction = Interaction.objects.create(
@@ -215,3 +219,51 @@ class ReprocessWebhook:
         )
         processor.webhook_log = webhook_log
         return processor.process()
+
+
+class LeadDistributionService:
+    """
+    Servicio encargado de distribuir los leads nuevos a los vendedores
+    utilizando una estrategia de Round Robin.
+    """
+
+    @staticmethod
+    def assign(lead: Lead) -> Lead:
+        """Asigna el lead al siguiente vendedor en el carrusel y actualiza el estado."""
+        # 1. Obtener vendedores activos (que no sean admin)
+        active_vendors = list(User.objects.filter(is_active=True, is_staff=False).order_by('id'))
+        
+        if not active_vendors:
+            logger.warning("No hay vendedores activos para asignar el lead %s", lead.id)
+            return lead
+
+        # 2. Obtener estado de Round Robin con bloqueo de fila para concurrencia
+        with transaction.atomic():
+            state = RoundRobinState.objects.select_for_update().get_or_create(id=1)[0]
+            
+            # 3. Determinar el siguiente vendedor
+            next_vendor = active_vendors[0] # Default al primero
+            
+            if state.last_assigned_user:
+                # Buscar el índice del último vendedor
+                last_index = -1
+                for i, vendor in enumerate(active_vendors):
+                    if vendor.id == state.last_assigned_user.id:
+                        last_index = i
+                        break
+                
+                # Calcular el siguiente índice (carrusel)
+                next_index = (last_index + 1) % len(active_vendors)
+                next_vendor = active_vendors[next_index]
+            
+            # 4. Asignar y guardar
+            lead.assigned_to = next_vendor
+            lead.save(update_fields=['assigned_to'])
+            
+            state.last_assigned_user = next_vendor
+            state.save()
+            
+            logger.info("Lead %s asignado automáticamente a %s", lead.id, next_vendor.username)
+        
+        return lead
+

@@ -6,6 +6,7 @@ Serializadores DRF para la API REST.
 
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import Lead, Source, Interaction, WebhookLog
 
@@ -81,6 +82,12 @@ class LeadDetailSerializer(serializers.ModelSerializer):
             return f"{obj.assigned_to.first_name} {obj.assigned_to.last_name}".strip() or obj.assigned_to.username
         return None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request and not request.user.is_staff:
+            self.fields["assigned_to"].read_only = True
+
 
 class LeadCreateSerializer(serializers.ModelSerializer):
     """Serializer para creación manual de leads (formulario)."""
@@ -106,6 +113,12 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         if not validated_data.get("contact_email"):
             validated_data["contact_email"] = validated_data["original_email"]
         return super().create(validated_data)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request and not request.user.is_staff:
+            self.fields["assigned_to"].read_only = True
 
 
 class WebhookLogSerializer(serializers.ModelSerializer):
@@ -159,3 +172,18 @@ class DashboardStatsSerializer(serializers.Serializer):
     failed_webhooks = serializers.IntegerField()
     webhook_success_rate = serializers.FloatField()
     leads_by_source = serializers.ListField()
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Inyectar campos personalizados en el token
+        token['is_staff'] = user.is_staff
+        token['first_name'] = user.first_name
+        token['last_name'] = user.last_name
+        token['username'] = user.username
+
+        return token
+

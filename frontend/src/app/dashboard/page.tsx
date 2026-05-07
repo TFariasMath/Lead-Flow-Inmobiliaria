@@ -107,22 +107,26 @@ export default function DashboardPage() {
           value={stats.leads_by_status["Cierre Ganado"] || 0}
           color="var(--color-success)"
         />
-        <StatCard
-          icon={Webhook}
-          label="Total Webhooks"
-          value={stats.total_webhooks}
-          color="var(--color-accent)"
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Tasa de Éxito"
-          value={`${stats.webhook_success_rate}%`}
-          color={
-            stats.webhook_success_rate >= 90
-              ? "var(--color-success)"
-              : "var(--color-warning)"
-          }
-        />
+        {user?.isStaff && (
+          <>
+            <StatCard
+              icon={Webhook}
+              label="Total Webhooks"
+              value={stats.total_webhooks}
+              color="var(--color-accent)"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Tasa de Éxito"
+              value={`${stats.webhook_success_rate}%`}
+              color={
+                stats.webhook_success_rate >= 90
+                  ? "var(--color-success)"
+                  : "var(--color-warning)"
+              }
+            />
+          </>
+        )}
       </div>
 
       {/* Charts */}
@@ -168,40 +172,42 @@ export default function DashboardPage() {
         </div>
 
         {/* Webhooks Chart */}
-        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <AlertTriangle className="w-5 h-5 text-[var(--color-warning)]" />
-            <h2 className="text-lg font-semibold text-white">
-              Estado de Webhooks
-            </h2>
+        {user?.isStaff && (
+          <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <AlertTriangle className="w-5 h-5 text-[var(--color-warning)]" />
+              <h2 className="text-lg font-semibold text-white">
+                Estado de Webhooks
+              </h2>
+            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={webhookData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={4}
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {webhookData.map((entry, i) => (
+                    <Cell key={i} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1a1d27",
+                    border: "1px solid #2a2d3a",
+                    borderRadius: "8px",
+                    color: "#e4e6eb",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie
-                data={webhookData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={4}
-                dataKey="value"
-                label={({ name, value }) => `${name}: ${value}`}
-              >
-                {webhookData.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1a1d27",
-                  border: "1px solid #2a2d3a",
-                  borderRadius: "8px",
-                  color: "#e4e6eb",
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        )}
       </div>
 
       {/* Source Breakdown */}

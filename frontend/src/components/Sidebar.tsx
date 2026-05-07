@@ -19,16 +19,19 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/leads", label: "Leads", icon: Users },
   { href: "/dashboard/leads/new", label: "Nuevo Lead", icon: UserPlus },
-  { href: "/dashboard/webhooks", label: "Webhook Logs", icon: Webhook },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const navItems = [...BASE_NAV_ITEMS];
+  if (user?.isStaff) {
+    navItems.push({ href: "/dashboard/webhooks", label: "Webhook Logs", icon: Webhook });
+  }
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 flex flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]/80 backdrop-blur-xl z-50">
@@ -49,7 +52,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
             (item.href !== "/dashboard" && pathname.startsWith(item.href));

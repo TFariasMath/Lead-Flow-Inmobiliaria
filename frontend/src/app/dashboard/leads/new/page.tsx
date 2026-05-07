@@ -27,7 +27,7 @@ const validationSchema = Yup.object({
 });
 
 export default function NewLeadPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
   const [sources, setSources] = useState<Source[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -208,18 +208,27 @@ export default function NewLeadPage() {
                   <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1.5">
                     Asignar a Vendedor
                   </label>
-                  <Field
-                    as="select"
-                    name="assigned_to"
-                    className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-                  >
-                    <option value="">Sin asignar</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.first_name} {u.last_name} ({u.username})
-                      </option>
-                    ))}
-                  </Field>
+                  {user?.isStaff ? (
+                    <Field
+                      as="select"
+                      name="assigned_to"
+                      className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
+                    >
+                      <option value="">Sin asignar</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.first_name} {u.last_name} ({u.username})
+                        </option>
+                      ))}
+                    </Field>
+                  ) : (
+                    <input
+                      type="text"
+                      value="Asignado a ti (automáticamente)"
+                      disabled
+                      className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text-muted)] opacity-60 cursor-not-allowed"
+                    />
+                  )}
                 </div>
               </div>
 

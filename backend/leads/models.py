@@ -205,3 +205,27 @@ class WebhookLog(models.Model):
 
     def __str__(self):
         return f"[{self.status}] {self.source_type} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class RoundRobinState(models.Model):
+    """
+    Singleton model to track the last assigned user for Round Robin distribution.
+    """
+    last_assigned_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="El último vendedor al que se le asignó un lead."
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Round Robin State"
+        verbose_name_plural = "Round Robin State"
+
+    @classmethod
+    def get_state(cls):
+        state, _ = cls.objects.get_or_create(id=1)
+        return state
+
