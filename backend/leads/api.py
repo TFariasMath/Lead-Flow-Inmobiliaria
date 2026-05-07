@@ -1,90 +1,87 @@
 """
 Lead Flow - API Views
 =====================
-Vistas DRF. Toda la lógica de negocio está en services.py.
-Las vistas solo manejan serialización, permisos y respuestas HTTP.
+Vistas DRF. Toda la lógica de negocio pesada reside en services.py.
+Las vistas actúan como controladores que manejan:
+- Serialización y validación de entrada.
+- Permisos y seguridad.
+- Respuestas HTTP y códigos de estado.
 
-Seguridad:
+Seguridad implementada:
 - Vendedores solo ven leads asignados a ellos (Row-Level Access).
-- Staff/Admin ve todos los leads.
-- El endpoint de webhook es público (AllowAny) ya que lo llaman servicios externos.
+- Staff/Admin tiene visibilidad total del sistema.
+- El endpoint de webhook es público (AllowAny) para integraciones externas.
 """
 
-import logging
+import logging  # Para registro de eventos y errores en consola/logs
 
-from django.contrib.auth.models import User
-from django.db.models import Count, Q
-from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import api_view, permission_classes, action
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.views import TokenObtainPairView
+# Importaciones de Django para base de datos y modelos
+from django.contrib.auth.models import User  # Modelo de usuario estándar
+from django.db.models import Count, Q        # Herramientas para consultas complejas
+from django.http import HttpResponse         # Para respuestas binarias (ej: PDF)
 
-from django.http import HttpResponse
+# Importaciones de Django Rest Framework (DRF)
+from rest_framework import viewsets, status, permissions # Clases base para el API
+from rest_framework.decorators import api_view, permission_classes, action # Decoradores de funciones
+from rest_framework.response import Response # Objeto para devolver JSON
+from rest_framework.views import APIView     # Clase base para vistas personalizadas
+from rest_framework_simplejwt.views import TokenObtainPairView # Base para login JWT
+
+# Importaciones locales (Modelos, Serializadores y Servicios)
 from .models import (
     Lead, Source, Interaction, WebhookLog, Campaign, 
     LandingPage, SentEmail, MediaAsset, LandingPageVisit
 )
-from .utils_pdf import generate_personalized_brochure
+from .utils_pdf import generate_personalized_brochure  # Utilidad para crear PDFs
 from .serializers import (
-    LeadListSerializer,
-    LeadDetailSerializer,
-    LeadCreateSerializer,
-    SourceSerializer,
-    CampaignSerializer,
-    InteractionSerializer,
-    WebhookLogSerializer,
-    WebhookReceiveSerializer,
-    ReprocessSerializer,
-    LandingPageSerializer,
-    LandingPageSubmitSerializer,
-    MediaAssetSerializer,
-    SentEmailSerializer,
-    UserSerializer,
-    DashboardStatsSerializer,
+    LeadListSerializer, LeadDetailSerializer, LeadCreateSerializer,
+    SourceSerializer, CampaignSerializer, InteractionSerializer,
+    WebhookLogSerializer, WebhookReceiveSerializer, ReprocessSerializer,
+    LandingPageSerializer, LandingPageSubmitSerializer, MediaAssetSerializer,
+    SentEmailSerializer, UserSerializer, DashboardStatsSerializer,
     CustomTokenObtainPairSerializer,
 )
-from .services import WebhookProcessor, ReprocessWebhook
+from .services import WebhookProcessor, ReprocessWebhook # Lógica centralizada
 
+# Instancia de logger para esta aplicación
 logger = logging.getLogger(__name__)
 
 
-# ─── Auth / JWT ──────────────────────────────────────────────────────────────
+# ─── Auth / JWT (Control de Acceso) ──────────────────────────────────────────
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-    Controlador de autenticación JWT.
-    
-    Responsabilidades:
-    - Generar tokens de acceso y actualización.
-    - Capturar metadatos de la sesión (IP, User Agent).
-    - Registrar una auditoría de inicio de sesión vinculada al usuario.
+    Controlador de autenticación personalizado.
+    Extiende la lógica estándar de JWT para capturar datos de la sesión.
     """
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
         """
-        Sobreescribe el método POST para inyectar la lógica de auditoría
-        solo si la autenticación fue exitosa.
+        Sobreescribe el login exitoso para registrar una auditoría de seguridad.
         """
         response = super().post(request, *args, **kwargs)
+        
+        # Si las credenciales son válidas y el token fue generado
         if response.status_code == 200:
-            from django.contrib.auth.models import User
             from .models import SessionAudit
             
-            # Extraer IP y User Agent de los meta-datos de la petición
+            # Identificar al usuario que acaba de entrar
             username = request.data.get("username")
             user = User.objects.filter(username=username).first()
+            
             if user:
+                # Detección de IP (maneja proxy/balanceadores)
                 x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
                 if x_forwarded_for:
                     ip = x_forwarded_for.split(',')[0]
                 else:
                     ip = request.META.get('REMOTE_ADDR')
                 
+                # Captura del navegador/sistema operativo del usuario
                 user_agent = request.META.get('HTTP_USER_AGENT', '')
                 
-                # Crear registro de auditoría persistente
+                # Crear el registro de auditoría en la BD
                 SessionAudit.objects.create(
                     user=user,
                     ip_address=ip,
@@ -96,31 +93,35 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 # ─── Webhook Receive (público) ───────────────────────────────────────────────
 
 class WebhookReceiveView(APIView):
+# ─── Webhook Receive (Público / Entrada de Leads) ───────────────────────────
+
+class WebhookReceiveView(APIView):
     """
-    POST /api/v1/webhooks/receive/
-    Puerta de entrada para el tráfico externo (Zapier, Calendly, formularios).
+    Endpoint para capturar leads externos (Zapier, Meta, formularios).
     
     Características:
-    - AllowAny: No requiere autenticación (validación por IP/Token externo en el futuro).
-    - Asíncrono: Delega el procesamiento pesado a Django-Q2.
-    - Fail-Safe: Acepta casi cualquier JSON para evitar que la fuente externa falle.
+    - Es público (AllowAny): No requiere login.
+    - Es asíncrono: Delega el trabajo pesado a Django Q para responder rápido.
+    - Es tolerante: Acepta casi cualquier JSON y lo guarda para revisión.
     """
     permission_classes = [permissions.AllowAny]
-    authentication_classes = []
+    authentication_classes = [] # Desactiva autenticación JWT para este endpoint
 
     def post(self, request):
         """
-        Recibe el payload, crea un log de auditoría y dispara la tarea asíncrona.
+        Punto de entrada para el POST del webhook.
         """
         raw_payload = request.data
         source_type = raw_payload.get("source_type", "unknown")
         data = raw_payload.get("data", raw_payload)
 
-        # Registro persistente de la petición cruda
+        # 1. Registrar la llegada del webhook en la BD inmediatamente
         processor = WebhookProcessor(source_type=source_type, raw_body=data)
         webhook_log = processor.create_log()
 
-        # Delegación a la cola de tareas
+        # 2. Disparar la tarea en segundo plano (Worker)
+        # Esto permite que el servidor externo (ej. Facebook) reciba un 200 OK
+        # sin esperar a que nosotros procesemos toda la lógica de negocio.
         from django_q.tasks import async_task
         async_task('leads.tasks.process_webhook_task', str(webhook_log.id))
 
@@ -134,33 +135,43 @@ class WebhookReceiveView(APIView):
         )
 
 
-# ─── Lead ViewSet ────────────────────────────────────────────────────────────
+# ─── Lead ViewSet (Gestión de Prospectos) ────────────────────────────────────
 
 class LeadViewSet(viewsets.ModelViewSet):
     """
-    CRUD de Leads con Row-Level Access.
-    - Staff: ve todos los leads.
-    - Vendedor: solo ve leads asignados a él.
+    Controlador principal para el listado y edición de leads.
+    Implementa seguridad de nivel de fila (Row-Level Security).
     """
+    # Campos por los que se puede filtrar en la URL
     filterset_fields = ["status", "first_source", "assigned_to"]
+    # Campos en los que se puede buscar texto
     search_fields = ["original_email", "contact_email", "first_name", "last_name", "phone"]
+    # Campos por los que se puede ordenar
     ordering_fields = ["created_at", "updated_at", "status"]
 
     def get_serializer_class(self):
+        """
+        Cambia el serializador según la acción para optimizar el envío de datos.
+        """
         if self.action == "create":
-            return LeadCreateSerializer
+            return LeadCreateSerializer # Serializador ligero para creación
         if self.action in ("retrieve",):
-            return LeadDetailSerializer
-        return LeadListSerializer
+            return LeadDetailSerializer # Serializador completo con historial y notas
+        return LeadListSerializer       # Serializador optimizado para tablas
 
     def get_queryset(self):
+        """
+        Filtra los datos según quién esté pidiendo la información.
+        """
+        # Optimizamos la consulta con select_related para evitar el problema N+1
         qs = Lead.objects.select_related("assigned_to", "first_source")
 
-        # Anotar el conteo de interacciones para la lista
+        # Si estamos listando, añadimos el conteo de interacciones (timeline)
         if self.action == "list":
             qs = qs.annotate(interaction_count=Count("interactions"))
 
-        # Row-Level Access: vendedores solo ven sus leads
+        # REGLA DE SEGURIDAD:
+        # Si NO es administrador, solo puede ver los leads que tiene asignados.
         user = self.request.user
         if not user.is_staff:
             qs = qs.filter(assigned_to=user)
@@ -169,11 +180,10 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Al crear un lead manualmente:
-        - Si es Vendedor: Forzamos la auto-asignación a sí mismo.
-        - Si es Admin: Respeta lo que haya elegido en el formulario.
+        Lógica extra al crear un lead manualmente desde el panel.
         """
         user = self.request.user
+        # Si un vendedor crea un lead manualmente, se le asigna a él mismo automáticamente.
         if not user.is_staff:
             serializer.save(assigned_to=user)
         else:
@@ -181,8 +191,12 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"])
     def history(self, request, pk=None):
-        """GET /api/v1/leads/{id}/history/ - Historial de cambios."""
+        """
+        Endpoint extra: GET /api/v1/leads/{id}/history/
+        Consulta el registro de auditoría de cambios del lead.
+        """
         lead = self.get_object()
+        # Traemos los últimos 50 cambios realizados
         history_entries = lead.history.all()[:50]
         data = []
         for entry in history_entries:
@@ -190,13 +204,15 @@ class LeadViewSet(viewsets.ModelViewSet):
                 "history_id": entry.history_id,
                 "history_date": entry.history_date,
                 "history_type": entry.get_history_type_display(),
-                "history_user": entry.history_user.username if entry.history_user else None,
-                "changes": self._get_changes(entry),
+                "history_user": entry.history_user.username if entry.history_user else "Sistema",
+                "changes": self._get_changes(entry), # Extrae qué campos cambiaron
             })
         return Response(data)
 
     def _get_changes(self, history_entry):
-        """Compara con la versión anterior para extraer los cambios."""
+        """
+        Método interno para calcular la diferencia entre dos versiones de un lead.
+        """
         changes = {}
         try:
             prev = history_entry.prev_record
@@ -212,15 +228,15 @@ class LeadViewSet(viewsets.ModelViewSet):
         return changes
 
 
-# ─── Webhook Log ViewSet ─────────────────────────────────────────────────────
+# ─── Webhook Log ViewSet (Auditoría Técnica) ─────────────────────────────────
 
 class WebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    Vista de logs de webhook. Incluye acción para re-procesar fallidos.
-    Solo para administradores.
+    Permite a los administradores inspeccionar la entrada de datos crudos.
+    Incluye la capacidad de corregir y re-procesar webhooks fallidos.
     """
     serializer_class = WebhookLogSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAdminUser] # Restringido a staff
     filterset_fields = ["status", "source_type"]
     ordering_fields = ["created_at", "status"]
 
@@ -231,20 +247,23 @@ class WebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
     def reprocess(self, request, pk=None):
         """
         POST /api/v1/webhook-logs/{id}/reprocess/
-        Re-procesa un webhook fallido con el JSON editado.
+        Permite editar un JSON que llegó mal y volver a intentar la creación del lead.
         """
         webhook_log = self.get_object()
 
+        # Solo tiene sentido re-procesar si falló antes
         if webhook_log.status != WebhookLog.Status.FAILED:
             return Response(
                 {"error": "Solo se pueden re-procesar webhooks con estado 'Failed'."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Validar que el nuevo JSON sea válido
         serializer = ReprocessSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        # Ejecutar la lógica de re-procesamiento definida en services.py
         result = ReprocessWebhook.reprocess(
             webhook_log=webhook_log,
             edited_body=serializer.validated_data["edited_body"],
@@ -257,74 +276,86 @@ class WebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
 
-# ─── Source ViewSet ──────────────────────────────────────────────────────────
+# ─── Catálogos Auxiliares ────────────────────────────────────────────────────
 
 class SourceViewSet(viewsets.ModelViewSet):
+    """Gestión de fuentes de leads (ej: Facebook, Web, Manual)."""
     queryset = Source.objects.all()
     serializer_class = SourceSerializer
 
 
-# ─── Campaign ViewSet ────────────────────────────────────────────────────────
-
 class CampaignViewSet(viewsets.ModelViewSet):
+    """Gestión de campañas de marketing asociadas."""
     queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
     filterset_fields = ["is_active"]
 
 
-# ─── Interaction ViewSet ─────────────────────────────────────────────────────
+# ─── Historial / Timeline ───────────────────────────────────────────────────
 
 class InteractionViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Permite visualizar el timeline de eventos de un lead.
+    """
     serializer_class = InteractionSerializer
     filterset_fields = ["lead", "source"]
 
     def get_queryset(self):
+        # Cargamos relaciones para evitar múltiples consultas a la BD
         qs = Interaction.objects.select_related("source", "lead")
-        # Filtrar por lead si se provee en query params
+        
+        # Filtro opcional por ID de lead
         lead_id = self.request.query_params.get("lead_id")
         if lead_id:
             qs = qs.filter(lead_id=lead_id)
         return qs
 
 
-# ─── Users (Vendedores) ─────────────────────────────────────────────────────
+# ─── Usuarios (Dropdowns de Asignación) ──────────────────────────────────────
 
 class UserListView(APIView):
-    """Lista de usuarios/vendedores para dropdown de asignación."""
-
+    """
+    Lista simplificada de usuarios activos.
+    Se usa para que el administrador pueda elegir a quién asignar un lead.
+    """
     def get(self, request):
         users = User.objects.filter(is_active=True)
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 
 
+# ─── Exportación de Datos ────────────────────────────────────────────────────
+
 class LeadExportView(APIView):
     """
-    GET /api/v1/leads/export/
-    Exporta los leads a CSV. Si es vendedor, solo exporta los suyos.
-    Si es admin, exporta todos.
+    Genera un archivo CSV descargable con la base de datos de leads.
+    Respeta la privacidad: vendedores solo descargan sus propios leads.
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         import csv
-        from django.http import HttpResponse
-
         user = request.user
+        
+        # Consulta base
         leads_qs = Lead.objects.all().order_by("-created_at")
         
+        # Filtro de seguridad
         if not user.is_staff:
             leads_qs = leads_qs.filter(assigned_to=user)
 
+        # Preparar respuesta como archivo CSV
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="leads_export.csv"'
 
         writer = csv.writer(response)
+        # Cabeceras del CSV
         writer.writerow([
             'ID', 'Email Original', 'Nombre', 'Apellido', 'Telefono',
             'Empresa', 'Estado', 'Vendedor', 'Fuente', 'Score', 'Fecha Creacion'
         ])
 
+        # Escribir filas
         for lead in leads_qs:
             writer.writerow([
                 lead.id,
@@ -343,37 +374,35 @@ class LeadExportView(APIView):
         return response
 
 
-# ─── Dashboard Stats ────────────────────────────────────────────────────────
+# ─── Estadísticas del Dashboard (KPIs) ───────────────────────────────────────
 
 class DashboardStatsView(APIView):
     """
-    GET /api/v1/dashboard/stats/
-    Estadísticas para el panel operacional.
+    Calcula los indicadores clave de rendimiento (KPIs) para la pantalla principal.
     """
-
     def get(self, request):
         user = request.user
 
-        # Base queryset según permisos
+        # Filtrar el universo de leads según quién consulta
         leads_qs = Lead.objects.all()
         if not user.is_staff:
             leads_qs = leads_qs.filter(assigned_to=user)
 
         total_leads = leads_qs.count()
 
-        # Leads por estado
+        # Agrupación por estado del pipeline
         leads_by_status = {}
         for choice_value, choice_label in Lead.Status.choices:
             count = leads_qs.filter(status=choice_value).count()
             leads_by_status[choice_label] = count
 
-        # Webhooks stats
+        # Métricas técnicas de Webhooks (Salud de las integraciones)
         total_webhooks = WebhookLog.objects.count()
         successful = WebhookLog.objects.filter(status=WebhookLog.Status.SUCCESS).count()
         failed = WebhookLog.objects.filter(status=WebhookLog.Status.FAILED).count()
         success_rate = (successful / total_webhooks * 100) if total_webhooks > 0 else 0
 
-        # Leads por fuente
+        # Análisis de origen: ¿De dónde vienen los clientes?
         leads_by_source = list(
             leads_qs.values("first_source__name")
             .annotate(count=Count("id"))
@@ -393,19 +422,43 @@ class DashboardStatsView(APIView):
         return Response(data)
 
 
-# ─── Analytics (Performance) ──────────────────────────────────────────────────
+# ─── Análisis de Rendimiento (Vendedores) ───────────────────────────────────
 
 class PerformanceAnalyticsView(APIView):
     """
-    GET /api/v1/analytics/performance/
-    Analíticas de rendimiento de vendedores (Solo administradores).
+    Compara el rendimiento de cierre entre distintos vendedores.
+    Exclusivo para administradores.
     """
     permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 
     def get(self, request):
-        from django.db.models import Count, Q
-
+        # Solo consideramos usuarios activos que no son administradores (vendedores)
         vendors = User.objects.filter(is_active=True, is_staff=False)
+        data = []
+
+        for vendor in vendors:
+            # Métricas por vendedor
+            total = Lead.objects.filter(assigned_to=vendor).count()
+            won = Lead.objects.filter(assigned_to=vendor, status=Lead.Status.CIERRE_GANADO).count()
+            lost = Lead.objects.filter(assigned_to=vendor, status=Lead.Status.CIERRE_PERDIDO).count()
+            
+            # Tasa de conversión de leads ganados
+            conversion_rate = (won / total * 100) if total > 0 else 0
+            
+            data.append({
+                "vendor_name": f"{vendor.first_name} {vendor.last_name}".strip() or vendor.username,
+                "total_assigned": total,
+                "won": won,
+                "lost": lost,
+                "conversion_rate": round(conversion_rate, 2),
+                # Estado de disponibilidad para recibir nuevos leads
+                "is_available": getattr(vendor, "vendor_profile", None) and vendor.vendor_profile.is_available_for_leads
+            })
+            
+        # Ordenar el ranking: mejores vendedores primero
+        data.sort(key=lambda x: x["conversion_rate"], reverse=True)
+
+        return Response(data)
         data = []
 
         for vendor in vendors:
@@ -432,18 +485,20 @@ class PerformanceAnalyticsView(APIView):
 
 # ─── Media & Landings (Pro) ──────────────────────────────────────────────────
 
+# ─── Biblioteca de Medios y Landing Pages (Gestión) ──────────────────────────
+
 class MediaAssetViewSet(viewsets.ModelViewSet):
     """
-    CRUD para la biblioteca de medios.
-    Permite subir y listar imágenes para las landings.
+    CRUD para gestionar imágenes y archivos de la biblioteca de medios.
     """
     queryset = MediaAsset.objects.all()
     serializer_class = MediaAssetSerializer
     permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 
+
 class LandingPageViewSet(viewsets.ModelViewSet):
     """
-    CRUD completo para Landing Pages (Dashboard).
+    Controlador para que el administrador cree y edite Landing Pages.
     """
     queryset = LandingPage.objects.all().select_related('campaign', 'source')
     serializer_class = LandingPageSerializer
@@ -451,7 +506,10 @@ class LandingPageViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def analytics(self, request, pk=None):
-        """Analíticas específicas de una landing."""
+        """
+        GET /api/v1/landings/{id}/analytics/
+        Retorna métricas de rendimiento específicas de esta página.
+        """
         landing = self.get_object()
         return Response({
             "visits": landing.visits_count,
@@ -461,11 +519,12 @@ class LandingPageViewSet(viewsets.ModelViewSet):
 
 # ─── Landing Pages (Públicas) ─────────────────────────────────────────────────
 
+# ─── Vistas Públicas (Para el Cliente Final) ───────────────────────────────
+
 class LandingPageDetailView(APIView):
     """
-    GET /api/v1/landings/<slug>/
-    Endpoint público para obtener los datos de una Landing Page.
-    Registra una visita automáticamente.
+    Endpoint público que entrega la configuración de una Landing Page.
+    Registra automáticamente una visita detallada (IP, Navegador).
     """
     permission_classes = [permissions.AllowAny]
 
@@ -476,15 +535,15 @@ class LandingPageDetailView(APIView):
             )
         except LandingPage.DoesNotExist:
             return Response(
-                {"error": "Landing Page no encontrada."},
+                {"error": "Landing Page no encontrada o inactiva."},
                 status=status.HTTP_404_NOT_FOUND,
             )
         
-        # Registrar visita (Asíncrono opcionalmente, pero aquí directo para simplicidad)
+        # Incrementar contador básico de visitas
         landing.visits_count += 1
         landing.save(update_fields=['visits_count'])
         
-        # Log de visita detallado
+        # Guardar log de auditoría de la visita
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
         
@@ -500,23 +559,18 @@ class LandingPageDetailView(APIView):
 
 class LandingPageSubmitView(APIView):
     """
-    POST /api/v1/landings/<slug>/submit/
-    Endpoint público para recibir leads desde una Landing Page.
-    Crea o actualiza el lead y lo asocia a la campaña de la landing.
+    Recibe los datos del formulario de una Landing Page.
+    Procesa el lead, lo asigna mediante Round Robin y guarda UTMs.
     """
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, slug):
-        # Validar que la landing exista
         try:
             landing = LandingPage.objects.select_related('campaign', 'source').get(
                 slug=slug, is_active=True
             )
         except LandingPage.DoesNotExist:
-            return Response(
-                {"error": "Landing Page no encontrada."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"error": "Landing inactiva."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = LandingPageSubmitSerializer(data=request.data)
         if not serializer.is_valid():
@@ -525,7 +579,7 @@ class LandingPageSubmitView(APIView):
         data = serializer.validated_data
         email = data.pop('email').lower().strip()
 
-        # Construir payload para el WebhookProcessor
+        # Delegar la creación del lead al procesador de Webhooks (unificando lógica)
         source_slug = landing.source.slug if landing.source else 'landing-page'
         raw_body = {
             'email': email,
@@ -533,40 +587,34 @@ class LandingPageSubmitView(APIView):
             'landing_slug': slug,
         }
 
-        from .services import WebhookProcessor
         processor = WebhookProcessor(source_type=source_slug, raw_body=raw_body)
         processor.create_log()
         result = processor.process()
 
-        # Asociar campaña y UTMs al lead si fue exitoso
+        # Si el lead se creó o actualizó con éxito, inyectamos datos de campaña
         if result.status == 'success' and result.lead:
             lead = result.lead
             lead.campaign = landing.campaign
+            # Guardar parámetros de tracking de marketing (UTMs)
             lead.utm_source = data.get('utm_source', '')
             lead.utm_medium = data.get('utm_medium', '')
             lead.utm_campaign = data.get('utm_campaign', '')
             lead.utm_term = data.get('utm_term', '')
             lead.utm_content = data.get('utm_content', '')
-            lead.save(update_fields=[
-                'campaign', 'utm_source', 'utm_medium',
-                'utm_campaign', 'utm_term', 'utm_content',
-            ])
+            lead.save()
 
         return Response(
-            {"message": "¡Gracias! Nos pondremos en contacto contigo pronto.", "success": True},
+            {"message": "¡Información recibida con éxito!", "success": True},
             status=status.HTTP_201_CREATED,
         )
 
 
-class SentEmailViewSet(viewsets.ReadOnlyModelViewSet):
-    # ... (existing code)
-    pass
-
+# ─── Auditoría de Comunicaciones ─────────────────────────────────────────────
 
 class SentEmailViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet para visualizar los correos enviados desde el CRM.
-    Solo lectura para auditoría.
+    ViewSet para visualizar los correos electrónicos enviados.
+    Útil para que el vendedor vea qué se le ha enviado al cliente.
     """
     queryset = SentEmail.objects.all()
     serializer_class = SentEmailSerializer
@@ -574,29 +622,34 @@ class SentEmailViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ["subject", "to_email", "body_text"]
 
 
+# ─── Generación de Documentación (PDF) ───────────────────────────────────────
+
 class LeadBrochureView(APIView):
     """
-    GET /api/v1/leads/<id>/brochure/
-    Genera y sirve el PDF personalizado para el lead.
+    Endpoint que genera dinámicamente un brochure PDF personalizado.
+    Lo utiliza el cliente desde un link enviado a su correo.
     """
-    permission_classes = [permissions.AllowAny] # Público para que el cliente lo baje desde el mail
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request, lead_id):
         try:
+            # Obtener datos del lead y su campaña
             lead = Lead.objects.select_related('campaign', 'assigned_to').get(id=lead_id)
         except Lead.DoesNotExist:
             return Response({"error": "Lead no encontrado"}, status=404)
         
         if not lead.campaign:
-            return Response({"error": "El lead no está asociado a ninguna campaña"}, status=400)
+            return Response({"error": "Este lead no tiene una campaña asociada."}, status=400)
             
+        # Generar el PDF usando la utilidad especializada
         pdf_content = generate_personalized_brochure(lead, lead.campaign)
         
         if pdf_content:
             response = HttpResponse(pdf_content, content_type='application/pdf')
+            # Forzar la descarga con un nombre de archivo amigable
             filename = f"Brochure_{lead.first_name or 'Inversionista'}_{lead.campaign.slug}.pdf"
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
             
-        return Response({"error": "Error generando el PDF"}, status=500)
+        return Response({"error": "Error técnico generando el documento."}, status=500)
 

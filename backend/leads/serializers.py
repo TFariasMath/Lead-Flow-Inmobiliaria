@@ -1,17 +1,21 @@
 """
 Lead Flow - Serializers
 =======================
-Serializadores DRF para la API REST.
+Transforman los modelos de base de datos en JSON para el frontend
+y validan la entrada de datos que viene del exterior.
 """
 
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage, SentEmail
+from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage, SentEmail, MediaAsset
 
+
+# ─── Catálogos de Marketing ──────────────────────────────────────────────────
 
 class SourceSerializer(serializers.ModelSerializer):
+    """Representación de una fuente de origen (ej: Facebook Ads)."""
     class Meta:
         model = Source
         fields = ["id", "name", "slug", "description", "is_active", "created_at"]
@@ -19,13 +23,20 @@ class SourceSerializer(serializers.ModelSerializer):
 
 
 class CampaignSerializer(serializers.ModelSerializer):
+    """Representación de una campaña comercial (ej: Inversión 2024)."""
     class Meta:
         model = Campaign
         fields = ["id", "name", "slug", "budget", "is_active", "start_date", "end_date", "created_at"]
         read_only_fields = ["id", "created_at"]
 
 
+# ─── Historial de Eventos ────────────────────────────────────────────────────
+
 class InteractionSerializer(serializers.ModelSerializer):
+    """
+    Representa un evento en la vida de un lead.
+    Muestra el nombre de la fuente de forma legible.
+    """
     source_name = serializers.CharField(source="source.name", read_only=True)
 
     class Meta:
@@ -37,8 +48,13 @@ class InteractionSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
 
+# ─── Gestión de Leads ─────────────────────────────────────────────────────────
+
 class LeadListSerializer(serializers.ModelSerializer):
-    """Serializer compacto para la vista de lista."""
+    """
+    Versión ligera del Lead para tablas y listados.
+    Incluye nombres de relaciones para evitar IDs crudos en el UI.
+    """
     assigned_to_name = serializers.SerializerMethodField()
     first_source_name = serializers.CharField(
         source="first_source.name", read_only=True, default=""
@@ -46,6 +62,7 @@ class LeadListSerializer(serializers.ModelSerializer):
     campaign_name = serializers.CharField(
         source="campaign.name", read_only=True, default=""
     )
+    # Este campo viene de una anotación en el QuerySet (Count interacciones)
     interaction_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -62,13 +79,17 @@ class LeadListSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "original_email", "score", "created_at", "updated_at"]
 
     def get_assigned_to_name(self, obj):
+        """Formatea el nombre del vendedor asignado."""
         if obj.assigned_to:
             return f"{obj.assigned_to.first_name} {obj.assigned_to.last_name}".strip() or obj.assigned_to.username
-        return None
+        return "Sin Asignar"
 
 
 class LeadDetailSerializer(serializers.ModelSerializer):
-    """Serializer completo para la vista de detalle con timeline."""
+    """
+    Versión completa del Lead para la vista de detalle.
+    Incluye todo el timeline de interacciones anidado.
+    """
     interactions = InteractionSerializer(many=True, read_only=True)
     assigned_to_name = serializers.SerializerMethodField()
     first_source_name = serializers.CharField(
@@ -98,6 +119,11 @@ class LeadDetailSerializer(serializers.ModelSerializer):
         return None
 
     def __init__(self, *args, **kwargs):
+        """
+        Seguridad dinámica:
+        Si el usuario NO es staff, el campo 'assigned_to' se vuelve solo lectura.
+        Esto evita que un vendedor se 'robe' leads asignados a otros.
+        """
         super().__init__(*args, **kwargs)
         request = self.context.get("request")
         if request and not request.user.is_staff:
@@ -105,8 +131,10 @@ class LeadDetailSerializer(serializers.ModelSerializer):
 
 
 class LeadCreateSerializer(serializers.ModelSerializer):
-    """Serializer para creación manual de leads (formulario)."""
-
+    """
+    Se utiliza para la creación manual de leads desde el dashboard.
+    Incluye validación de duplicados y normalización de emails.
+    """
     class Meta:
         model = Lead
         fields = [
@@ -119,26 +147,34 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ["score"]
 
     def validate_original_email(self, value):
+        """Evita crear dos veces el mismo lead por error humano."""
         if Lead.objects.filter(original_email=value.lower()).exists():
             raise serializers.ValidationError(
-                "Ya existe un lead con este email. Busca el lead existente en vez de crear uno nuevo."
+                "Ya existe un lead con este email. Usa el buscador para encontrarlo."
             )
         return value.lower()
 
     def create(self, validated_data):
-        # Si no se provee contact_email, usar el original
+        # Si no se especifica un email de contacto, usamos el original por defecto
         if not validated_data.get("contact_email"):
             validated_data["contact_email"] = validated_data["original_email"]
         return super().create(validated_data)
 
     def __init__(self, *args, **kwargs):
+        """Restricción de asignación: Vendedores no pueden asignar leads a otros."""
         super().__init__(*args, **kwargs)
         request = self.context.get("request")
         if request and not request.user.is_staff:
             self.fields["assigned_to"].read_only = True
 
 
+# ─── Infraestructura de Webhooks ─────────────────────────────────────────────
+
 class WebhookLogSerializer(serializers.ModelSerializer):
+    """
+    Serializador para la auditoría técnica de webhooks.
+    Muestra quién editó y qué lead se generó a partir del log.
+    """
     lead_name = serializers.CharField(source="lead.__str__", read_only=True, default="")
     edited_by_name = serializers.SerializerMethodField()
 
@@ -161,24 +197,25 @@ class WebhookLogSerializer(serializers.ModelSerializer):
         return None
 
 
-class WebhookReceiveSerializer(serializers.Serializer):
-    """Validación mínima del payload de webhook entrante."""
-    source_type = serializers.CharField(max_length=100)
-    data = serializers.DictField()
-
-
 class ReprocessSerializer(serializers.Serializer):
-    """Para el re-procesamiento de webhooks fallidos."""
+    """Esquema de datos para corregir un webhook fallido."""
     edited_body = serializers.DictField()
 
 
+# ─── Landing Pages & Multimedia ──────────────────────────────────────────────
+
 class MediaAssetSerializer(serializers.ModelSerializer):
+    """Manejo de archivos de imagen para las landings."""
     class Meta:
         model = MediaAsset
         fields = ["id", "title", "file", "alt_text", "created_at"]
 
 
 class LandingPageSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el constructor visual de Landing Pages.
+    Incluye métricas de rendimiento calculadas.
+    """
     campaign_name = serializers.ReadOnlyField(source="campaign.name")
     source_name = serializers.ReadOnlyField(source="source.name")
     conversion_rate = serializers.ReadOnlyField()
@@ -197,7 +234,10 @@ class LandingPageSerializer(serializers.ModelSerializer):
 
 
 class LandingPageSubmitSerializer(serializers.Serializer):
-    """Validación del formulario público de Landing Page."""
+    """
+    Valida los datos que vienen desde el formulario público de una landing.
+    Incluye captura de parámetros UTM para atribución de marketing.
+    """
     email = serializers.EmailField()
     first_name = serializers.CharField(max_length=150, required=False, default="")
     last_name = serializers.CharField(max_length=150, required=False, default="")
@@ -210,8 +250,10 @@ class LandingPageSubmitSerializer(serializers.Serializer):
     utm_content = serializers.CharField(max_length=200, required=False, default="")
 
 
+# ─── Otros Serializadores ───────────────────────────────────────────────────
+
 class SentEmailSerializer(serializers.ModelSerializer):
-    """Serializer para el visor de correos enviados."""
+    """Historial de correos enviados para auditoría del CRM."""
     class Meta:
         model = SentEmail
         fields = [
@@ -223,7 +265,7 @@ class SentEmailSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer básico de usuarios (vendedores)."""
+    """Información pública del vendedor."""
     class Meta:
         model = User
         fields = ["id", "username", "first_name", "last_name", "email", "is_staff"]
@@ -231,7 +273,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class DashboardStatsSerializer(serializers.Serializer):
-    """Estadísticas del dashboard."""
+    """Esquema de respuesta para las métricas globales del dashboard."""
     total_leads = serializers.IntegerField()
     leads_by_status = serializers.DictField()
     total_webhooks = serializers.IntegerField()
@@ -242,11 +284,15 @@ class DashboardStatsSerializer(serializers.Serializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Extiende el token JWT para incluir datos del perfil del usuario.
+    Esto permite que el frontend sepa el nombre del usuario sin hacer otra petición.
+    """
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
 
-        # Inyectar campos personalizados en el token
+        # Inyectar claims personalizados en el payload del token
         token['is_staff'] = user.is_staff
         token['first_name'] = user.first_name
         token['last_name'] = user.last_name

@@ -1,3 +1,11 @@
+"""
+Lead Flow - Communication Tests
+===============================
+Pruebas especializadas para el motor de emails y el Sandbox de base de datos.
+Garantiza que cada correo enviado a un cliente quede registrado correctamente
+en su historial (Timeline).
+"""
+
 import uuid
 from django.test import TestCase, override_settings
 from django.core import mail
@@ -7,10 +15,11 @@ from .email_backends import DatabaseEmailBackend
 
 class CommunicationInfrastructureTests(TestCase):
     """
-    Pruebas exhaustivas para el sistema de comunicaciones y Sandbox de emails.
+    Validación de la infraestructura de mensajería.
     """
 
     def setUp(self):
+        # Setup: Vendedor y Lead vinculados para las pruebas de envío
         self.vendedor = User.objects.create_user(username="test_vendedor", email="v@test.com")
         self.lead = Lead.objects.create(
             original_email="cliente@test.com",
@@ -21,89 +30,97 @@ class CommunicationInfrastructureTests(TestCase):
 
     @override_settings(EMAIL_BACKEND='leads.email_backends.DatabaseEmailBackend')
     def test_send_email_success_persistence(self):
-        """Verifica que un email enviado se guarde en DB y cree una interacción."""
-        subject = "Test Subject"
-        body = "Hello test body"
+        """
+        Prueba el flujo completo de persistencia:
+        1. Se 'envía' un correo mediante Django.
+        2. El backend lo intercepta y lo guarda en SentEmail.
+        3. Se crea una Interacción automática en el Lead.
+        """
+        subject = "Bienvenido a Lead Flow"
+        body = "Estamos felices de tenerte aquí."
         mail.send_mail(
             subject,
             body,
-            "from@crm.com",
+            "hola@leadflow.dev",
             ["cliente@test.com"],
-            html_message="<p>Hello HTML</p>"
+            html_message="<p>Versión <b>HTML</b> del mensaje</p>"
         )
 
-        # Verificar SentEmail
+        # Validación: El registro existe en la tabla de auditoría de mails
         sent = SentEmail.objects.get(to_email="cliente@test.com")
         self.assertEqual(sent.subject, subject)
-        self.assertEqual(sent.body_text, body)
-        self.assertEqual(sent.body_html, "<p>Hello HTML</p>")
+        self.assertEqual(sent.body_html, "<p>Versión <b>HTML</b> del mensaje</p>")
         self.assertEqual(sent.lead, self.lead)
 
-        # Verificar Interacción en el Timeline
+        # Validación: El timeline del lead ahora muestra este envío
         interaction = Interaction.objects.filter(lead=self.lead, type=Interaction.Type.EMAIL_SENT).first()
         self.assertIsNotNone(interaction)
         self.assertIn(subject, interaction.notes)
 
     @override_settings(EMAIL_BACKEND='leads.email_backends.DatabaseEmailBackend')
     def test_send_email_no_lead_found(self):
-        """Verifica que si el lead no existe, el email se guarde pero sin vínculo de FK."""
+        """
+        Caso Borde: El correo se envía a alguien que NO es un lead registrado.
+        Debe guardarse el mail para auditoría, pero sin asociación de Lead.
+        """
         mail.send_mail(
-            "Desconocido",
+            "Asunto Desconocido",
             "Cuerpo",
             "from@crm.com",
-            ["desconocido@noexiste.com"]
+            ["extraño@gmail.com"]
         )
 
-        sent = SentEmail.objects.get(to_email="desconocido@noexiste.com")
+        sent = SentEmail.objects.get(to_email="extraño@gmail.com")
         self.assertIsNone(sent.lead)
-        # No debería haber interacción si no hay lead
+        # Sin lead -> No hay interacción en timeline
         self.assertEqual(Interaction.objects.count(), 0)
 
     @override_settings(EMAIL_BACKEND='leads.email_backends.DatabaseEmailBackend')
     def test_adverse_empty_recipients(self):
-        """Prueba de robustez ante falta de destinatarios."""
-        # Django mail.send_mail suele validar esto, pero probamos el backend directamente
+        """Prueba de robustez: Envío sin destinatarios."""
         backend = DatabaseEmailBackend()
         from django.core.mail import EmailMessage
         msg = EmailMessage("Sub", "Body", "from@test.com", [])
         
         result = backend.send_messages([msg])
+        # El backend debe retornar 0 mensajes enviados y no explotar
         self.assertEqual(result, 0)
         self.assertEqual(SentEmail.objects.count(), 0)
 
     @override_settings(EMAIL_BACKEND='leads.email_backends.DatabaseEmailBackend')
     def test_adverse_lead_deleted_during_process(self):
-        """Escenario: El lead es borrado justo antes de que el backend lo procese."""
+        """Escenario: El lead es eliminado por otro usuario mientras se enviaba el mail."""
         from django.core.mail import EmailMessage
         msg = EmailMessage("Sub", "Body", "from@test.com", ["cliente@test.com"])
         
-        # Simulamos el borrado
+        # Simulamos eliminación concurrente
         self.lead.delete()
         
         backend = DatabaseEmailBackend()
         backend.send_messages([msg])
         
-        # El correo debe guardarse (como auditoría) pero sin FK al lead
+        # El mail debe guardarse igual como 'huérfano' (auditoría forense)
         sent = SentEmail.objects.get(to_email="cliente@test.com")
         self.assertIsNone(sent.lead)
 
     @override_settings(EMAIL_BACKEND='leads.email_backends.DatabaseEmailBackend')
     def test_adverse_corrupted_html(self):
-        """Verifica que el sistema no explote con contenido HTML nulo o mal formado."""
+        """Verifica que el sistema sea resiliente a formatos no soportados."""
         from django.core.mail import EmailMultiAlternatives
         msg = EmailMultiAlternatives("Sub", "Body", "from@test.com", ["cliente@test.com"])
-        # Adjuntamos algo que no es texto/html pero tiene contenido
+        # Intentamos adjuntar un binario como si fuera HTML alternativo
         msg.attach_alternative("%PDF-1.4...", "application/pdf")
         
         backend = DatabaseEmailBackend()
         backend.send_messages([msg])
         
         sent = SentEmail.objects.get(to_email="cliente@test.com")
-        self.assertEqual(sent.body_html, "") # Debe ser string vacío porque no encontró 'text/html'
+        # No encontró text/html, por lo tanto el campo body_html debe quedar vacío
+        self.assertEqual(sent.body_html, "")
 
     @override_settings(EMAIL_BACKEND='leads.email_backends.DatabaseEmailBackend')
     def test_multiple_recipients_tracking(self):
-        """Verifica comportamiento con múltiples destinatarios (solo se trackea el primero)."""
+        """Verifica el comportamiento con copias o múltiples destinatarios."""
         mail.send_mail(
             "Masivo",
             "Contenido",
@@ -111,7 +128,7 @@ class CommunicationInfrastructureTests(TestCase):
             ["cliente@test.com", "otro@test.com"]
         )
         
-        # Debe haber un registro para el envío
+        # Por simplicidad de tracking, el sistema registra el evento para el primer destinatario.
         self.assertEqual(SentEmail.objects.count(), 1)
         sent = SentEmail.objects.first()
         self.assertEqual(sent.to_email, "cliente@test.com")

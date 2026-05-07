@@ -1,28 +1,42 @@
+"""
+Lead Flow - Management Command: Seed Data
+=========================================
+Comando de consola para inicializar la base de datos con datos de prueba.
+Uso: python manage.py seed_data
+"""
+
 import logging
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from leads.models import Source
 
+# Logger para reportar errores en la consola
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = 'Carga datos iniciales (vendedores y fuentes) con soporte UTF-8 garantizado.'
+    """
+    Carga el superusuario, vendedores y fuentes de origen por defecto.
+    Garantiza que el sistema sea funcional inmediatamente después de instalarlo.
+    """
+    help = 'Inicializa la base de datos con vendedores y fuentes de ejemplo.'
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.MIGRATE_HEADING("--- Iniciando Carga de Datos (Seed) ---"))
+        self.stdout.write(self.style.MIGRATE_HEADING("--- Iniciando Proceso de Sembrado (Seed) ---"))
 
-        # 1. Superusuario
+        # 1. Crear Administrador Principal
+        # Se asegura de que siempre haya un usuario staff para entrar al panel /admin
         if not User.objects.filter(username="admin").exists():
             User.objects.create_superuser(
                 username="admin",
                 email="admin@leadflow.dev",
                 password="admin123",
-                first_name="Admin",
-                last_name="LeadFlow",
+                first_name="Administrador",
+                last_name="General",
             )
-            self.stdout.write(self.style.SUCCESS("✅ Superusuario 'admin' creado (pass: admin123)"))
+            self.stdout.write(self.style.SUCCESS("✅ Superusuario 'admin' creado (Pass: admin123)"))
 
-        # 2. Vendedores (Datos con acentos)
+        # 2. Crear Equipo de Ventas
+        # Estos usuarios recibirán los leads a través del sistema Round Robin.
         vendors = [
             {"username": "vendedor1", "first_name": "María", "last_name": "García", "email": "maria@leadflow.dev"},
             {"username": "vendedor2", "first_name": "Carlos", "last_name": "López", "email": "carlos@leadflow.dev"},
@@ -30,6 +44,7 @@ class Command(BaseCommand):
         ]
 
         for v in vendors:
+            # get_or_create evita duplicados si el comando se corre varias veces
             user, created = User.objects.get_or_create(
                 username=v["username"],
                 defaults={
@@ -42,20 +57,21 @@ class Command(BaseCommand):
             if created:
                 user.set_password("vendedor123")
                 user.save()
-                self.stdout.write(self.style.SUCCESS(f"✅ Vendedor '{v['username']}' creado: {v['first_name']} {v['last_name']}"))
+                self.stdout.write(self.style.SUCCESS(f"✅ Vendedor '{v['username']}' configurado."))
             else:
-                # Si ya existe, actualizamos por si acaso hubo error de encoding previo
+                # Si ya existía, forzamos la actualización de nombres (por si hubo cambios en el script)
                 user.first_name = v["first_name"]
                 user.last_name = v["last_name"]
                 user.save()
-                self.stdout.write(f"ℹ️ Vendedor '{v['username']}' actualizado para corregir nombres.")
+                self.stdout.write(f"ℹ️ Vendedor '{v['username']}' ya existía (nombres actualizados).")
 
-        # 3. Fuentes
+        # 3. Crear Fuentes de Origen
+        # Define los canales por los cuales pueden entrar los prospectos.
         sources = [
-            {"name": "Web", "slug": "web", "description": "Formulario de contacto del sitio web"},
-            {"name": "Calendly", "slug": "calendly", "description": "Reservas de citas desde Calendly"},
-            {"name": "Mailchimp", "slug": "mailchimp", "description": "Suscripciones desde campañas de Mailchimp"},
-            {"name": "Manual", "slug": "manual", "description": "Ingreso manual por parte del equipo comercial"},
+            {"name": "Sitio Web", "slug": "web", "description": "Formulario de contacto oficial"},
+            {"name": "Facebook Ads", "slug": "facebook", "description": "Campañas de generación de clientes potenciales"},
+            {"name": "Google Search", "slug": "google", "description": "Búsqueda orgánica en buscadores"},
+            {"name": "Manual", "slug": "manual", "description": "Ingreso directo por el vendedor"},
         ]
 
         for s in sources:
@@ -64,6 +80,6 @@ class Command(BaseCommand):
                 defaults={"name": s["name"], "description": s["description"]},
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f"✅ Fuente '{s['name']}' creada."))
+                self.stdout.write(self.style.SUCCESS(f"✅ Fuente '{s['name']}' habilitada."))
 
-        self.stdout.write(self.style.MIGRATE_LABEL("\n🎉 Carga de datos completada exitosamente."))
+        self.stdout.write(self.style.MIGRATE_LABEL("\n🚀 ¡Ambiente de trabajo listo para usar!"))
