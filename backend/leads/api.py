@@ -117,6 +117,18 @@ class LeadViewSet(viewsets.ModelViewSet):
 
         return qs
 
+    def perform_create(self, serializer):
+        """
+        Al crear un lead manualmente:
+        - Si es Vendedor: Forzamos la auto-asignación a sí mismo.
+        - Si es Admin: Respeta lo que haya elegido en el formulario.
+        """
+        user = self.request.user
+        if not user.is_staff:
+            serializer.save(assigned_to=user)
+        else:
+            serializer.save()
+
     @action(detail=True, methods=["get"])
     def history(self, request, pk=None):
         """GET /api/v1/leads/{id}/history/ - Historial de cambios."""

@@ -40,7 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
