@@ -95,10 +95,24 @@ export interface Lead {
 export interface Interaction {
   id: string;
   lead: string;
-  source: number;
+  type: string;
+  source: number | null;
   source_name: string;
   raw_payload: Record<string, unknown>;
   notes: string;
+  created_at: string;
+}
+
+export interface SentEmail {
+  id: string;
+  lead: string | null;
+  to_email: string;
+  from_email: string;
+  subject: string;
+  body_text: string;
+  body_html: string;
+  status: string;
+  error_message: string | null;
   created_at: string;
 }
 
@@ -254,4 +268,10 @@ export interface VendorPerformance {
 
 export function getPerformanceAnalytics(token: string) {
   return apiFetch<VendorPerformance[]>("/analytics/performance/", { token });
+}
+
+// --- Emails -------------------------------------------------------------------
+
+export function getSentEmails(token: string) {
+  return apiFetch<PaginatedResponse<SentEmail>>("/sent-emails/", { token });
 }

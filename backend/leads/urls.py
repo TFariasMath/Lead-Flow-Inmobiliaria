@@ -18,6 +18,7 @@ from .api import (
     LeadExportView,
     LandingPageDetailView,
     LandingPageSubmitView,
+    SentEmailViewSet,
 )
 
 router = DefaultRouter()
@@ -26,6 +27,7 @@ router.register(r"webhook-logs", WebhookLogViewSet, basename="webhooklog")
 router.register(r"sources", SourceViewSet, basename="source")
 router.register(r"campaigns", CampaignViewSet, basename="campaign")
 router.register(r"interactions", InteractionViewSet, basename="interaction")
+router.register(r"sent-emails", SentEmailViewSet, basename="sentemail")
 
 urlpatterns = [
     # Webhook público

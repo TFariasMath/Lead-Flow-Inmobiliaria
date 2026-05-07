@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage
+from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage, SentEmail
 
 
 class SourceSerializer(serializers.ModelSerializer):
@@ -181,6 +181,10 @@ class LandingPageSerializer(serializers.ModelSerializer):
         model = LandingPage
         fields = [
             "id", "title", "slug", "subtitle", "description",
+            "benefit_1_icon", "benefit_1_title",
+            "benefit_2_icon", "benefit_2_title",
+            "benefit_3_icon", "benefit_3_title",
+            "cta_text", "success_message",
             "primary_color", "image_url",
             "campaign", "campaign_name", "source", "source_name",
             "is_active", "created_at",
@@ -199,6 +203,18 @@ class LandingPageSubmitSerializer(serializers.Serializer):
     utm_campaign = serializers.CharField(max_length=200, required=False, default="")
     utm_term = serializers.CharField(max_length=200, required=False, default="")
     utm_content = serializers.CharField(max_length=200, required=False, default="")
+
+
+class SentEmailSerializer(serializers.ModelSerializer):
+    """Serializer para el visor de correos enviados."""
+    class Meta:
+        model = SentEmail
+        fields = [
+            "id", "lead", "to_email", "from_email",
+            "subject", "body_text", "body_html",
+            "status", "error_message", "created_at"
+        ]
+        read_only_fields = fields
 
 
 class UserSerializer(serializers.ModelSerializer):

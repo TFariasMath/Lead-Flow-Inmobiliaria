@@ -43,6 +43,25 @@ class Campaign(models.Model):
     name = models.CharField(max_length=150, unique=True)
     slug = models.SlugField(max_length=150, unique=True)
     budget = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Contenido dinámico para Brochure (PDF)
+    brochure_title = models.CharField(
+        max_length=200, 
+        blank=True, 
+        default="", 
+        help_text="Título principal en la portada del PDF."
+    )
+    brochure_description = models.TextField(
+        blank=True, 
+        default="", 
+        help_text="Texto introductorio en el PDF."
+    )
+    brochure_features = models.JSONField(
+        default=list, 
+        blank=True, 
+        help_text="Lista de características destacadas para el PDF (ej: ['Piscina', 'Gimnasio'])."
+    )
+    
     is_active = models.BooleanField(default=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -63,8 +82,24 @@ class LandingPage(models.Model):
     """
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True)
+    # Layout & Content Premium
     subtitle = models.TextField(blank=True, default="")
     description = models.TextField(blank=True, default="Déjanos tus datos y te contactaremos a la brevedad.")
+    
+    # Beneficios (Icono + Texto)
+    benefit_1_icon = models.CharField(max_length=50, default="Building", help_text="Nombre del icono de Lucide (ej: Building, Zap, Shield)")
+    benefit_1_title = models.CharField(max_length=100, default="Propiedades Exclusivas")
+    
+    benefit_2_icon = models.CharField(max_length=50, default="User", help_text="Nombre del icono de Lucide")
+    benefit_2_title = models.CharField(max_length=100, default="Asesoría 1 a 1")
+    
+    benefit_3_icon = models.CharField(max_length=50, default="TrendingUp", help_text="Nombre del icono de Lucide")
+    benefit_3_title = models.CharField(max_length=100, default="Alta Rentabilidad")
+    
+    # Call to Action
+    cta_text = models.CharField(max_length=50, default="Quiero más información →")
+    success_message = models.TextField(default="¡Listo! Hemos recibido tu información. Uno de nuestros asesores se pondrá en contacto contigo a la brevedad.")
+    
     primary_color = models.CharField(max_length=20, default="#3b82f6", help_text="Color HEX para el botón y detalles.")
     image_url = models.URLField(blank=True, default="")
     
@@ -243,14 +278,28 @@ class Lead(models.Model):
 
 class Interaction(models.Model):
     """
-    Registro de cada vez que un lead llega por una fuente.
+    Registro de cada vez que ocurre un evento con el lead.
     Forma el timeline / historial del viaje del contacto.
     """
+    class Type(models.TextChoices):
+        EMAIL_SENT = "email_sent", "Email Enviado"
+        EMAIL_RECEIVED = "email_received", "Email Recibido"
+        WEBHOOK = "webhook", "Webhook (Captura)"
+        NOTE = "note", "Nota Manual"
+        STATUS_CHANGE = "status_change", "Cambio de Estado"
+        SYSTEM = "system", "Sistema"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     lead = models.ForeignKey(
         Lead,
         on_delete=models.CASCADE,
         related_name="interactions",
+    )
+    type = models.CharField(
+        max_length=20,
+        choices=Type.choices,
+        default=Type.WEBHOOK,
+        db_index=True,
     )
     source = models.ForeignKey(
         Source,
@@ -260,7 +309,7 @@ class Interaction(models.Model):
     )
     raw_payload = models.JSONField(
         default=dict,
-        help_text="Payload original recibido del webhook.",
+        help_text="Datos asociados al evento.",
     )
     notes = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -271,7 +320,38 @@ class Interaction(models.Model):
         verbose_name_plural = "Interacciones"
 
     def __str__(self):
-        return f"{self.lead} via {self.source} @ {self.created_at:%Y-%m-%d %H:%M}"
+        return f"{self.type} - {self.lead} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class SentEmail(models.Model):
+    """
+    Registro permanente de todos los correos enviados por el sistema.
+    Sirve como Sandbox local y auditoría en producción.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    lead = models.ForeignKey(
+        Lead, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_emails"
+    )
+    to_email = models.EmailField()
+    from_email = models.EmailField()
+    subject = models.CharField(max_length=255)
+    body_text = models.TextField()
+    body_html = models.TextField(null=True, blank=True)
+    
+    # Metadatos para trazabilidad
+    headers = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=20, default="sent") # sent, failed
+    error_message = models.TextField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Email Enviado"
+        verbose_name_plural = "Emails Enviados"
+
+    def __str__(self):
+        return f"{self.subject} -> {self.to_email}"
 
 
 class WebhookLog(models.Model):

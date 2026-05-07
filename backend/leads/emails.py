@@ -64,7 +64,7 @@ VENDOR_ALERT_HTML = """
 <body>
     <div class="container">
         <div class="header">
-            <h1>¡Nuevo Lead Asignado!</h1>
+            <h1>🚨 ¡Nuevo Lead Asignado! 🚨</h1>
         </div>
         <div class="content">
             <p>Hola <strong>{vendor_name}</strong>,</p>
@@ -114,7 +114,7 @@ def send_welcome_email(lead_email: str, first_name: str):
 
 def send_vendor_alert_email(vendor_email: str, vendor_name: str, lead_data: dict, lead_id: str):
     """Envía una alerta inmediata al vendedor cuando se le asigna un lead."""
-    subject = f"Nuevo Lead Asignado: {lead_data.get('first_name', '')} (Score: {lead_data.get('score', 0)})"
+    subject = f"🚨 Nuevo Lead Asignado: {lead_data.get('first_name', '')} (Score: {lead_data.get('score', 0)})"
     
     # Construir URL temporal (esto luego puede salir de las settings)
     crm_url = f"http://localhost:3000/dashboard/leads/{lead_id}"

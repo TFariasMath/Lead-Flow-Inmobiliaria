@@ -16,6 +16,8 @@ import {
   LogOut,
   Zap,
   BarChart,
+  Mail,
+  Globe,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -31,7 +33,9 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const navItems = [...BASE_NAV_ITEMS];
   if (user?.isStaff) {
+    navItems.push({ href: "/dashboard/landings", label: "Landing Pages", icon: Globe });
     navItems.push({ href: "/dashboard/analytics", label: "Rendimiento", icon: BarChart });
+    navItems.push({ href: "/dashboard/emails", label: "Email Sandbox", icon: Mail });
     navItems.push({ href: "/dashboard/webhooks", label: "Webhook Logs", icon: Webhook });
   }
 

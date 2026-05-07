@@ -20,7 +20,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage
+from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage, SentEmail
 from .serializers import (
     LeadListSerializer,
     LeadDetailSerializer,
@@ -33,6 +33,7 @@ from .serializers import (
     ReprocessSerializer,
     LandingPageSerializer,
     LandingPageSubmitSerializer,
+    SentEmailSerializer,
     UserSerializer,
     DashboardStatsSerializer,
     CustomTokenObtainPairSerializer,
@@ -489,3 +490,15 @@ class LandingPageSubmitView(APIView):
             {"message": "¡Gracias! Nos pondremos en contacto contigo pronto.", "success": True},
             status=status.HTTP_201_CREATED,
         )
+
+
+class SentEmailViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet para visualizar los correos enviados desde el CRM.
+    Solo lectura para auditoría.
+    """
+    queryset = SentEmail.objects.all()
+    serializer_class = SentEmailSerializer
+    filterset_fields = ["lead", "to_email", "status"]
+    search_fields = ["subject", "to_email", "body_text"]
+

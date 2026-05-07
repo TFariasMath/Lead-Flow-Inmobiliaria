@@ -114,9 +114,9 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # ─── Emails (Automatización y Nurturing) ─────────────────────────────────────
 
-# Backend temporal para desarrollo: Imprime los correos en la consola.
-# Para producción, cambiar a "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Backend de Sandbox Personalizado: Guarda los correos en la base de datos
+# para verlos en el Dashboard.
+EMAIL_BACKEND = "leads.email_backends.DatabaseEmailBackend"
 DEFAULT_FROM_EMAIL = "CRM Inmobiliaria <no-reply@crm-inmobiliaria.com>"
 
 # Variables SMTP para cuando pases a producción:
