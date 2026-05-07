@@ -78,6 +78,13 @@ export interface Lead {
   assigned_to_name: string | null;
   first_source: number | null;
   first_source_name: string;
+  campaign: number | null;
+  campaign_name: string;
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  utm_term: string;
+  utm_content: string;
   interaction_count?: number;
   score: number;
   interactions?: Interaction[];
@@ -187,6 +194,22 @@ export interface Source {
 
 export function getSources(token: string) {
   return apiFetch<PaginatedResponse<Source>>("/sources/", { token });
+}
+
+// ─── Campaigns ────────────────────────────────────────────────────────────────
+
+export interface Campaign {
+  id: number;
+  name: string;
+  slug: string;
+  budget: string;
+  is_active: boolean;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+export function getCampaigns(token: string) {
+  return apiFetch<PaginatedResponse<Campaign>>("/campaigns/", { token });
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────

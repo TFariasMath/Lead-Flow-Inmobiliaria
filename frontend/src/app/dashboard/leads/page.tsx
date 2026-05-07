@@ -9,7 +9,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getLeads, getSources, type Lead, type Source } from "@/lib/api";
+import { getLeads, getSources, getCampaigns, type Lead, type Source, type Campaign } from "@/lib/api";
 import { Search, Filter, ChevronLeft, ChevronRight, Eye, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,12 +39,14 @@ export default function LeadsListPage() {
   const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [campaignFilter, setCampaignFilter] = useState("");
 
   const fetchLeads = useCallback(async () => {
     if (!token) return;
@@ -55,6 +57,7 @@ export default function LeadsListPage() {
       if (search) params.set("search", search);
       if (statusFilter) params.set("status", statusFilter);
       if (sourceFilter) params.set("first_source", sourceFilter);
+      if (campaignFilter) params.set("campaign", campaignFilter);
 
       const data = await getLeads(token, params.toString());
       setLeads(data.results);
@@ -64,15 +67,16 @@ export default function LeadsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, page, search, statusFilter, sourceFilter]);
+  }, [token, page, search, statusFilter, sourceFilter, campaignFilter]);
 
   useEffect(() => {
     fetchLeads();
-  }, [fetchLeads]);
+  }, [token, page, search, statusFilter, sourceFilter, campaignFilter]);
 
   useEffect(() => {
     if (!token) return;
     getSources(token).then((d) => setSources(d.results)).catch(console.error);
+    getCampaigns(token).then((d) => setCampaigns(d.results)).catch(console.error);
   }, [token]);
 
   const totalPages = Math.ceil(totalCount / 20);
@@ -174,6 +178,22 @@ export default function LeadsListPage() {
             {sources.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
+              </option>
+            ))}
+          </select>
+          <select
+            id="filter-campaign"
+            value={campaignFilter}
+            onChange={(e) => {
+              setCampaignFilter(e.target.value);
+              setPage(1);
+            }}
+            className="px-3 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
+          >
+            <option value="">Todas las campañas</option>
+            {campaigns.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
               </option>
             ))}
           </select>
@@ -281,8 +301,17 @@ export default function LeadsListPage() {
                         {STATUS_BADGES[lead.status]?.label || lead.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-sm text-[var(--color-text-muted)]">
-                      {lead.first_source_name || "—"}
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-white">
+                          {lead.first_source_name || "—"}
+                        </span>
+                        {lead.campaign_name && (
+                          <span className="text-[10px] text-[var(--color-primary)] font-medium">
+                            {lead.campaign_name}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-[var(--color-text-muted)]">
                       {lead.assigned_to_name || "Sin asignar"}

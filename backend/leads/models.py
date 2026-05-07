@@ -36,6 +36,54 @@ class Source(models.Model):
         return self.name
 
 
+class Campaign(models.Model):
+    """
+    Campañas de marketing asociadas a la captación de leads.
+    """
+    name = models.CharField(max_length=150, unique=True)
+    slug = models.SlugField(max_length=150, unique=True)
+    budget = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_active = models.BooleanField(default=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Campaña"
+        verbose_name_plural = "Campañas"
+
+    def __str__(self):
+        return self.name
+
+
+class LandingPage(models.Model):
+    """
+    Páginas de captura públicas integradas al CRM.
+    """
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    subtitle = models.TextField(blank=True, default="")
+    description = models.TextField(blank=True, default="Déjanos tus datos y te contactaremos a la brevedad.")
+    primary_color = models.CharField(max_length=20, default="#3b82f6", help_text="Color HEX para el botón y detalles.")
+    image_url = models.URLField(blank=True, default="")
+    
+    # Tracking
+    campaign = models.ForeignKey(Campaign, on_delete=models.SET_NULL, null=True, blank=True, related_name="landing_pages")
+    source = models.ForeignKey(Source, on_delete=models.SET_NULL, null=True, blank=True, help_text="Fuente asignada a los leads de esta landing.")
+    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Landing Page"
+        verbose_name_plural = "Landing Pages"
+
+    def __str__(self):
+        return self.title
+
+
 class VendorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="vendor_profile")
     is_available_for_leads = models.BooleanField(
@@ -134,6 +182,20 @@ class Lead(models.Model):
         blank=True,
         related_name="leads",
     )
+
+    # ── Tracking y Campañas (UTMs) ────────────────────────────────────
+    campaign = models.ForeignKey(
+        Campaign,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="leads",
+    )
+    utm_source = models.CharField(max_length=200, blank=True, default="")
+    utm_medium = models.CharField(max_length=200, blank=True, default="")
+    utm_campaign = models.CharField(max_length=200, blank=True, default="")
+    utm_term = models.CharField(max_length=200, blank=True, default="")
+    utm_content = models.CharField(max_length=200, blank=True, default="")
 
     # ── Timestamps y Score ────────────────────────────────────────────
     score = models.IntegerField(

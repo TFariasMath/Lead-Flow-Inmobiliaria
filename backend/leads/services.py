@@ -17,6 +17,7 @@ from typing import Optional
 from django.contrib.auth.models import User
 from django.db import transaction, IntegrityError
 from django.utils import timezone
+from django_q.tasks import async_task
 
 from .models import Lead, Source, Interaction, WebhookLog, RoundRobinState
 
@@ -180,6 +181,11 @@ class WebhookProcessor:
                     
                     # Distribuir mediante Round Robin
                     LeadDistributionService.assign(lead)
+                    
+                    # Nurturing: Enviar correo de bienvenida si califica (fuera de la transacción idealmente, 
+                    # pero como las tareas async van a la cola, está bien encolarla aquí).
+                    if getattr(lead, 'score', 0) >= 70:
+                        async_task('leads.tasks.task_send_welcome_email', str(lead.id))
 
                 # Crear interacción en el timeline
                 interaction = Interaction.objects.create(
@@ -291,6 +297,9 @@ class LeadDistributionService:
             state.save()
             
             logger.info("Lead %s asignado automáticamente a %s", lead.id, next_vendor.username)
+            
+            # Alerta: Enviar correo al vendedor
+            async_task('leads.tasks.task_send_vendor_alert', str(lead.id), next_vendor.id)
         
         return lead
 

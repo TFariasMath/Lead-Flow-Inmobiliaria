@@ -26,7 +26,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  if (!user?.is_staff) {
+  if (!user?.isStaff) {
     return (
       <div className="p-8 text-center text-red-400 bg-red-500/10 rounded-xl border border-red-500/20">
         <h2 className="text-xl font-bold">Acceso Denegado</h2>

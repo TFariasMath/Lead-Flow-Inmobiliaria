@@ -4,7 +4,7 @@ Lead Flow - Admin
 
 from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
-from .models import Lead, Source, Interaction, WebhookLog, VendorProfile, SessionAudit
+from .models import Lead, Source, Interaction, WebhookLog, VendorProfile, SessionAudit, Campaign, LandingPage
 
 
 @admin.register(VendorProfile)
@@ -33,6 +33,23 @@ class LeadAdmin(SimpleHistoryAdmin):
 class SourceAdmin(admin.ModelAdmin):
     list_display = ["name", "slug", "is_active", "created_at"]
     prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Campaign)
+class CampaignAdmin(admin.ModelAdmin):
+    list_display = ["name", "slug", "budget", "is_active", "start_date", "end_date", "created_at"]
+    list_filter = ["is_active"]
+    search_fields = ["name", "slug"]
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(LandingPage)
+class LandingPageAdmin(admin.ModelAdmin):
+    list_display = ["title", "slug", "campaign", "source", "is_active", "created_at"]
+    list_filter = ["is_active", "campaign"]
+    search_fields = ["title", "slug"]
+    prepopulated_fields = {"slug": ("title",)}
+    raw_id_fields = ["campaign", "source"]
 
 
 @admin.register(Interaction)

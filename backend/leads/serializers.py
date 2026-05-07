@@ -8,13 +8,20 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import Lead, Source, Interaction, WebhookLog
+from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage
 
 
 class SourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Source
         fields = ["id", "name", "slug", "description", "is_active", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
+class CampaignSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Campaign
+        fields = ["id", "name", "slug", "budget", "is_active", "start_date", "end_date", "created_at"]
         read_only_fields = ["id", "created_at"]
 
 
@@ -36,6 +43,9 @@ class LeadListSerializer(serializers.ModelSerializer):
     first_source_name = serializers.CharField(
         source="first_source.name", read_only=True, default=""
     )
+    campaign_name = serializers.CharField(
+        source="campaign.name", read_only=True, default=""
+    )
     interaction_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -45,6 +55,7 @@ class LeadListSerializer(serializers.ModelSerializer):
             "first_name", "last_name", "phone",
             "status", "assigned_to", "assigned_to_name",
             "first_source", "first_source_name",
+            "campaign", "campaign_name", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
             "interaction_count", "score",
             "created_at", "updated_at",
         ]
@@ -63,6 +74,9 @@ class LeadDetailSerializer(serializers.ModelSerializer):
     first_source_name = serializers.CharField(
         source="first_source.name", read_only=True, default=""
     )
+    campaign_name = serializers.CharField(
+        source="campaign.name", read_only=True, default=""
+    )
 
     class Meta:
         model = Lead
@@ -72,6 +86,7 @@ class LeadDetailSerializer(serializers.ModelSerializer):
             "address", "company",
             "status", "assigned_to", "assigned_to_name",
             "first_source", "first_source_name",
+            "campaign", "campaign_name", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
             "interactions", "score",
             "created_at", "updated_at",
         ]
@@ -99,6 +114,7 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             "first_name", "last_name", "phone",
             "address", "company",
             "status", "assigned_to", "first_source", "score",
+            "campaign", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
         ]
         read_only_fields = ["score"]
 
@@ -154,6 +170,35 @@ class WebhookReceiveSerializer(serializers.Serializer):
 class ReprocessSerializer(serializers.Serializer):
     """Para el re-procesamiento de webhooks fallidos."""
     edited_body = serializers.DictField()
+
+
+class LandingPageSerializer(serializers.ModelSerializer):
+    """Serializer público para Landing Pages."""
+    campaign_name = serializers.CharField(source="campaign.name", read_only=True, default="")
+    source_name = serializers.CharField(source="source.name", read_only=True, default="")
+
+    class Meta:
+        model = LandingPage
+        fields = [
+            "id", "title", "slug", "subtitle", "description",
+            "primary_color", "image_url",
+            "campaign", "campaign_name", "source", "source_name",
+            "is_active", "created_at",
+        ]
+
+
+class LandingPageSubmitSerializer(serializers.Serializer):
+    """Validación del formulario público de Landing Page."""
+    email = serializers.EmailField()
+    first_name = serializers.CharField(max_length=150, required=False, default="")
+    last_name = serializers.CharField(max_length=150, required=False, default="")
+    phone = serializers.CharField(max_length=50, required=False, default="")
+    company = serializers.CharField(max_length=200, required=False, default="")
+    utm_source = serializers.CharField(max_length=200, required=False, default="")
+    utm_medium = serializers.CharField(max_length=200, required=False, default="")
+    utm_campaign = serializers.CharField(max_length=200, required=False, default="")
+    utm_term = serializers.CharField(max_length=200, required=False, default="")
+    utm_content = serializers.CharField(max_length=200, required=False, default="")
 
 
 class UserSerializer(serializers.ModelSerializer):

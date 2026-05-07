@@ -20,16 +20,19 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import Lead, Source, Interaction, WebhookLog
+from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage
 from .serializers import (
     LeadListSerializer,
     LeadDetailSerializer,
     LeadCreateSerializer,
     SourceSerializer,
+    CampaignSerializer,
     InteractionSerializer,
     WebhookLogSerializer,
     WebhookReceiveSerializer,
     ReprocessSerializer,
+    LandingPageSerializer,
+    LandingPageSubmitSerializer,
     UserSerializer,
     DashboardStatsSerializer,
     CustomTokenObtainPairSerializer,
@@ -240,6 +243,14 @@ class SourceViewSet(viewsets.ModelViewSet):
     serializer_class = SourceSerializer
 
 
+# ─── Campaign ViewSet ────────────────────────────────────────────────────────
+
+class CampaignViewSet(viewsets.ModelViewSet):
+    queryset = Campaign.objects.all()
+    serializer_class = CampaignSerializer
+    filterset_fields = ["is_active"]
+
+
 # ─── Interaction ViewSet ─────────────────────────────────────────────────────
 
 class InteractionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -396,3 +407,85 @@ class PerformanceAnalyticsView(APIView):
         data.sort(key=lambda x: x["conversion_rate"], reverse=True)
 
         return Response(data)
+
+
+# ─── Landing Pages (Públicas) ─────────────────────────────────────────────────
+
+class LandingPageDetailView(APIView):
+    """
+    GET /api/v1/landings/<slug>/
+    Endpoint público para obtener los datos de una Landing Page.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, slug):
+        try:
+            landing = LandingPage.objects.select_related('campaign', 'source').get(
+                slug=slug, is_active=True
+            )
+        except LandingPage.DoesNotExist:
+            return Response(
+                {"error": "Landing Page no encontrada."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(LandingPageSerializer(landing).data)
+
+
+class LandingPageSubmitView(APIView):
+    """
+    POST /api/v1/landings/<slug>/submit/
+    Endpoint público para recibir leads desde una Landing Page.
+    Crea o actualiza el lead y lo asocia a la campaña de la landing.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, slug):
+        # Validar que la landing exista
+        try:
+            landing = LandingPage.objects.select_related('campaign', 'source').get(
+                slug=slug, is_active=True
+            )
+        except LandingPage.DoesNotExist:
+            return Response(
+                {"error": "Landing Page no encontrada."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = LandingPageSubmitSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        email = data.pop('email').lower().strip()
+
+        # Construir payload para el WebhookProcessor
+        source_slug = landing.source.slug if landing.source else 'landing-page'
+        raw_body = {
+            'email': email,
+            **{k: v for k, v in data.items() if v},
+            'landing_slug': slug,
+        }
+
+        from .services import WebhookProcessor
+        processor = WebhookProcessor(source_type=source_slug, raw_body=raw_body)
+        processor.create_log()
+        result = processor.process()
+
+        # Asociar campaña y UTMs al lead si fue exitoso
+        if result.status == 'success' and result.lead:
+            lead = result.lead
+            lead.campaign = landing.campaign
+            lead.utm_source = data.get('utm_source', '')
+            lead.utm_medium = data.get('utm_medium', '')
+            lead.utm_campaign = data.get('utm_campaign', '')
+            lead.utm_term = data.get('utm_term', '')
+            lead.utm_content = data.get('utm_content', '')
+            lead.save(update_fields=[
+                'campaign', 'utm_source', 'utm_medium',
+                'utm_campaign', 'utm_term', 'utm_content',
+            ])
+
+        return Response(
+            {"message": "¡Gracias! Nos pondremos en contacto contigo pronto.", "success": True},
+            status=status.HTTP_201_CREATED,
+        )

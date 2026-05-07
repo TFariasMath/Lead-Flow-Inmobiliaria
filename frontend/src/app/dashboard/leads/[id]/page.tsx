@@ -298,6 +298,15 @@ export default function LeadDetailPage() {
                 label="Fuente"
                 value={lead.first_source_name || "—"}
               />
+              {lead.campaign_name && (
+                <>
+                  <div className="h-px bg-[var(--color-border)] my-4" />
+                  <h4 className="text-xs font-semibold text-[var(--color-primary)] uppercase tracking-wider mb-2">Tracking</h4>
+                  <InfoRow label="Campaña" value={lead.campaign_name} />
+                  {lead.utm_source && <InfoRow label="UTM Source" value={lead.utm_source} />}
+                  {lead.utm_medium && <InfoRow label="UTM Medium" value={lead.utm_medium} />}
+                </>
+              )}
             </div>
           )}
         </div>
