@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "simple_history",
+    "django_q",
     # Local
     "leads",
 ]
@@ -151,3 +152,23 @@ CORS_ALLOWED_ORIGINS = [
 # ─── Default PK ──────────────────────────────────────────────────────────────
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ─── Django Q2 (Asynchronous Tasks) ──────────────────────────────────────────
+
+import sys
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+
+Q_CLUSTER = {
+    "name": "LeadFlowCluster",
+    "workers": 4,
+    "recycle": 500,
+    "timeout": 60,
+    "compress": True,
+    "save_limit": 250,
+    "queue_limit": 500,
+    "cpu_affinity": 1,
+    "label": "Django Q",
+    "orm": "default", # Uses Django's database (PostgreSQL) as the broker
+    "sync": TESTING,  # Ejecutar de forma sincrónica durante los tests
+}

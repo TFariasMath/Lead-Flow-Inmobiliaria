@@ -253,8 +253,12 @@ class LeadDistributionService:
     @staticmethod
     def assign(lead: Lead) -> Lead:
         """Asigna el lead al siguiente vendedor en el carrusel y actualiza el estado."""
-        # 1. Obtener vendedores activos (que no sean admin)
-        active_vendors = list(User.objects.filter(is_active=True, is_staff=False).order_by('id'))
+        # 1. Obtener vendedores activos y disponibles (que no sean admin)
+        active_vendors = list(User.objects.filter(
+            is_active=True, 
+            is_staff=False,
+            vendor_profile__is_available_for_leads=True
+        ).order_by('id'))
         
         if not active_vendors:
             logger.warning("No hay vendedores activos para asignar el lead %s", lead.id)

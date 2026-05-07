@@ -79,6 +79,7 @@ export interface Lead {
   first_source: number | null;
   first_source_name: string;
   interaction_count?: number;
+  score: number;
   interactions?: Interaction[];
   created_at: string;
   updated_at: string;
@@ -217,4 +218,17 @@ export interface DashboardStats {
 
 export function getDashboardStats(token: string) {
   return apiFetch<DashboardStats>("/dashboard/stats/", { token });
+}
+
+export interface VendorPerformance {
+  vendor_name: string;
+  total_assigned: number;
+  won: number;
+  lost: number;
+  conversion_rate: number;
+  is_available: boolean;
+}
+
+export function getPerformanceAnalytics(token: string) {
+  return apiFetch<VendorPerformance[]>("/analytics/performance/", { token });
 }

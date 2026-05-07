@@ -10,72 +10,36 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getLeads, getSources, type Lead, type Source } from "@/lib/api";
-import { Search, Filter, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, Eye, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGES: Record<string, { label: string; color: string }> = {
-  nuevo: { label: "Nuevo", color: "bg-indigo-500/15 text-indigo-400" },
-  contactado: { label: "Contactado", color: "bg-cyan-500/15 text-cyan-400" },
-  en_calificacion: {
-    label: "En Calificación",
-    color: "bg-amber-500/15 text-amber-400",
-  },
-  propuesta_enviada: {
-    label: "Propuesta",
-    color: "bg-purple-500/15 text-purple-400",
-  },
-  cierre_ganado: {
-    label: "Ganado",
-    color: "bg-emerald-500/15 text-emerald-400",
-  },
-  cierre_perdido: {
-    label: "Perdido",
-    color: "bg-red-500/15 text-red-400",
-  },
+// ...
 };
 
 export default function LeadsListPage() {
-  const { token } = useAuth();
-  const router = useRouter();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [sources, setSources] = useState<Source[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
-
-  const fetchLeads = useCallback(async () => {
+// ...
+  const handleExportCSV = async () => {
     if (!token) return;
-    setLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.set("page", page.toString());
-      if (search) params.set("search", search);
-      if (statusFilter) params.set("status", statusFilter);
-      if (sourceFilter) params.set("first_source", sourceFilter);
-
-      const data = await getLeads(token, params.toString());
-      setLeads(data.results);
-      setTotalCount(data.count);
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+      const res = await fetch(`${API_BASE}/leads/export/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error("Error exporting CSV");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "leads_export.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
-  }, [token, page, search, statusFilter, sourceFilter]);
-
-  useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
-
-  useEffect(() => {
-    if (!token) return;
-    getSources(token).then((d) => setSources(d.results)).catch(console.error);
-  }, [token]);
-
-  const totalPages = Math.ceil(totalCount / 20);
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -87,12 +51,21 @@ export default function LeadsListPage() {
             {totalCount} contacto{totalCount !== 1 ? "s" : ""} en el sistema
           </p>
         </div>
-        <button
-          onClick={() => router.push("/dashboard/leads/new")}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] text-white text-sm font-medium hover:shadow-lg hover:shadow-[var(--color-primary)]/25 transition-all"
-        >
-          + Nuevo Lead
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-white text-sm font-medium hover:bg-[var(--color-surface-hover)] transition-all"
+          >
+            <Download className="w-4 h-4" />
+            Exportar CSV
+          </button>
+          <button
+            onClick={() => router.push("/dashboard/leads/new")}
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] text-white text-sm font-medium hover:shadow-lg hover:shadow-[var(--color-primary)]/25 transition-all"
+          >
+            + Nuevo Lead
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -159,6 +132,9 @@ export default function LeadsListPage() {
                   Contacto
                 </th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
+                  Score
+                </th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
                   Email
                 </th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
@@ -215,6 +191,20 @@ export default function LeadsListPage() {
                           {lead.first_name} {lead.last_name}
                         </span>
                       </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={cn(
+                          "inline-flex px-2 py-0.5 rounded text-xs font-bold",
+                          lead.score >= 80
+                            ? "bg-emerald-500/15 text-emerald-400"
+                            : lead.score >= 50
+                            ? "bg-amber-500/15 text-amber-400"
+                            : "bg-red-500/15 text-red-400"
+                        )}
+                      >
+                        {lead.score}/100
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-[var(--color-text-muted)]">
                       {lead.original_email}

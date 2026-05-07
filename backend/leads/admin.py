@@ -4,8 +4,22 @@ Lead Flow - Admin
 
 from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
-from .models import Lead, Source, Interaction, WebhookLog
+from .models import Lead, Source, Interaction, WebhookLog, VendorProfile, SessionAudit
 
+
+@admin.register(VendorProfile)
+class VendorProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "is_available_for_leads")
+    list_filter = ("is_available_for_leads",)
+    search_fields = ("user__username", "user__email")
+
+
+@admin.register(SessionAudit)
+class SessionAuditAdmin(admin.ModelAdmin):
+    list_display = ("user", "login_at", "ip_address", "user_agent")
+    list_filter = ("login_at", "user")
+    search_fields = ("user__username", "ip_address")
+    readonly_fields = ("user", "ip_address", "user_agent", "login_at")
 
 @admin.register(Lead)
 class LeadAdmin(SimpleHistoryAdmin):

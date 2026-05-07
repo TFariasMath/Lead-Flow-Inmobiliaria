@@ -13,6 +13,8 @@ from .api import (
     InteractionViewSet,
     UserListView,
     DashboardStatsView,
+    PerformanceAnalyticsView,
+    LeadExportView,
 )
 
 router = DefaultRouter()
@@ -24,8 +26,11 @@ router.register(r"interactions", InteractionViewSet, basename="interaction")
 urlpatterns = [
     # Webhook público
     path("webhooks/receive/", WebhookReceiveView.as_view(), name="webhook-receive"),
-    # Dashboard
+    # Dashboard y Analíticas
     path("dashboard/stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
+    path("analytics/performance/", PerformanceAnalyticsView.as_view(), name="analytics-performance"),
+    # Exportación
+    path("leads/export/", LeadExportView.as_view(), name="leads-export"),
     # Usuarios (vendedores)
     path("users/", UserListView.as_view(), name="user-list"),
     # Router DRF

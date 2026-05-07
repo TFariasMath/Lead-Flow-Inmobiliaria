@@ -45,6 +45,31 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     """Vista de login que retorna el token customizado (con is_staff)."""
     serializer_class = CustomTokenObtainPairSerializer
 
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            from django.contrib.auth.models import User
+            from .models import SessionAudit
+            
+            # SimpleJWT Serializer expects username and password
+            username = request.data.get("username")
+            user = User.objects.filter(username=username).first()
+            if user:
+                x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+                if x_forwarded_for:
+                    ip = x_forwarded_for.split(',')[0]
+                else:
+                    ip = request.META.get('REMOTE_ADDR')
+                
+                user_agent = request.META.get('HTTP_USER_AGENT', '')
+                
+                SessionAudit.objects.create(
+                    user=user,
+                    ip_address=ip,
+                    user_agent=user_agent
+                )
+        return response
+
 
 # ─── Webhook Receive (público) ───────────────────────────────────────────────
 
@@ -69,16 +94,17 @@ class WebhookReceiveView(APIView):
 
         # Crear log de inmediato con PENDING
         processor = WebhookProcessor(source_type=source_type, raw_body=data)
-        processor.create_log()
+        webhook_log = processor.create_log()
 
-        # Intentar procesar sincrónicamente
-        webhook_log = processor.process()
+        # Enviar tarea a Django-Q2
+        from django_q.tasks import async_task
+        async_task('leads.tasks.process_webhook_task', str(webhook_log.id))
 
         return Response(
             {
                 "status": "received",
                 "webhook_log_id": str(webhook_log.id),
-                "processing_status": webhook_log.status,
+                "processing_status": "pending", # Siempre devolvemos pending al cliente externo
             },
             status=status.HTTP_200_OK,
         )
@@ -240,6 +266,51 @@ class UserListView(APIView):
         return Response(serializer.data)
 
 
+class LeadExportView(APIView):
+    """
+    GET /api/v1/leads/export/
+    Exporta los leads a CSV. Si es vendedor, solo exporta los suyos.
+    Si es admin, exporta todos.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        import csv
+        from django.http import HttpResponse
+
+        user = request.user
+        leads_qs = Lead.objects.all().order_by("-created_at")
+        
+        if not user.is_staff:
+            leads_qs = leads_qs.filter(assigned_to=user)
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="leads_export.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'ID', 'Email Original', 'Nombre', 'Apellido', 'Telefono',
+            'Empresa', 'Estado', 'Vendedor', 'Fuente', 'Score', 'Fecha Creacion'
+        ])
+
+        for lead in leads_qs:
+            writer.writerow([
+                lead.id,
+                lead.original_email,
+                lead.first_name,
+                lead.last_name,
+                lead.phone,
+                lead.company,
+                lead.get_status_display(),
+                lead.assigned_to.username if lead.assigned_to else "Sin asignar",
+                lead.first_source.name if lead.first_source else "Sin fuente",
+                lead.score,
+                lead.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            ])
+
+        return response
+
+
 # ─── Dashboard Stats ────────────────────────────────────────────────────────
 
 class DashboardStatsView(APIView):
@@ -286,5 +357,42 @@ class DashboardStatsView(APIView):
             "webhook_success_rate": round(success_rate, 1),
             "leads_by_source": leads_by_source,
         }
+
+        return Response(data)
+
+
+# ─── Analytics (Performance) ──────────────────────────────────────────────────
+
+class PerformanceAnalyticsView(APIView):
+    """
+    GET /api/v1/analytics/performance/
+    Analíticas de rendimiento de vendedores (Solo administradores).
+    """
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+
+    def get(self, request):
+        from django.db.models import Count, Q
+
+        vendors = User.objects.filter(is_active=True, is_staff=False)
+        data = []
+
+        for vendor in vendors:
+            total = Lead.objects.filter(assigned_to=vendor).count()
+            won = Lead.objects.filter(assigned_to=vendor, status=Lead.Status.CIERRE_GANADO).count()
+            lost = Lead.objects.filter(assigned_to=vendor, status=Lead.Status.CIERRE_PERDIDO).count()
+            
+            conversion_rate = (won / total * 100) if total > 0 else 0
+            
+            data.append({
+                "vendor_name": f"{vendor.first_name} {vendor.last_name}".strip() or vendor.username,
+                "total_assigned": total,
+                "won": won,
+                "lost": lost,
+                "conversion_rate": round(conversion_rate, 2),
+                "is_available": getattr(vendor, "vendor_profile", None) and vendor.vendor_profile.is_available_for_leads
+            })
+            
+        # Ordenar por tasa de conversión descendente
+        data.sort(key=lambda x: x["conversion_rate"], reverse=True)
 
         return Response(data)

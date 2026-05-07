@@ -45,10 +45,10 @@ class LeadListSerializer(serializers.ModelSerializer):
             "first_name", "last_name", "phone",
             "status", "assigned_to", "assigned_to_name",
             "first_source", "first_source_name",
-            "interaction_count",
+            "interaction_count", "score",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "original_email", "created_at", "updated_at"]
+        read_only_fields = ["id", "original_email", "score", "created_at", "updated_at"]
 
     def get_assigned_to_name(self, obj):
         if obj.assigned_to:
@@ -72,10 +72,10 @@ class LeadDetailSerializer(serializers.ModelSerializer):
             "address", "company",
             "status", "assigned_to", "assigned_to_name",
             "first_source", "first_source_name",
-            "interactions",
+            "interactions", "score",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "original_email", "created_at", "updated_at"]
+        read_only_fields = ["id", "original_email", "score", "created_at", "updated_at"]
 
     def get_assigned_to_name(self, obj):
         if obj.assigned_to:
@@ -98,8 +98,9 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             "original_email", "contact_email",
             "first_name", "last_name", "phone",
             "address", "company",
-            "status", "assigned_to", "first_source",
+            "status", "assigned_to", "first_source", "score",
         ]
+        read_only_fields = ["score"]
 
     def validate_original_email(self, value):
         if Lead.objects.filter(original_email=value.lower()).exists():
