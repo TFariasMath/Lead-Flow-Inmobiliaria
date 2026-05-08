@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; color: #1e293b; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #0f172a; padding: 25px; text-align: center; border-radius: 12px 12px 0 0; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; }
+        .content { background-color: #ffffff; padding: 40px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px; }
+        .btn { display: inline-block; padding: 14px 28px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 25px; }
+        .footer { text-align: center; margin-top: 25px; font-size: 13px; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>¡Bienvenido a Lead Flow!</h1>
+        </div>
+        <div class="content">
+            <p>Hola <strong>{{ first_name }}</strong>,</p>
+            <p>Es un gusto saludarte. Hemos recibido tus datos correctamente y un asesor especializado te contactará en breve.</p>
+            <p>Para que vayas conociendo nuestras opciones, hemos preparado un <strong>Brochure Personalizado</strong> exclusivamente para ti:</p>
+            <div style="text-align: center;">
+                <a href="{{ brochure_url }}" class="btn">Ver mi Brochure PDF</a>
+            </div>
+            <p style="margin-top: 35px;">Si tienes dudas inmediatas, solo responde a este correo.</p>
+            <p>Saludos,<br>El equipo comercial.</p>
+        </div>
+        <div class="footer">
+            <p>Este es un mensaje automático de nuestro CRM.</p>
+        </div>
+    </div>
+</body>
+</html>

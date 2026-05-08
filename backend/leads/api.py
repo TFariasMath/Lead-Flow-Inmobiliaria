@@ -59,40 +59,34 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         """
         Sobreescribe el login exitoso para registrar una auditoría de seguridad.
+        No bloquea el acceso si la auditoría falla.
         """
         response = super().post(request, *args, **kwargs)
         
-        # Si las credenciales son válidas y el token fue generado
         if response.status_code == 200:
-            from .models import SessionAudit
-            
-            # Identificar al usuario que acaba de entrar
-            username = request.data.get("username")
-            user = User.objects.filter(username=username).first()
-            
-            if user:
-                # Detección de IP (maneja proxy/balanceadores)
-                x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-                if x_forwarded_for:
-                    ip = x_forwarded_for.split(',')[0]
-                else:
-                    ip = request.META.get('REMOTE_ADDR')
+            try:
+                from .models import SessionAudit
+                username = request.data.get("username")
+                user = User.objects.filter(username=username).first()
                 
-                # Captura del navegador/sistema operativo del usuario
-                user_agent = request.META.get('HTTP_USER_AGENT', '')
+                if user:
+                    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+                    ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
+                    user_agent = request.META.get('HTTP_USER_AGENT', '')
+                    
+                    # Auditamos de forma segura
+                    SessionAudit.objects.create(
+                        user=user,
+                        ip_address=ip,
+                        user_agent=user_agent
+                    )
+            except Exception as e:
+                # Si falla la auditoría, logueamos el error pero NO bloqueamos al usuario
+                logger.error(f"Error en auditoría de sesión: {e}")
                 
-                # Crear el registro de auditoría en la BD
-                SessionAudit.objects.create(
-                    user=user,
-                    ip_address=ip,
-                    user_agent=user_agent
-                )
         return response
 
 
-# ─── Webhook Receive (público) ───────────────────────────────────────────────
-
-class WebhookReceiveView(APIView):
 # ─── Webhook Receive (Público / Entrada de Leads) ───────────────────────────
 
 class WebhookReceiveView(APIView):
@@ -112,8 +106,15 @@ class WebhookReceiveView(APIView):
         Punto de entrada para el POST del webhook.
         """
         raw_payload = request.data
-        source_type = raw_payload.get("source_type", "unknown")
-        data = raw_payload.get("data", raw_payload)
+        
+        # Robustez: Si nos envían una lista [] o algo que no sea un objeto {}, 
+        # lo manejamos como un payload genérico sin explotar.
+        if not isinstance(raw_payload, dict):
+            source_type = "unknown"
+            data = {"raw_list": raw_payload} if isinstance(raw_payload, list) else {"raw_data": str(raw_payload)}
+        else:
+            source_type = raw_payload.get("source_type", "unknown")
+            data = raw_payload.get("data", raw_payload)
 
         # 1. Registrar la llegada del webhook en la BD inmediatamente
         processor = WebhookProcessor(source_type=source_type, raw_body=data)
@@ -382,9 +383,17 @@ class DashboardStatsView(APIView):
     """
     def get(self, request):
         user = request.user
+        days = request.query_params.get('days')
 
         # Filtrar el universo de leads según quién consulta
         leads_qs = Lead.objects.all()
+
+        if days and days.isdigit():
+            from django.utils import timezone
+            from datetime import timedelta
+            start_date = timezone.now() - timedelta(days=int(days))
+            leads_qs = leads_qs.filter(created_at__gte=start_date)
+
         if not user.is_staff:
             leads_qs = leads_qs.filter(assigned_to=user)
 
@@ -459,28 +468,7 @@ class PerformanceAnalyticsView(APIView):
         data.sort(key=lambda x: x["conversion_rate"], reverse=True)
 
         return Response(data)
-        data = []
 
-        for vendor in vendors:
-            total = Lead.objects.filter(assigned_to=vendor).count()
-            won = Lead.objects.filter(assigned_to=vendor, status=Lead.Status.CIERRE_GANADO).count()
-            lost = Lead.objects.filter(assigned_to=vendor, status=Lead.Status.CIERRE_PERDIDO).count()
-            
-            conversion_rate = (won / total * 100) if total > 0 else 0
-            
-            data.append({
-                "vendor_name": f"{vendor.first_name} {vendor.last_name}".strip() or vendor.username,
-                "total_assigned": total,
-                "won": won,
-                "lost": lost,
-                "conversion_rate": round(conversion_rate, 2),
-                "is_available": getattr(vendor, "vendor_profile", None) and vendor.vendor_profile.is_available_for_leads
-            })
-            
-        # Ordenar por tasa de conversión descendente
-        data.sort(key=lambda x: x["conversion_rate"], reverse=True)
-
-        return Response(data)
 
 
 # ─── Media & Landings (Pro) ──────────────────────────────────────────────────

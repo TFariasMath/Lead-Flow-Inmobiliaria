@@ -202,6 +202,12 @@ class ReprocessSerializer(serializers.Serializer):
     edited_body = serializers.DictField()
 
 
+class WebhookReceiveSerializer(serializers.Serializer):
+    """Validación mínima del payload de webhook entrante."""
+    source_type = serializers.CharField(max_length=100)
+    data = serializers.DictField()
+
+
 # ─── Landing Pages & Multimedia ──────────────────────────────────────────────
 
 class MediaAssetSerializer(serializers.ModelSerializer):

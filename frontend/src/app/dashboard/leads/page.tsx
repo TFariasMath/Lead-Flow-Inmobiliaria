@@ -1,7 +1,7 @@
 /**
  * Lead Flow - Leads List Page
  * ===========================
- * Tabla principal de gestión comercial con filtros por estado, fuente y búsqueda.
+ * Tabla principal de gestión comercial con filtros y Slide-over de detalle.
  */
 
 "use client";
@@ -9,29 +9,33 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getLeads, getSources, getCampaigns, type Lead, type Source, type Campaign } from "@/lib/api";
-import { Search, Filter, ChevronLeft, ChevronRight, Eye, Download } from "lucide-react";
+import { getLeads, getSources, getCampaigns, updateLead, type Lead, type Source, type Campaign } from "@/lib/api";
+import { Search, Filter, ChevronLeft, ChevronRight, Eye, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import LeadDetailPanel from "@/components/LeadDetailPanel";
+
+const STATUS_OPTIONS = [
+  "nuevo",
+  "contactado",
+  "en_calificacion",
+  "propuesta_enviada",
+  "cierre_ganado",
+  "cierre_perdido",
+];
 
 const STATUS_BADGES: Record<string, { label: string; color: string }> = {
-  nuevo: { label: "Nuevo", color: "bg-indigo-500/15 text-indigo-400" },
-  contactado: { label: "Contactado", color: "bg-cyan-500/15 text-cyan-400" },
-  en_calificacion: {
-    label: "En Calificación",
-    color: "bg-amber-500/15 text-amber-400",
-  },
-  propuesta_enviada: {
-    label: "Propuesta",
-    color: "bg-purple-500/15 text-purple-400",
-  },
-  cierre_ganado: {
-    label: "Ganado",
-    color: "bg-emerald-500/15 text-emerald-400",
-  },
-  cierre_perdido: {
-    label: "Perdido",
-    color: "bg-red-500/15 text-red-400",
-  },
+  Nuevo: { label: "Nuevo", color: "bg-blue-500/10 text-blue-400 border border-blue-500/20" },
+  nuevo: { label: "Nuevo", color: "bg-blue-500/10 text-blue-400 border border-blue-500/20" },
+  Contactado: { label: "Contactado", color: "bg-sky-500/10 text-sky-400 border border-sky-500/20" },
+  contactado: { label: "Contactado", color: "bg-sky-500/10 text-sky-400 border border-sky-500/20" },
+  "En Calificación": { label: "Calificación", color: "bg-amber-500/10 text-amber-400 border border-amber-500/20" },
+  en_calificacion: { label: "Calificación", color: "bg-amber-500/10 text-amber-400 border border-amber-500/20" },
+  "Propuesta Enviada": { label: "Propuesta", color: "bg-violet-500/10 text-violet-400 border border-violet-500/20" },
+  propuesta_enviada: { label: "Propuesta", color: "bg-violet-500/10 text-violet-400 border border-violet-500/20" },
+  "Cierre Ganado": { label: "Ganado", color: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
+  cierre_ganado: { label: "Ganado", color: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
+  "Cierre Perdido": { label: "Perdido", color: "bg-slate-500/10 text-slate-400 border border-slate-500/20" },
+  cierre_perdido: { label: "Perdido", color: "bg-slate-500/10 text-slate-400 border border-slate-500/20" },
 };
 
 export default function LeadsListPage() {
@@ -47,6 +51,9 @@ export default function LeadsListPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
+  
+  // Slide-over state
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   const fetchLeads = useCallback(async () => {
     if (!token) return;
@@ -71,7 +78,7 @@ export default function LeadsListPage() {
 
   useEffect(() => {
     fetchLeads();
-  }, [token, page, search, statusFilter, sourceFilter, campaignFilter]);
+  }, [fetchLeads]);
 
   useEffect(() => {
     if (!token) return;
@@ -79,7 +86,15 @@ export default function LeadsListPage() {
     getCampaigns(token).then((d) => setCampaigns(d.results)).catch(console.error);
   }, [token]);
 
-  const totalPages = Math.ceil(totalCount / 20);
+  const handleStatusUpdate = async (leadId: string, newStatus: string) => {
+    if (!token) return;
+    try {
+      await updateLead(token, leadId, { status: newStatus });
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleExportCSV = async () => {
     if (!token) return;
@@ -103,27 +118,43 @@ export default function LeadsListPage() {
     }
   };
 
+  const totalPages = Math.ceil(totalCount / 20);
+
+  const newToday = leads.filter(l => {
+    const d = new Date(l.created_at);
+    const today = new Date();
+    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
+  }).length;
+  
+  const unattended = leads.filter(l => l.status.toLowerCase() === "nuevo").length;
+
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn relative">
+      {/* Mini-Dashboard Ticker */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <TickerCard label="Nuevos Hoy" value={newToday} color="#3b82f6" trend="+2" />
+        <TickerCard label="Sin Atender" value={unattended} color="#f59e0b" trend={unattended > 5 ? "Alert" : "OK"} />
+        <TickerCard label="Meta Mensual" value="85%" color="#10b981" trend="↑ 5%" />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pt-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Leads</h1>
-          <p className="text-[var(--color-text-muted)] mt-1">
-            {totalCount} contacto{totalCount !== 1 ? "s" : ""} en el sistema
+          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Leads</h1>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
+            {totalCount} contactos en sistema
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-white text-sm font-medium hover:bg-[var(--color-surface-hover)] transition-all"
+            className="h-10 px-4 rounded-xl bg-slate-900/50 border border-white/5 text-slate-300 text-xs font-bold uppercase tracking-widest hover:text-white transition-all"
           >
-            <Download className="w-4 h-4" />
-            Exportar CSV
+            Exportar
           </button>
           <button
             onClick={() => router.push("/dashboard/leads/new")}
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] text-white text-sm font-medium hover:shadow-lg hover:shadow-[var(--color-primary)]/25 transition-all"
+            className="h-10 px-6 rounded-xl bg-blue-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-500 shadow-lg shadow-blue-600/20 transition-all"
           >
             + Nuevo Lead
           </button>
@@ -133,7 +164,7 @@ export default function LeadsListPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             id="lead-search"
             type="text"
@@ -143,11 +174,11 @@ export default function LeadsListPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-sm text-white placeholder-[var(--color-text-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-900/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all"
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-[var(--color-text-muted)]" />
+          <Filter className="w-4 h-4 text-slate-500 mr-2" />
           <select
             id="filter-status"
             value={statusFilter}
@@ -155,15 +186,10 @@ export default function LeadsListPage() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
+            className="px-3 py-2.5 bg-slate-900/50 border border-white/5 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
           >
-            <option value="">Todos los estados</option>
-            <option value="nuevo">Nuevo</option>
-            <option value="contactado">Contactado</option>
-            <option value="en_calificacion">En Calificación</option>
-            <option value="propuesta_enviada">Propuesta Enviada</option>
-            <option value="cierre_ganado">Cierre Ganado</option>
-            <option value="cierre_perdido">Cierre Perdido</option>
+            <option value="">Estado</option>
+            {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt.replace('_', ' ')}</option>)}
           </select>
           <select
             id="filter-source"
@@ -172,160 +198,106 @@ export default function LeadsListPage() {
               setSourceFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
+            className="px-3 py-2.5 bg-slate-900/50 border border-white/5 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
           >
-            <option value="">Todas las fuentes</option>
+            <option value="">Fuente</option>
             {sources.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
           </select>
-          <select
-            id="filter-campaign"
-            value={campaignFilter}
-            onChange={(e) => {
-              setCampaignFilter(e.target.value);
-              setPage(1);
-            }}
-            className="px-3 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-          >
-            <option value="">Todas las campañas</option>
-            {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      {/* Table Section */}
+      <div className="glass-container rounded-3xl overflow-hidden border border-white/5">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b border-[var(--color-border)]">
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Contacto
-                </th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Score
-                </th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Teléfono
-                </th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Fuente
-                </th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Vendedor
-                </th>
-                <th className="text-center px-5 py-3.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">
-                  Acciones
-                </th>
+              <tr className="border-b border-white/5 bg-white/[0.02]">
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contacto</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Score</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Email</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estado</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Vendedor</th>
+                <th className="text-center px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Acciones</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12">
-                    <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
+                  <td colSpan={6} className="py-20 text-center">
+                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="text-center py-12 text-[var(--color-text-muted)]"
-                  >
-                    No se encontraron leads
-                  </td>
+                  <td colSpan={6} className="py-20 text-center text-slate-500 font-medium">No se encontraron leads</td>
                 </tr>
               ) : (
                 leads.map((lead, i) => (
                   <tr
                     key={lead.id}
-                    className="border-b border-[var(--color-border)]/50 hover:bg-[var(--color-surface-hover)] transition-colors cursor-pointer"
-                    style={{ animationDelay: `${i * 30}ms` }}
-                    onClick={() =>
-                      router.push(`/dashboard/leads/${lead.id}`)
-                    }
+                    className="group hover:bg-white/[0.03] transition-colors cursor-pointer"
+                    onClick={() => setSelectedLeadId(lead.id)}
                   >
-                    <td className="px-5 py-3.5">
+                    <td className="px-6 py-4 max-w-[200px]">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary)]/30 to-[var(--color-accent)]/30 flex items-center justify-center text-xs font-bold text-[var(--color-primary-hover)]">
-                          {(lead.first_name || lead.original_email)
-                            .charAt(0)
-                            .toUpperCase()}
+                        <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                          {(lead.first_name || lead.original_email).charAt(0).toUpperCase()}
                         </div>
-                        <span className="text-sm font-medium text-white">
+                        <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate">
                           {lead.first_name} {lead.last_name}
                         </span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={cn(
-                          "inline-flex px-2 py-0.5 rounded text-xs font-bold",
-                          lead.score >= 80
-                            ? "bg-emerald-500/15 text-emerald-400"
-                            : lead.score >= 50
-                            ? "bg-amber-500/15 text-amber-400"
-                            : "bg-red-500/15 text-red-400"
-                        )}
-                      >
-                        {lead.score}/100
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-[var(--color-text-muted)]">
-                      {lead.original_email}
-                    </td>
-                    <td className="px-5 py-3.5 text-sm text-[var(--color-text-muted)]">
-                      {lead.phone || "—"}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={cn(
-                          "inline-flex px-2.5 py-1 rounded-full text-xs font-medium",
-                          STATUS_BADGES[lead.status]?.color ||
-                            "bg-gray-500/15 text-gray-400"
-                        )}
-                      >
-                        {STATUS_BADGES[lead.status]?.label || lead.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-white">
-                          {lead.first_source_name || "—"}
-                        </span>
-                        {lead.campaign_name && (
-                          <span className="text-[10px] text-[var(--color-primary)] font-medium">
-                            {lead.campaign_name}
-                          </span>
-                        )}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: lead.score >= 80 ? '#10b981' : lead.score >= 50 ? '#f59e0b' : '#ef4444' }} />
+                         <span className="text-xs font-bold text-white">{lead.score}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-sm text-[var(--color-text-muted)]">
-                      {lead.assigned_to_name || "Sin asignar"}
+                    <td className="px-6 py-4 max-w-[180px]">
+                      <span className="text-xs font-medium text-slate-400 truncate block">{lead.original_email}</span>
                     </td>
-                    <td className="px-5 py-3.5 text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/dashboard/leads/${lead.id}`);
-                        }}
-                        className="p-1.5 rounded-md hover:bg-[var(--color-primary)]/15 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                    <td className="px-6 py-4">
+                      <select 
+                        value={lead.status}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-transparent border border-white/5 focus:outline-none focus:ring-1 focus:ring-blue-600/50 cursor-pointer",
+                          STATUS_BADGES[lead.status]?.color || "text-slate-400"
+                        )}
                       >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                        {STATUS_OPTIONS.map(opt => <option key={opt} value={opt} className="bg-slate-900 text-white">{opt.replace('_', ' ')}</option>)}
+                      </select>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-medium text-slate-400">{lead.assigned_to_name || "Sin asignar"}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedLeadId(lead.id);
+                          }}
+                          className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/dashboard/leads/${lead.id}`);
+                          }}
+                          className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -336,28 +308,56 @@ export default function LeadsListPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--color-border)]">
-            <p className="text-sm text-[var(--color-text-muted)]">
+          <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-white/[0.01]">
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
               Página {page} de {totalPages}
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="p-1.5 rounded-md border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] disabled:opacity-30"
+                className="p-2 rounded-lg border border-white/5 text-slate-500 hover:bg-white/5 disabled:opacity-30"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="p-1.5 rounded-md border border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] disabled:opacity-30"
+                className="p-2 rounded-lg border border-white/5 text-slate-500 hover:bg-white/5 disabled:opacity-30"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         )}
+      </div>
+
+      {/* Slide-over Detail Panel */}
+      <LeadDetailPanel 
+        leadId={selectedLeadId}
+        token={token}
+        onClose={() => setSelectedLeadId(null)}
+        onUpdate={fetchLeads}
+      />
+    </div>
+  );
+}
+
+function TickerCard({ label, value, color, trend }: { label: string; value: string | number; color: string; trend: string }) {
+  return (
+    <div className="glass-card rounded-2xl p-4 flex items-center justify-between group overflow-hidden relative">
+      <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: color }} />
+      <div>
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</p>
+        <p className="text-xl font-black text-white mt-0.5">{value}</p>
+      </div>
+      <div className="text-right">
+        <span className={cn(
+          "text-[10px] font-bold px-1.5 py-0.5 rounded",
+          trend === "Alert" ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"
+        )}>
+          {trend}
+        </span>
       </div>
     </div>
   );

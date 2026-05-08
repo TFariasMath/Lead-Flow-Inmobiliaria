@@ -1,85 +1,130 @@
 """
-Lead Flow - Management Command: Seed Data
-=========================================
-Comando de consola para inicializar la base de datos con datos de prueba.
-Uso: python manage.py seed_data
+Lead Flow - Management Command: Seed Data (PRO Version)
+=====================================================
+Puebla la base de datos con un historial masivo de 90 días.
+Simula leads, visitas, conversiones e interacciones.
 """
 
-import logging
+import random
+from datetime import timedelta
+from django.utils import timezone
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from leads.models import Source
-
-# Logger para reportar errores en la consola
-logger = logging.getLogger(__name__)
+from leads.models import Source, Campaign, LandingPage, Lead, Interaction, LandingPageVisit
 
 class Command(BaseCommand):
-    """
-    Carga el superusuario, vendedores y fuentes de origen por defecto.
-    Garantiza que el sistema sea funcional inmediatamente después de instalarlo.
-    """
-    help = 'Inicializa la base de datos con vendedores y fuentes de ejemplo.'
+    help = 'Puebla la base de datos con 90 días de datos históricos realistas.'
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.MIGRATE_HEADING("--- Iniciando Proceso de Sembrado (Seed) ---"))
+        self.stdout.write(self.style.MIGRATE_HEADING("--- Generando Datos Históricos Pro (90 días) ---"))
 
-        # 1. Crear Administrador Principal
-        # Se asegura de que siempre haya un usuario staff para entrar al panel /admin
-        if not User.objects.filter(username="admin").exists():
-            User.objects.create_superuser(
-                username="admin",
-                email="admin@leadflow.dev",
-                password="admin123",
-                first_name="Administrador",
-                last_name="General",
-            )
-            self.stdout.write(self.style.SUCCESS("✅ Superusuario 'admin' creado (Pass: admin123)"))
+        # 1. Usuarios Base
+        admin, _ = User.objects.get_or_create(username="admin", defaults={"is_staff": True, "is_superuser": True})
+        admin.set_password("123")
+        admin.save()
 
-        # 2. Crear Equipo de Ventas
-        # Estos usuarios recibirán los leads a través del sistema Round Robin.
-        vendors = [
-            {"username": "vendedor1", "first_name": "María", "last_name": "García", "email": "maria@leadflow.dev"},
-            {"username": "vendedor2", "first_name": "Carlos", "last_name": "López", "email": "carlos@leadflow.dev"},
-            {"username": "vendedor3", "first_name": "Ana", "last_name": "Martínez", "email": "ana@leadflow.dev"},
+        vendedores = []
+        for name in ["Maria", "Carlos", "Ana"]:
+            user, _ = User.objects.get_or_create(username=name.lower(), defaults={"first_name": name, "is_staff": False})
+            user.set_password("123")
+            user.save()
+            vendedores.append(user)
+
+        # 2. Fuentes
+        sources = {}
+        for s_info in [
+            {"name": "Facebook Ads", "slug": "facebook"},
+            {"name": "Google Search", "slug": "google"},
+            {"name": "Instagram", "slug": "instagram"},
+            {"name": "Directo", "slug": "direct"},
+        ]:
+            source, _ = Source.objects.get_or_create(slug=s_info["slug"], defaults={"name": s_info["name"]})
+            sources[s_info["slug"]] = source
+
+        # 3. Campañas y Landings
+        campanas_info = [
+            {"name": "Edificio SkyView", "slug": "skyview", "color": "#3b82f6"},
+            {"name": "Barrio Universitario", "slug": "barrio-u", "color": "#10b981"},
+            {"name": "Lofts Industriales", "slug": "lofts", "color": "#f59e0b"},
         ]
 
-        for v in vendors:
-            # get_or_create evita duplicados si el comando se corre varias veces
-            user, created = User.objects.get_or_create(
-                username=v["username"],
+        landings = []
+        for c in campanas_info:
+            camp, _ = Campaign.objects.get_or_create(slug=c["slug"], defaults={"name": c["name"], "budget": random.randint(1000, 5000)})
+            
+            landing, _ = LandingPage.objects.get_or_create(
+                slug=c["slug"],
                 defaults={
-                    "first_name": v["first_name"],
-                    "last_name": v["last_name"],
-                    "email": v["email"],
-                    "is_staff": False,
-                },
+                    "title": f"Invierte en {c['name']}",
+                    "subtitle": "La mejor rentabilidad del sector.",
+                    "primary_color": c["color"],
+                    "campaign": camp,
+                    "source": sources["facebook"],
+                    "benefits": [
+                        {"icon": "Building", "title": "Entrega Inmediata"},
+                        {"icon": "TrendingUp", "title": "Plusvalía del 15%"},
+                        {"icon": "Shield", "title": "Seguridad 24/7"}
+                    ]
+                }
             )
-            if created:
-                user.set_password("vendedor123")
-                user.save()
-                self.stdout.write(self.style.SUCCESS(f"✅ Vendedor '{v['username']}' configurado."))
-            else:
-                # Si ya existía, forzamos la actualización de nombres (por si hubo cambios en el script)
-                user.first_name = v["first_name"]
-                user.last_name = v["last_name"]
-                user.save()
-                self.stdout.write(f"ℹ️ Vendedor '{v['username']}' ya existía (nombres actualizados).")
+            landings.append(landing)
 
-        # 3. Crear Fuentes de Origen
-        # Define los canales por los cuales pueden entrar los prospectos.
-        sources = [
-            {"name": "Sitio Web", "slug": "web", "description": "Formulario de contacto oficial"},
-            {"name": "Facebook Ads", "slug": "facebook", "description": "Campañas de generación de clientes potenciales"},
-            {"name": "Google Search", "slug": "google", "description": "Búsqueda orgánica en buscadores"},
-            {"name": "Manual", "slug": "manual", "description": "Ingreso directo por el vendedor"},
-        ]
+        # 4. Generación de Datos en el Tiempo (90 días atrás)
+        ahora = timezone.now()
+        total_leads = 0
+        total_visitas = 0
 
-        for s in sources:
-            source, created = Source.objects.get_or_create(
-                slug=s["slug"],
-                defaults={"name": s["name"], "description": s["description"]},
-            )
-            if created:
-                self.stdout.write(self.style.SUCCESS(f"✅ Fuente '{s['name']}' habilitada."))
+        self.stdout.write("Generando registros diarios...")
+        for i in range(90, -1, -1):
+            fecha = ahora - timedelta(days=i)
+            
+            for lp in landings:
+                # Simular visitas diarias (entre 10 y 50)
+                num_visitas = random.randint(10, 50)
+                for _ in range(num_visitas):
+                    v = LandingPageVisit.objects.create(
+                        landing_page=lp,
+                        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Simulation",
+                        ip_address=f"192.168.1.{random.randint(1, 254)}"
+                    )
+                    # Forzar fecha en el pasado
+                    LandingPageVisit.objects.filter(id=v.id).update(created_at=fecha)
+                    total_visitas += 1
+                
+                # Actualizar contador acumulado en la landing
+                LandingPage.objects.filter(id=lp.id).update(visits_count=lp.visits_count + num_visitas)
+                lp.refresh_from_db()
 
-        self.stdout.write(self.style.MIGRATE_LABEL("\n🚀 ¡Ambiente de trabajo listo para usar!"))
+                # Simular conversión (Leads) - Tasa del ~10%
+                num_leads = int(num_visitas * random.uniform(0.05, 0.15))
+                for _ in range(num_leads):
+                    vendedor = random.choice(vendedores)
+                    lead = Lead.objects.create(
+                        original_email=f"prospecto_{total_leads}@example.com",
+                        first_name=f"Lead_{total_leads}",
+                        last_name=f"Prueba_{i}",
+                        phone=f"+569{random.randint(10000000, 99999999)}",
+                        status=random.choice(Lead.Status.choices)[0],
+                        assigned_to=vendedor,
+                        first_source=lp.source,
+                        campaign=lp.campaign,
+                    )
+                    # Forzar fecha
+                    Lead.objects.filter(id=lead.id).update(created_at=fecha)
+                    
+                    # Añadir interacciones al azar
+                    num_ints = random.randint(1, 3)
+                    for k in range(num_ints):
+                        int_date = fecha + timedelta(hours=random.randint(1, 48))
+                        if int_date > ahora: int_date = ahora
+                        
+                        inte = Interaction.objects.create(
+                            lead=lead,
+                            type=random.choice(Interaction.Type.choices)[0],
+                            notes=f"Seguimiento automático día {i}",
+                        )
+                        Interaction.objects.filter(id=inte.id).update(created_at=int_date)
+                    
+                    total_leads += 1
+
+        self.stdout.write(self.style.SUCCESS(f"\n✅ Éxito: Se generaron {total_visitas} visitas y {total_leads} leads en los últimos 90 días."))

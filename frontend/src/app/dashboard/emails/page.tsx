@@ -114,9 +114,9 @@ export default function EmailSandboxPage() {
                     key={email.id} 
                     className="hover:bg-white/[0.02] transition-colors group"
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-white">{email.to_email}</span>
+                    <td className="px-6 py-4 max-w-[220px]">
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-sm font-medium text-white truncate">{email.to_email}</span>
                         {email.lead && (
                           <Link 
                             href={`/dashboard/leads/${email.lead}`}
@@ -127,8 +127,8 @@ export default function EmailSandboxPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-300">{email.subject}</span>
+                    <td className="px-6 py-4 max-w-[300px]">
+                      <span className="text-sm text-gray-300 truncate block">{email.subject}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">

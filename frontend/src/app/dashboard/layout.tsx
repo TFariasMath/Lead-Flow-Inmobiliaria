@@ -40,9 +40,13 @@ export default function DashboardLayout({
   if (!token) return null;
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)]">
+    <div className="min-h-screen relative flex p-4 gap-4 overflow-hidden">
       <Sidebar />
-      <main className="ml-64 p-8">{children}</main>
+      <main className="flex-1 glass-container rounded-[2rem] overflow-hidden relative">
+        <div className="h-full overflow-y-auto p-8 custom-scrollbar">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

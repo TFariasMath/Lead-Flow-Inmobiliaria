@@ -253,8 +253,9 @@ export interface DashboardStats {
   leads_by_source: Array<{ first_source__name: string; count: number }>;
 }
 
-export function getDashboardStats(token: string) {
-  return apiFetch<DashboardStats>("/dashboard/stats/", { token });
+export function getDashboardStats(token: string, days?: string) {
+  const query = days ? `?days=${days}` : "";
+  return apiFetch<DashboardStats>(`/dashboard/stats/${query}`, { token });
 }
 
 export interface VendorPerformance {

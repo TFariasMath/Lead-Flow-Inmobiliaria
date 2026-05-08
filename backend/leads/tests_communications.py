@@ -132,3 +132,64 @@ class CommunicationInfrastructureTests(TestCase):
         self.assertEqual(SentEmail.objects.count(), 1)
         sent = SentEmail.objects.first()
         self.assertEqual(sent.to_email, "cliente@test.com")
+
+
+class BrochureTests(TestCase):
+    """Pruebas para la generación y descarga de Brochures PDF."""
+
+    def setUp(self):
+        from .models import Campaign, Source, LandingPage
+        from django.urls import reverse
+        self.source = Source.objects.create(name="Web", slug="web")
+        self.campaign = Campaign.objects.create(
+            name="Test Campaign", 
+            slug="test-campaign",
+            brochure_title="Brochure Especial",
+            brochure_features=["Feature 1", "Feature 2"]
+        )
+        self.landing = LandingPage.objects.create(
+            title="Landing Test",
+            slug="landing-test",
+            campaign=self.campaign,
+            source=self.source,
+            primary_color="#ff0000"
+        )
+        self.lead = Lead.objects.create(
+            original_email="pdf@test.com",
+            first_name="Juan",
+            campaign=self.campaign,
+            assigned_to=User.objects.create_user(username="asesor_test", email="asesor@test.com")
+        )
+        self.url = reverse('lead-brochure', kwargs={'lead_id': self.lead.id})
+
+    def test_generate_brochure_utility(self):
+        """Prueba la utilidad de generación de PDF directamente."""
+        from .utils_pdf import generate_personalized_brochure
+        pdf_content = generate_personalized_brochure(self.lead, self.campaign)
+        
+        self.assertIsNotNone(pdf_content)
+        self.assertTrue(len(pdf_content) > 0)
+        # Firma básica de PDF
+        self.assertTrue(pdf_content.startswith(b"%PDF"))
+
+    def test_lead_brochure_endpoint(self):
+        """Prueba el endpoint de descarga del brochure."""
+        from django.test import Client
+        client = Client()
+        response = client.get(self.url)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('Content-Disposition', response)
+        self.assertIn('Brochure_Juan_test-campaign.pdf', response['Content-Disposition'])
+
+    def test_lead_brochure_no_campaign_returns_400(self):
+        """Si el lead no tiene campaña, el endpoint debe fallar con 400."""
+        self.lead.campaign = None
+        self.lead.save()
+        
+        from django.test import Client
+        client = Client()
+        response = client.get(self.url)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("no tiene una campaña asociada", response.json()['error'])

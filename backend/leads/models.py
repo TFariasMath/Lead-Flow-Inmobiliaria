@@ -96,7 +96,6 @@ class MediaAsset(models.Model):
         return self.title or self.file.name
 
 
-class LandingPage(models.Model):
 # ─── Páginas de Aterrizaje Dinámicas ─────────────────────────────────────────
 
 class LandingPage(models.Model):
@@ -158,7 +157,7 @@ class LandingPage(models.Model):
         """Calcula el rendimiento de la página (% de visitas que dejan sus datos)."""
         if self.visits_count == 0:
             return 0
-        leads = Lead.objects.filter(source=self.source).count()
+        leads = Lead.objects.filter(first_source=self.source).count()
         return round((leads / self.visits_count) * 100, 2)
 
 
@@ -519,4 +518,37 @@ class RoundRobinState(models.Model):
         """Obtiene o crea el único registro de estado existente."""
         state, _ = cls.objects.get_or_create(id=1)
         return state
+
+
+# ─── Alertas del Sistema ─────────────────────────────────────────────────────
+
+class SystemAlert(models.Model):
+    """
+    Registro de eventos críticos que requieren atención del administrador.
+    Ejemplo: No hay vendedores disponibles para asignar un lead.
+    """
+    class Level(models.TextChoices):
+        INFO = "info", "Información"
+        WARNING = "warning", "Advertencia"
+        CRITICAL = "critical", "Crítico"
+
+    level = models.CharField(max_length=10, choices=Level.choices, default=Level.WARNING)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    is_resolved = models.BooleanField(default=False)
+    
+    # Metadatos opcionales para vincular la alerta a un objeto
+    content_type = models.CharField(max_length=100, blank=True, default="")
+    object_id = models.CharField(max_length=100, blank=True, default="")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Alerta del Sistema"
+        verbose_name_plural = "Alertas del Sistema"
+
+    def __str__(self):
+        return f"[{self.level.upper()}] {self.title}"
 

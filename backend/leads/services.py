@@ -18,7 +18,7 @@ from django.db import transaction, IntegrityError # Gestión de transacciones y 
 from django.utils import timezone                  # Manejo de fechas con zona horaria
 from django_q.tasks import async_task             # Motor de tareas en segundo plano
 
-from .models import Lead, Source, Interaction, WebhookLog, RoundRobinState
+from .models import Lead, Source, Interaction, WebhookLog, RoundRobinState, SystemAlert
 
 # Configuración del logger para seguimiento en consola
 logger = logging.getLogger(__name__)
@@ -128,12 +128,6 @@ class WebhookProcessor:
             return val_str[:max_length]
         return val_str
 
-    def _extract_lead_data(self) -> dict:
-        """Extrae campos del lead desde el payload con mapeo flexible y sanitización."""
-        body = self.webhook_log.edited_body or self.raw_body
-        return {
-            "first_name": self._safe_str(body.get("first_name", body.get("nombre", "")), 150),
-            "last_name": self._safe_str(body.get("last_name", body.get("apellido", "")), 150),
     def _extract_lead_data(self) -> dict:
         """
         Extrae y normaliza los campos de contacto del JSON.
@@ -248,6 +242,13 @@ class LeadDistributionService:
         
         if not active_vendors:
             logger.warning(f"No hay vendedores disponibles para el lead {lead.id}")
+            SystemAlert.objects.create(
+                level=SystemAlert.Level.CRITICAL,
+                title="Fallo de Asignación: Escasez de Vendedores",
+                description=f"El lead {lead.original_email} ha quedado sin asignar porque no hay vendedores activos y disponibles en el sistema.",
+                content_type="Lead",
+                object_id=str(lead.id)
+            )
             return lead
 
         # 2. Gestionar el turno de forma atómica para evitar asignaciones dobles

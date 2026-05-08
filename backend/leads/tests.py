@@ -6,6 +6,7 @@ Cubre: Ingesta de Webhooks, Lógica de Distribución (Round Robin),
 Scoring de Leads y Auditoría de Seguridad.
 """
 
+from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -59,7 +60,7 @@ class WebhookTests(APITestCase):
         # El log debe capturar el error técnico
         log = WebhookLog.objects.first()
         self.assertEqual(log.status, WebhookLog.Status.FAILED)
-        self.assertIn("El campo 'email' es requerido", log.error_message)
+        self.assertIn("No se encontró un email válido", log.error_message)
 
     def test_lead_data_merge(self):
         """
@@ -125,7 +126,6 @@ class AdvancedFeatureTests(APITestCase):
     """Pruebas sobre funciones críticas del negocio."""
     
     def setUp(self):
-        from django.contrib.auth.models import User
         # Creamos vendedores de prueba
         self.vendor1 = User.objects.create_user(username="v1", password="pw")
         self.vendor2 = User.objects.create_user(username="v2", password="pw")
@@ -134,6 +134,7 @@ class AdvancedFeatureTests(APITestCase):
         vp2 = self.vendor2.vendor_profile
         vp2.is_available_for_leads = False
         vp2.save()
+        self.url = reverse('webhook-receive')
 
     def test_round_robin_availability(self):
         """Verifica que el carrusel salte a los vendedores no disponibles."""
@@ -179,3 +180,79 @@ class AdvancedFeatureTests(APITestCase):
             # Verificamos que se pasó el ID del log correcto
             log = WebhookLog.objects.get(raw_body__email="async@test.com")
             mock_async.assert_called_once_with("leads.tasks.process_webhook_task", str(log.id))
+
+
+class SecurityAndAuditTests(APITestCase):
+    """Pruebas de seguridad, auditoría de sesiones y exportación de datos."""
+
+    def setUp(self):
+        from .models import SessionAudit, Lead, Source
+        self.admin = User.objects.create_superuser("admin", "admin@test.com", "pw")
+        self.vendedor = User.objects.create_user("vendedor", "v@test.com", "pw")
+        self.source = Source.objects.create(name="Web", slug="web")
+        
+        # Crear leads para las pruebas de exportación
+        Lead.objects.create(original_email="lead_admin@test.com", assigned_to=self.admin)
+        Lead.objects.create(original_email="lead_vendedor@test.com", assigned_to=self.vendedor)
+
+    def test_login_creates_session_audit(self):
+        """Verifica que el login JWT registre automáticamente la sesión para auditoría."""
+        from .models import SessionAudit
+        url = reverse('token_obtain')
+        payload = {"username": "vendedor", "password": "pw"}
+        
+        # Antes del login, no hay auditorías
+        self.assertEqual(SessionAudit.objects.count(), 0)
+        
+        response = self.client.post(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Después del login exitoso, debe existir un registro
+        self.assertEqual(SessionAudit.objects.count(), 1)
+        audit = SessionAudit.objects.first()
+        self.assertEqual(audit.user, self.vendedor)
+        self.assertTrue(audit.ip_address is not None)
+
+    def test_export_leads_row_level_security(self):
+        """Verifica que un vendedor solo descargue sus propios leads en el CSV."""
+        self.client.force_authenticate(user=self.vendedor)
+        url = reverse('leads-export')
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        
+        # Verificar contenido del CSV
+        content = response.content.decode('utf-8')
+        self.assertIn("lead_vendedor@test.com", content)
+        self.assertNotIn("lead_admin@test.com", content)
+
+    def test_export_leads_admin_visibility(self):
+        """Verifica que un administrador descargue TODO el universo de leads en el CSV."""
+        self.client.force_authenticate(user=self.admin)
+        url = reverse('leads-export')
+        response = self.client.get(url)
+        
+        content = response.content.decode('utf-8')
+        self.assertIn("lead_vendedor@test.com", content)
+        self.assertIn("lead_admin@test.com", content)
+
+    def test_lead_status_history_tracking(self):
+        """Verifica que el cambio de estado se registre en django-simple-history."""
+        lead = Lead.objects.create(original_email="history@test.com", status=Lead.Status.NUEVO)
+        
+        # Cambiamos el estado
+        lead.status = Lead.Status.CONTACTADO
+        lead.save()
+        
+        # Debe haber 2 registros en el historial (creación + edición)
+        self.assertEqual(lead.history.count(), 2)
+        latest_history = lead.history.first()
+        self.assertEqual(latest_history.status, Lead.Status.CONTACTADO)
+        
+        # Verificar que el endpoint de historial devuelve los datos
+        self.client.force_authenticate(user=self.admin)
+        url = reverse('lead-history', kwargs={'pk': lead.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(len(response.json()) >= 1)

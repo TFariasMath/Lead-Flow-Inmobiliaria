@@ -1,76 +1,91 @@
 """
-Lead Flow - Django Settings
-===========================
-Configuración principal del proyecto. Usa PostgreSQL vía Docker
-y JWT para autenticación de vendedores.
+Lead Flow - Django Settings (Core Configuration)
+================================================
+Este archivo centraliza el comportamiento técnico de todo el CRM.
+Define desde la conexión a la base de datos hasta las políticas de seguridad.
+
+Para producción, muchas de estas constantes deben leerse de variables de entorno
+(.env) para no exponer secretos en el repositorio.
 """
 
-# Importaciones de módulos estándar de Python
-import os  # Permite interactuar con el sistema operativo y variables de entorno
-from pathlib import Path  # Facilita el manejo de rutas de archivos de forma multiplataforma
-from datetime import timedelta  # Utilizado para definir lapsos de tiempo (especialmente para JWT)
+import os
+from pathlib import Path
+from datetime import timedelta
 
-# BASE_DIR define la ruta raíz del proyecto (donde está manage.py)
+# Ruta base del proyecto (donde se encuentra manage.py)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECRET_KEY es una clave única de seguridad; se intenta leer de una variable de entorno por seguridad
+# ─── Seguridad Básica ────────────────────────────────────────────────────────
+
+# SECRET_KEY: Llave maestra para firmas criptográficas y sesiones.
+# En producción, NUNCA uses la llave por defecto.
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
     "django-insecure-leadflow-dev-key-change-in-production-2024"
 )
 
-# DEBUG activa el modo de depuración; lee de variable de entorno o por defecto es True en desarrollo
+# DEBUG: Si es True, muestra errores detallados (útil en desarrollo).
+# En producción DEBE ser False para no exponer el código al atacante.
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1")
 
-# ALLOWED_HOSTS define qué dominios pueden servir esta app; '*' permite cualquiera (útil en dev)
+# ALLOWED_HOSTS: Lista de dominios que pueden servir esta app (ej: 'crm.tuempresa.com').
 ALLOWED_HOSTS = ["*"]
 
+# CORS: Permite que el frontend (Next.js) acceda a la API
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
-# ─── Aplicaciones Instaladas (Componentes del Sistema) ────────────────────────
+
+# ─── Aplicaciones Instaladas ──────────────────────────────────────────────────
 
 INSTALLED_APPS = [
-    "django.contrib.admin",         # Interfaz administrativa integrada de Django
-    "django.contrib.auth",          # Sistema de autenticación (usuarios, grupos, permisos)
-    "django.contrib.contenttypes",   # Permite relacionar permisos con modelos genéricos
-    "django.contrib.sessions",       # Gestión de sesiones de usuario persistentes
-    "django.contrib.messages",       # Sistema para notificaciones flash al usuario
-    "django.contrib.staticfiles",    # Manejo de archivos CSS, JavaScript e imágenes
-    # Librerías de Terceros (Extraídas de requirements.txt)
-    "rest_framework",               # Herramientas para construir APIs potentes
-    "rest_framework_simplejwt",     # Plugin para usar tokens JWT con el API
-    "corsheaders",                  # Maneja las políticas de intercambio de recursos (CORS)
-    "django_filters",               # Permite filtrar datos en los endpoints del API
-    "simple_history",               # Mantiene un historial completo de cambios en los modelos
-    "django_q",                     # Motor para ejecutar tareas pesadas en segundo plano
-    # Aplicaciones Propias del Proyecto
-    "leads",                        # Aplicación principal que gestiona los leads y campañas
+    # Módulos Core de Django
+    "django.contrib.admin",         # Panel administrativo (/admin)
+    "django.contrib.auth",          # Gestión de usuarios y permisos
+    "django.contrib.contenttypes",   # Framework de tipos de contenido
+    "django.contrib.sessions",       # Persistencia de sesiones
+    "django.contrib.messages",       # Mensajes flash
+    "django.contrib.staticfiles",    # Archivos CSS/JS/Imágenes
+    
+    # Librerías Externas (Instaladas vía pip)
+    "rest_framework",               # Framework para la API REST
+    "rest_framework_simplejwt",     # Autenticación moderna vía tokens
+    "corsheaders",                  # Permite que el Frontend (React/Vue) hable con el Backend
+    "django_filters",               # Filtrado potente en URLs de la API
+    "simple_history",               # Auditoría de cambios (Log de cambios por usuario)
+    "django_q",                     # Motor de tareas en segundo plano (Workers)
+    
+    # Módulos Propios
+    "leads",                        # Aplicación principal del CRM
 ]
 
-# ─── Middleware (Capa de procesamiento de peticiones) ─────────────────────────
+
+# ─── Middleware (La 'Cebolla' de Procesamiento) ───────────────────────────────
 
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",        # Aplica mejoras de seguridad HTTP
-    "django.contrib.sessions.middleware.SessionMiddleware", # Inicia y cierra sesiones de usuario
-    "corsheaders.middleware.CorsMiddleware",               # Controla quién puede consultar el API (CORS)
-    "django.middleware.common.CommonMiddleware",            # Manejo de URLs y reescrituras comunes
-    "django.middleware.csrf.CsrfViewMiddleware",            # Protege contra ataques de falsificación de petición
-    "django.contrib.auth.middleware.AuthenticationMiddleware", # Asocia usuarios con peticiones HTTP
-    "django.contrib.messages.middleware.MessageMiddleware",    # Procesa mensajes temporales entre peticiones
-    "django.middleware.clickjacking.XFrameOptionsMiddleware", # Evita que el sitio se cargue en iframes externos
-    "simple_history.middleware.HistoryRequestMiddleware",    # Captura quién realiza cambios en la BD
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware", # Debe ir antes de CommonMiddleware
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware", # Captura el usuario que edita la DB
 ]
 
-# ROOT_URLCONF indica dónde está el mapa principal de rutas (URLs)
 ROOT_URLCONF = "config.urls"
 
-# Configuración del motor de renderizado de plantillas HTML
 TEMPLATES = [
     {
-        "BACKEND": "django.template.backends.django.DjangoTemplates", # Motor estándar de Django
-        "DIRS": [],                                                    # Carpetas adicionales de plantillas
-        "APP_DIRS": True,                                              # Buscar plantillas dentro de cada app
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [
+            BASE_DIR / "templates",  # Carpetas locales del backend
+            BASE_DIR.parent / "messaging-lab" / "templates", # Carpeta del Lab (Sincronizada)
+        ],
+        "APP_DIRS": True,
         "OPTIONS": {
-            "context_processors": [                                    # Variables disponibles en todo el HTML
+            "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
@@ -80,126 +95,89 @@ TEMPLATES = [
     },
 ]
 
-# Punto de entrada para servidores web en producción (ej. Gunicorn)
 WSGI_APPLICATION = "config.wsgi.application"
 
 
-# ─── Base de Datos (PostgreSQL vía Docker) ────────────────────────────────────
+# ─── Base de Datos (PostgreSQL) ───────────────────────────────────────────────
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",            # Motor de base de datos relacional
-        "NAME": os.environ.get("DB_NAME", "leadflow"),        # Nombre de la base de datos
-        "USER": os.environ.get("DB_USER", "leadflow_user"),   # Usuario para la conexión
-        "PASSWORD": os.environ.get("DB_PASSWORD", "leadflow_secret_2024"), # Contraseña de acceso
-        "HOST": os.environ.get("DB_HOST", "localhost"),       # Servidor (en Docker se usa el nombre del servicio)
-        "PORT": os.environ.get("DB_PORT", "5432"),            # Puerto estándar de Postgres
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DB_NAME", "leadflow"),
+        "USER": os.environ.get("DB_USER", "leadflow_user"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "leadflow_secret_2024"),
+        "HOST": os.environ.get("DB_HOST", "localhost"), # 'db' si se usa Docker Compose
+        "PORT": os.environ.get("DB_PORT", "5432"),
     }
 }
 
 
-# ─── Autenticación (Validación de robustez de claves) ─────────────────────────
+# ─── Configuración de Internacionalización ────────────────────────────────────
 
-AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"}, # Evita claves parecidas al nombre
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},         # Exige un largo mínimo
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},        # Prohíbe claves muy comunes
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},       # Evita claves que sean solo números
-]
+LANGUAGE_CODE = "es"                        # Interfaz en Español
+TIME_ZONE = "America/Santiago"              # Horario de Chile
+USE_I18N = True
+USE_TZ = True                               # Almacena en UTC, muestra en local
 
 
-# ─── Internacionalización y Zona Horaria ─────────────────────────────────────
+# ─── Archivos Estáticos y Media ───────────────────────────────────────────────
 
-LANGUAGE_CODE = "es"                        # Define el idioma de los mensajes del sistema (Español)
-TIME_ZONE = "America/Santiago"              # Configurado para la zona horaria de Santiago de Chile
-USE_I18N = True                             # Activa el soporte para traducciones (Internalización)
-USE_TZ = True                               # Almacena fechas en UTC internamente pero las muestra localmente
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-
-# ─── Archivos Estáticos (CSS, JS, Imágenes) ───────────────────────────────────
-
-STATIC_URL = "static/"                      # URL base para servir archivos estáticos
-STATIC_ROOT = BASE_DIR / "staticfiles"      # Carpeta donde se guardan los estáticos al desplegar
+# Media: Carpeta donde se guardan las imágenes subidas por los usuarios
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 
-# ─── Emails (Automatización y Nurturing) ─────────────────────────────────────
+# ─── Sistema de Emails ────────────────────────────────────────────────────────
 
-# EMAIL_BACKEND define cómo se envían los correos. Se usa uno personalizado que guarda en BD.
+# Usamos nuestro propio backend para guardar mails en la base de datos local
 EMAIL_BACKEND = "leads.email_backends.DatabaseEmailBackend"
-# DEFAULT_FROM_EMAIL es el nombre y correo que verá el lead al recibir un mensaje
-DEFAULT_FROM_EMAIL = "CRM Inmobiliaria <no-reply@crm-inmobiliaria.com>"
-
-# Configuración SMTP para cuando el sistema pase a producción real
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.ejemplo.com") # Servidor de correo
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))            # Puerto del servidor
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True" # Uso de conexión cifrada
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")        # Usuario SMTP
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "") # Contraseña SMTP
+DEFAULT_FROM_EMAIL = "Lead Flow CRM <no-reply@leadflow.dev>"
 
 
-# ─── Django Rest Framework (DRF) ─────────────────────────────────────────────
+# ─── Django Rest Framework & Seguridad API ───────────────────────────────────
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication", # Solo permite acceso vía JWT
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",                # Protege todas las rutas por defecto
+        "rest_framework.permissions.IsAuthenticated", # Todo cerrado por defecto
     ),
     "DEFAULT_FILTER_BACKENDS": (
-        "django_filters.rest_framework.DjangoFilterBackend",         # Habilita filtrado avanzado
-        "rest_framework.filters.SearchFilter",                        # Habilita búsqueda global
-        "rest_framework.filters.OrderingFilter",                      # Habilita ordenamiento de tablas
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
     ),
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination", # Estilo de paginado
-    "PAGE_SIZE": 20,                                                  # Registros máximos por vista
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20, # 20 leads por página en las tablas
 }
 
 
-# ─── Configuración de JWT (SimpleJWT) ─────────────────────────────────────────
+# ─── Configuración JWT ────────────────────────────────────────────────────────
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),     # El token del frontend expira en 8 horas
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),     # El token de renovación dura una semana
-    "ROTATE_REFRESH_TOKENS": True,                   # Cada vez que renuevas, recibes un token nuevo
-    "AUTH_HEADER_TYPES": ("Bearer",),                # Formato esperado: Authorization: Bearer <token>
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),     # Sesión activa por 8 horas
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),     # Renovable por una semana
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 
-# ─── CORS (Control de acceso desde el Frontend) ───────────────────────────────
+# ─── Django Q2 (Background Workers) ──────────────────────────────────────────
 
-# Si estamos en modo DEBUG, permitimos peticiones de cualquier lugar (desarrollo)
-CORS_ALLOW_ALL_ORIGINS = DEBUG
-# Dominios específicos permitidos (Frontend oficial)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
-
-
-# ─── Identificadores por Defecto ──────────────────────────────────────────────
-
-# Define el tipo de dato para las llaves primarias autogeneradas (IDs)
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-
-# ─── Django Q2 (Colas de Tareas en Segundo Plano) ──────────────────────────────
-
-import sys # Necesario para detectar si estamos en modo de pruebas unitarias
-# TESTING captura si el comando ejecutado es 'manage.py test'
+import sys
 TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 
-# Q_CLUSTER define cómo se comportan los trabajadores que procesan tareas asíncronas
 Q_CLUSTER = {
-    "name": "LeadFlowCluster",      # Identificador del cluster
-    "workers": 4,                   # Número de núcleos dedicados a tareas de fondo
-    "recycle": 500,                 # Reinicia procesos para mantener limpieza de memoria
-    "timeout": 60,                  # Máximo de segundos que puede durar una tarea
-    "compress": True,               # Ahorra espacio en la base de datos comprimiendo datos
-    "save_limit": 250,              # Cuántas tareas exitosas recordar en el historial
-    "queue_limit": 500,             # Cuántas tareas pueden esperar antes de rechazar nuevas
-    "cpu_affinity": 1,              # Optimización de procesador
-    "label": "Django Q",            # Nombre visual en herramientas de monitoreo
-    "orm": "default",               # Indica que las tareas se guardan en el mismo PostgreSQL
-    "sync": TESTING,                # En modo test, las tareas son inmediatas (sincrónicas)
+    "name": "LeadFlowWorker",
+    "workers": 4,
+    "recycle": 500,
+    "timeout": 60,
+    "orm": "default", # Usa la misma base de datos para la cola de tareas
+    "sync": TESTING,   # En tests, las tareas se ejecutan al instante
 }
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
