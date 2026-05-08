@@ -241,6 +241,58 @@ export function getUsers(token: string) {
   return apiFetch<User[]>("/users/", { token });
 }
 
+// ─── Groups & Permissions ─────────────────────────────────────────────────────
+
+export interface Permission {
+  id: number;
+  name: string;
+  codename: string;
+  content_type: number;
+}
+
+export interface Group {
+  id: number;
+  name: string;
+  permissions: number[];
+  permissions_details?: Permission[];
+  user_count: number;
+}
+
+export function getGroups(token: string) {
+  return apiFetch<PaginatedResponse<Group>>("/groups/", { token });
+}
+
+export function getGroup(token: string, id: string) {
+  return apiFetch<Group>(`/groups/${id}/`, { token });
+}
+
+export function createGroup(token: string, data: Partial<Group>) {
+  return apiFetch<Group>("/groups/", {
+    token,
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateGroup(token: string, id: string, data: Partial<Group>) {
+  return apiFetch<Group>(`/groups/${id}/`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteGroup(token: string, id: string) {
+  return apiFetch(`/groups/${id}/`, {
+    token,
+    method: "DELETE",
+  });
+}
+
+export function getPermissions(token: string) {
+  return apiFetch<Permission[]>("/permissions/", { token });
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export interface DashboardStats {

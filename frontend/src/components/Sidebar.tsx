@@ -18,6 +18,7 @@ import {
   BarChart,
   Mail,
   Globe,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -32,11 +33,27 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const navItems = [...BASE_NAV_ITEMS];
-  if (user?.isStaff) {
-    navItems.push({ href: "/dashboard/landings", label: "Landing Pages", icon: Globe });
-    navItems.push({ href: "/dashboard/analytics", label: "Rendimiento", icon: BarChart });
-    navItems.push({ href: "/dashboard/emails", label: "Email Sandbox", icon: Mail });
-    navItems.push({ href: "/dashboard/webhooks", label: "Webhook Logs", icon: Webhook });
+  
+  if (user) {
+    if (user.permissions.includes("leads.view_landingpage") || user.isStaff) {
+      navItems.push({ href: "/dashboard/landings", label: "Landing Pages", icon: Globe });
+    }
+    
+    if (user.isStaff || user.groups.includes("Administrador")) {
+      navItems.push({ href: "/dashboard/analytics", label: "Rendimiento", icon: BarChart });
+    }
+    
+    if (user.permissions.includes("leads.view_sentemail") || user.isStaff) {
+      navItems.push({ href: "/dashboard/emails", label: "Email Sandbox", icon: Mail });
+    }
+    
+    if (user.permissions.includes("leads.view_webhooklog") || user.isStaff) {
+      navItems.push({ href: "/dashboard/webhooks", label: "Webhook Logs", icon: Webhook });
+    }
+    
+    if (user.groups.includes("Administrador")) {
+      navItems.push({ href: "/dashboard/settings/roles", label: "Roles", icon: Shield });
+    }
   }
 
   return (

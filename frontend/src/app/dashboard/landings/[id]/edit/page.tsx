@@ -7,7 +7,7 @@ import LandingLayout, { type LandingData } from "@/components/LandingLayout";
 import { ChevronLeft, Save, Loader2, Eye, Layout as LayoutIcon, Smartphone, Monitor, Zap as ZapIcon } from "lucide-react";
 import BenefitEditor from "@/components/BenefitEditor";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
 
 export default function LandingBuilderPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +19,7 @@ export default function LandingBuilderPage() {
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   
   // State for the landing data (form fields)
-  const [data, setData] = useState<LandingData & { slug: string; is_active: boolean }>({
+  const [data, setData] = useState<LandingData & { slug: string; is_active: boolean; campaign?: any }>({
     title: "",
     slug: "",
     subtitle: "",
@@ -68,12 +68,15 @@ export default function LandingBuilderPage() {
         body: JSON.stringify(data),
       });
       
-      if (!res.ok) throw new Error("Error saving landing page");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(JSON.stringify(errorData));
+      }
       
       router.push("/dashboard/landings");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Error al guardar los cambios.");
+      alert(`Error al guardar: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -255,11 +258,5 @@ function BenefitField({ label, title, icon, onTitleChange, onIconChange }: any) 
         />
       </div>
     </div>
-  );
-}
-
-function ZapIcon(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
   );
 }

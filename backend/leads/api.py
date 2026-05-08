@@ -141,8 +141,10 @@ class WebhookReceiveView(APIView):
 class LeadViewSet(viewsets.ModelViewSet):
     """
     Controlador principal para el listado y edición de leads.
-    Implementa seguridad de nivel de fila (Row-Level Security).
+    Implementa seguridad de nivel de fila (Row-Level Security) 
+    y respeta los permisos de Django.
     """
+    permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
     # Campos por los que se puede filtrar en la URL
     filterset_fields = ["status", "first_source", "assigned_to"]
     # Campos en los que se puede buscar texto
@@ -237,7 +239,7 @@ class WebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
     Incluye la capacidad de corregir y re-procesar webhooks fallidos.
     """
     serializer_class = WebhookLogSerializer
-    permission_classes = [permissions.IsAdminUser] # Restringido a staff
+    permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
     filterset_fields = ["status", "source_type"]
     ordering_fields = ["created_at", "status"]
 
@@ -283,6 +285,7 @@ class SourceViewSet(viewsets.ModelViewSet):
     """Gestión de fuentes de leads (ej: Facebook, Web, Manual)."""
     queryset = Source.objects.all()
     serializer_class = SourceSerializer
+    permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
 
 
 class CampaignViewSet(viewsets.ModelViewSet):
@@ -290,6 +293,7 @@ class CampaignViewSet(viewsets.ModelViewSet):
     queryset = Campaign.objects.all()
     serializer_class = CampaignSerializer
     filterset_fields = ["is_active"]
+    permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
 
 
 # ─── Historial / Timeline ───────────────────────────────────────────────────
@@ -382,53 +386,95 @@ class DashboardStatsView(APIView):
     Calcula los indicadores clave de rendimiento (KPIs) para la pantalla principal.
     """
     def get(self, request):
-        user = request.user
-        days = request.query_params.get('days')
+        try:
+            user = request.user
+            days = request.query_params.get('days')
 
-        # Filtrar el universo de leads según quién consulta
-        leads_qs = Lead.objects.all()
+            # Filtrar el universo de leads según quién consulta
+            leads_qs = Lead.objects.all()
 
-        if days and days.isdigit():
+            if days and days.isdigit():
+                from django.utils import timezone
+                from datetime import timedelta
+                start_date = timezone.now() - timedelta(days=int(days))
+                leads_qs = leads_qs.filter(created_at__gte=start_date)
+
+            if not user.is_staff:
+                leads_qs = leads_qs.filter(assigned_to=user)
+
+            total_leads = leads_qs.count()
+
+            # Agrupación por estado del pipeline
+            leads_by_status = {}
+            for choice_value, choice_label in Lead.Status.choices:
+                count = leads_qs.filter(status=choice_value).count()
+                leads_by_status[choice_label] = count
+
+            # Métricas técnicas de Webhooks (Salud de las integraciones)
+            total_webhooks = WebhookLog.objects.count()
+            successful = WebhookLog.objects.filter(status=WebhookLog.Status.SUCCESS).count()
+            failed = WebhookLog.objects.filter(status=WebhookLog.Status.FAILED).count()
+            success_rate = (successful / total_webhooks * 100) if total_webhooks > 0 else 0
+
+            # Análisis de origen con conversión
+            sources_data = []
+            source_groups = leads_qs.values("first_source__name").annotate(total=Count("id"))
+            for sg in source_groups:
+                s_name = sg["first_source__name"]
+                total = sg["total"]
+                won = leads_qs.filter(first_source__name=s_name, status=Lead.Status.CIERRE_GANADO).count()
+                sources_data.append({
+                    "name": s_name or "Desconocido",
+                    "count": total,
+                    "won_count": won,
+                    "conversion_rate": round((won / total * 100), 1) if total > 0 else 0
+                })
+            sources_data = sorted(sources_data, key=lambda x: x["won_count"], reverse=True)
+
+            # Leads Estancados (> 24h sin actualizar)
             from django.utils import timezone
             from datetime import timedelta
-            start_date = timezone.now() - timedelta(days=int(days))
-            leads_qs = leads_qs.filter(created_at__gte=start_date)
+            stale_threshold = timezone.now() - timedelta(hours=24)
+            stale_leads_count = leads_qs.exclude(
+                status__in=[Lead.Status.CIERRE_GANADO, Lead.Status.CIERRE_PERDIDO]
+            ).filter(updated_at__lt=stale_threshold).count()
 
-        if not user.is_staff:
-            leads_qs = leads_qs.filter(assigned_to=user)
+            # Datos para el Embudo (Ordenados por etapa lógica)
+            funnel_stages = [
+                (Lead.Status.NUEVO, "Nuevo"),
+                (Lead.Status.CONTACTADO, "Contactado"),
+                (Lead.Status.EN_CALIFICACION, "En Calificación"),
+                (Lead.Status.PROPUESTA_ENVIADA, "Propuesta Enviada"),
+                (Lead.Status.CIERRE_GANADO, "Cierre Ganado"),
+            ]
+            funnel_data = []
+            for status, label in funnel_stages:
+                funnel_data.append({
+                    "label": label,
+                    "value": leads_qs.filter(status=status).count()
+                })
 
-        total_leads = leads_qs.count()
-
-        # Agrupación por estado del pipeline
-        leads_by_status = {}
-        for choice_value, choice_label in Lead.Status.choices:
-            count = leads_qs.filter(status=choice_value).count()
-            leads_by_status[choice_label] = count
-
-        # Métricas técnicas de Webhooks (Salud de las integraciones)
-        total_webhooks = WebhookLog.objects.count()
-        successful = WebhookLog.objects.filter(status=WebhookLog.Status.SUCCESS).count()
-        failed = WebhookLog.objects.filter(status=WebhookLog.Status.FAILED).count()
-        success_rate = (successful / total_webhooks * 100) if total_webhooks > 0 else 0
-
-        # Análisis de origen: ¿De dónde vienen los clientes?
-        leads_by_source = list(
-            leads_qs.values("first_source__name")
-            .annotate(count=Count("id"))
-            .order_by("-count")
-        )
-
-        data = {
-            "total_leads": total_leads,
-            "leads_by_status": leads_by_status,
-            "total_webhooks": total_webhooks,
-            "successful_webhooks": successful,
-            "failed_webhooks": failed,
-            "webhook_success_rate": round(success_rate, 1),
-            "leads_by_source": leads_by_source,
-        }
-
-        return Response(data)
+            data = {
+                "total_leads": total_leads,
+                "leads_by_status": leads_by_status,
+                "total_webhooks": total_webhooks,
+                "successful_webhooks": successful,
+                "failed_webhooks": failed,
+                "webhook_success_rate": round(success_rate, 1),
+                "leads_by_source": sources_data,
+                "stale_leads_count": stale_leads_count,
+                "funnel_data": funnel_data,
+                "status": "healthy"
+            }
+            return Response(data)
+        except Exception as e:
+            from django.conf import settings
+            logger.error(f"Dashboard Stats Error: {str(e)}")
+            return Response({
+                "status": "error",
+                "message": "Error al cargar algunas métricas",
+                "error_detail": str(e) if settings.DEBUG else None
+            }, status=status.HTTP_200_OK)
 
 
 # ─── Análisis de Rendimiento (Vendedores) ───────────────────────────────────
@@ -481,7 +527,7 @@ class MediaAssetViewSet(viewsets.ModelViewSet):
     """
     queryset = MediaAsset.objects.all()
     serializer_class = MediaAssetSerializer
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
 
 
 class LandingPageViewSet(viewsets.ModelViewSet):
@@ -490,7 +536,7 @@ class LandingPageViewSet(viewsets.ModelViewSet):
     """
     queryset = LandingPage.objects.all().select_related('campaign', 'source')
     serializer_class = LandingPageSerializer
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
 
     @action(detail=True, methods=['get'])
     def analytics(self, request, pk=None):

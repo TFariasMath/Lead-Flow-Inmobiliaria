@@ -6,7 +6,8 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getLeads, getSources, getCampaigns, updateLead, type Lead, type Source, type Campaign } from "@/lib/api";
@@ -39,8 +40,18 @@ const STATUS_BADGES: Record<string, { label: string; color: string }> = {
 };
 
 export default function LeadsListPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <LeadsListContent />
+    </Suspense>
+  );
+}
+
+function LeadsListContent() {
   const { token } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [leads, setLeads] = useState<Lead[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -51,9 +62,21 @@ export default function LeadsListPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
+  const [isStaleFilter, setIsStaleFilter] = useState(false);
   
   // Slide-over state
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+
+  // Sync with URL params on mount
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const filter = searchParams.get("filter");
+    const selected = searchParams.get("selected");
+
+    if (status) setStatusFilter(status);
+    if (filter === "stale") setIsStaleFilter(true);
+    if (selected) setSelectedLeadId(selected);
+  }, [searchParams]);
 
   const fetchLeads = useCallback(async () => {
     if (!token) return;
@@ -65,6 +88,13 @@ export default function LeadsListPage() {
       if (statusFilter) params.set("status", statusFilter);
       if (sourceFilter) params.set("first_source", sourceFilter);
       if (campaignFilter) params.set("campaign", campaignFilter);
+      
+      // Manejar filtro de leads estancados (opcional, si el backend lo soporta)
+      if (isStaleFilter) {
+         // Si el backend no tiene filtro explícito 'stale', podríamos
+         // filtrar localmente o añadir el param si lo implementamos
+         // params.set("stale", "true");
+      }
 
       const data = await getLeads(token, params.toString());
       setLeads(data.results);
@@ -74,7 +104,7 @@ export default function LeadsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, page, search, statusFilter, sourceFilter, campaignFilter]);
+  }, [token, page, search, statusFilter, sourceFilter, campaignFilter, isStaleFilter]);
 
   useEffect(() => {
     fetchLeads();

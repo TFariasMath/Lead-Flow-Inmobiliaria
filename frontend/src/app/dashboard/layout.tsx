@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
+import NotificationPortal from "@/components/NotificationPortal";
 
 export default function DashboardLayout({
   children,
@@ -42,6 +43,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen relative flex p-4 gap-4 overflow-hidden">
       <Sidebar />
+      <NotificationPortal />
       <main className="flex-1 glass-container rounded-[2rem] overflow-hidden relative">
         <div className="h-full overflow-y-auto p-8 custom-scrollbar">
           {children}

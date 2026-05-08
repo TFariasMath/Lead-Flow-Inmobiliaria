@@ -13,6 +13,8 @@ import { login as apiLogin, refreshToken as apiRefresh, type TokenResponse } fro
 interface AuthUser {
   username: string;
   isStaff: boolean;
+  groups: string[];
+  permissions: string[];
 }
 
 interface AuthContextType {
@@ -43,6 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return {
         username: payload.username || payload.user_id?.toString() || "user",
         isStaff: payload.is_staff || false,
+        groups: payload.groups || [],
+        permissions: payload.permissions || [],
       };
     } catch {
       return null;

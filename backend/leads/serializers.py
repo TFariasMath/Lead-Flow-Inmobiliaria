@@ -5,7 +5,7 @@ Transforman los modelos de base de datos en JSON para el frontend
 y validan la entrada de datos que viene del exterior.
 """
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group, Permission
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -303,6 +303,30 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['first_name'] = user.first_name
         token['last_name'] = user.last_name
         token['username'] = user.username
+        
+        # Lista de nombres de grupos (Roles)
+        token['groups'] = list(user.groups.values_list('name', flat=True))
+        
+        # Lista de permisos (ej: 'leads.view_lead')
+        # Solo incluimos los de la app 'leads' para no inflar el token
+        perms = user.get_all_permissions()
+        token['permissions'] = [p for p in perms if p.startswith('leads.')]
 
         return token
 
+
+class PermissionSerializer(serializers.ModelSerializer):
+    """Representación de un permiso del sistema."""
+    class Meta:
+        model = Permission
+        fields = ["id", "name", "codename", "content_type"]
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    """Representación de un Rol (Grupo) con sus permisos."""
+    permissions_details = PermissionSerializer(source="permissions", many=True, read_only=True)
+    user_count = serializers.IntegerField(source="user_set.count", read_only=True)
+
+    class Meta:
+        model = Group
+        fields = ["id", "name", "permissions", "permissions_details", "user_count"]
