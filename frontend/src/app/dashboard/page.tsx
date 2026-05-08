@@ -422,36 +422,40 @@ export default function DashboardPage() {
               Ver Todo
             </button>
           </div>
-          <div className="space-y-3">
-            {recentLeads.map((lead, idx) => (
-              <div
-                key={lead.id}
-                className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/[0.03] transition-all cursor-pointer group border border-transparent hover:border-white/5"
-                onClick={() =>
-                  router.push(`/dashboard/leads?selected=${lead.id}`)
-                }
-                style={{
-                  animationDelay: `${idx * 80}ms`,
-                }}
-              >
-                <div className="w-9 h-9 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center text-[10px] font-bold text-white group-hover:bg-blue-600 group-hover:border-blue-500/30 transition-all">
-                  {lead.first_name.charAt(0)}
+          <div className="relative">
+            <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
+              {recentLeads.map((lead, idx) => (
+                <div
+                  key={lead.id}
+                  className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/[0.03] transition-all cursor-pointer group border border-transparent hover:border-white/5"
+                  onClick={() =>
+                    router.push(`/dashboard/leads?selected=${lead.id}`)
+                  }
+                  style={{
+                    animationDelay: `${idx * 80}ms`,
+                  }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center text-[10px] font-bold text-white group-hover:bg-blue-600 group-hover:border-blue-500/30 transition-all">
+                    {lead.first_name.charAt(0)}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-xs font-black text-white truncate uppercase">
+                      {lead.first_name} {lead.last_name}
+                    </p>
+                    <p className="text-[9px] text-slate-500 font-bold uppercase truncate">
+                      {lead.first_source_name} •{" "}
+                      {new Date(lead.created_at).toLocaleDateString("es", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </p>
+                  </div>
+                  <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-blue-500 transition-colors" />
                 </div>
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-xs font-black text-white truncate uppercase">
-                    {lead.first_name} {lead.last_name}
-                  </p>
-                  <p className="text-[9px] text-slate-500 font-bold uppercase truncate">
-                    {lead.first_source_name} •{" "}
-                    {new Date(lead.created_at).toLocaleDateString("es", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </p>
-                </div>
-                <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-blue-500 transition-colors" />
-              </div>
-            ))}
+              ))}
+            </div>
+            {/* Bottom fade effect */}
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[var(--color-bg)] to-transparent pointer-events-none opacity-60" />
           </div>
         </div>
 
@@ -466,44 +470,48 @@ export default function DashboardPage() {
                 Rendimiento del Equipo
               </h3>
             </div>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {performance.map((v, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 border border-white/5 flex items-center justify-center text-[10px] font-black text-white">
-                      {v.vendor_name.charAt(0)}
+            <div className="relative">
+              <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
+                {performance.map((v, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 border border-white/5 flex items-center justify-center text-[10px] font-black text-white">
+                        {v.vendor_name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-white uppercase">
+                          {v.vendor_name}
+                        </p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase">
+                          {v.total_leads || 0} leads
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-white uppercase">
-                        {v.vendor_name}
+                    <div className="text-right">
+                      <p
+                        className={cn(
+                          "text-sm font-black",
+                          (v.conversion_rate || 0) > 30
+                            ? "text-emerald-400"
+                            : (v.conversion_rate || 0) > 15
+                            ? "text-amber-400"
+                            : "text-red-400"
+                        )}
+                      >
+                        {v.conversion_rate}%
                       </p>
-                      <p className="text-[9px] text-slate-500 font-bold uppercase">
-                        {v.total_leads || 0} leads
+                      <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+                        Conversión
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p
-                      className={cn(
-                        "text-sm font-black",
-                        (v.conversion_rate || 0) > 30
-                          ? "text-emerald-400"
-                          : (v.conversion_rate || 0) > 15
-                          ? "text-amber-400"
-                          : "text-red-400"
-                      )}
-                    >
-                      {v.conversion_rate}%
-                    </p>
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">
-                      Conversión
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              {/* Bottom fade effect */}
+              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[var(--color-bg)] to-transparent pointer-events-none opacity-60" />
             </div>
           </div>
         )}

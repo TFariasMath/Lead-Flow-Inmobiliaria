@@ -81,9 +81,86 @@
             font-weight: bold;
             color: #1e293b;
         }
+        /* Estilos de Propiedades */
+        .property-page {
+            page-break-before: always;
+            padding: 40px 60px;
+        }
+        .property-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        .property-image {
+            width: 100%;
+            height: 250px;
+            background-color: #f1f5f9;
+            text-align: center;
+        }
+        .property-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .property-info {
+            padding: 25px;
+        }
+        .property-title {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 5px;
+        }
+        .property-location {
+            font-size: 10pt;
+            color: {{ primary_color }};
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .metrics-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .metric-box {
+            display: table-cell;
+            width: 33%;
+            padding: 15px;
+            background-color: #f8fafc;
+            border: 1px solid #f1f5f9;
+            text-align: center;
+        }
+        .metric-label {
+            font-size: 8pt;
+            color: #64748b;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .metric-value {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        .amenities-list {
+            margin-top: 15px;
+        }
+        .amenity-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            background-color: #f1f5f9;
+            color: #475569;
+            font-size: 9pt;
+            border-radius: 4px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
+    <!-- PORTADA -->
     <div class="header">
         <h1>{{ brochure_title|default:campaign.name }}</h1>
         <p>Propuesta Exclusiva de Inversión</p>
@@ -98,8 +175,8 @@
             {{ brochure_description|default:"Hemos preparado esta selección especial de propiedades pensando en tus objetivos de inversión. Nuestro equipo ha analizado cada detalle para asegurar la mejor rentabilidad." }}
         </div>
 
-        <h2 style="font-size: 16pt; border-bottom: 2px solid {{ primary_color }}; padding-bottom: 5px;">
-            Características Destacadas
+        <h2 style="font-size: 16pt; border-bottom: 2px solid {{ primary_color }}; padding-bottom: 5px; margin-top: 40px;">
+            ¿Por qué invertir con nosotros?
         </h2>
         
         <div class="features-grid">
@@ -108,12 +185,56 @@
                 <span>✓</span> {{ feature }}
             </div>
             {% empty %}
-            <div class="feature-item"><span>✓</span> Alta Rentabilidad</div>
-            <div class="feature-item"><span>✓</span> Ubicación Estratégica</div>
-            <div class="feature-item"><span>✓</span> Plusvalía Garantizada</div>
+            <div class="feature-item"><span>✓</span> Alta Rentabilidad y ROI Garantizado</div>
+            <div class="feature-item"><span>✓</span> Ubicación Estratégica en Zonas de Alta Plusvalía</div>
+            <div class="feature-item"><span>✓</span> Proyectos de Desarrolladores con Trayectoria</div>
             {% endfor %}
         </div>
     </div>
+
+    <!-- FICHA DE PROPIEDADES -->
+    {% for prop in properties %}
+    <div class="property-page">
+        <div class="property-title">{{ prop.name }}</div>
+        <div class="property-location">{{ prop.location }}</div>
+
+        <div class="property-card">
+            <div class="property-image">
+                {% if prop.main_image %}
+                    <img src="{{ request.scheme }}://{{ request.get_host }}{{ prop.main_image.file.url }}" alt="{{ prop.name }}">
+                {% else %}
+                    <div style="padding-top: 100px; color: #cbd5e1;">Imagen no disponible</div>
+                {% endif %}
+            </div>
+            <div class="property-info">
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <span class="metric-label">Inversión Mínima</span>
+                        <span class="metric-value">${{ prop.min_investment }}</span>
+                    </div>
+                    <div class="metric-box" style="border-left: 0; border-right: 0;">
+                        <span class="metric-label">Retorno Est.</span>
+                        <span class="metric-value" style="color: #10b981;">{{ prop.estimated_return }}</span>
+                    </div>
+                    <div class="metric-box">
+                        <span class="metric-label">Entrega</span>
+                        <span class="metric-value">{{ prop.delivery_date }}</span>
+                    </div>
+                </div>
+
+                <div style="font-size: 11pt; line-height: 1.5; color: #475569; margin-bottom: 20px;">
+                    {{ prop.description }}
+                </div>
+
+                <div class="amenities-list">
+                    {% for amenity in prop.amenities %}
+                    <span class="amenity-tag">{{ amenity }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 
     <div class="footer">
         <div class="footer-content">
@@ -125,7 +246,7 @@
                 </div>
             </div>
             <div class="footer-col" style="text-align: right;">
-                <img src="https://via.placeholder.com/120x40?text=LEAD+FLOW" alt="Logo" style="height: 30px;">
+                <span style="font-weight: 800; font-size: 14pt; color: {{ primary_color }};">LEAD FLOW</span>
             </div>
         </div>
     </div>

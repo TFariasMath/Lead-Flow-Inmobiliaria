@@ -1,7 +1,8 @@
 /**
- * Lead Flow - New Lead Page
- * =========================
- * Formulario de creación manual con Formik + Yup.
+ * Lead Flow - New Lead Page (Premium v3)
+ * =====================================
+ * Interfaz de alta precisión para el registro manual de contactos.
+ * Organizada por secciones con feedback visual inmediato.
  */
 
 "use client";
@@ -12,17 +13,30 @@ import { useAuth } from "@/context/AuthContext";
 import { createLead, getSources, getUsers, type Source, type User } from "@/lib/api";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import { ArrowLeft, UserPlus } from "lucide-react";
+import { 
+  ArrowLeft, 
+  UserPlus, 
+  Mail, 
+  User as UserIcon, 
+  Phone, 
+  Building2, 
+  MapPin, 
+  Zap,
+  Target,
+  ShieldCheck,
+  ChevronRight
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const validationSchema = Yup.object({
   original_email: Yup.string()
-    .email("Email inválido")
-    .required("El email es requerido"),
-  first_name: Yup.string().max(150, "Máximo 150 caracteres"),
-  last_name: Yup.string().max(150, "Máximo 150 caracteres"),
+    .email("Ingresa un correo electrónico válido")
+    .required("El email es obligatorio para el seguimiento"),
+  first_name: Yup.string().max(150, "El nombre es demasiado largo"),
+  last_name: Yup.string().max(150, "El apellido es demasiado largo"),
   phone: Yup.string().matches(
     /^[\d\s\-\+\(\)]*$/,
-    "Solo números, espacios, guiones y paréntesis"
+    "Formato de teléfono no válido"
   ),
 });
 
@@ -44,23 +58,40 @@ export default function NewLeadPage() {
   }, [token]);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
-      <button
-        onClick={() => router.push("/dashboard/leads")}
-        className="flex items-center gap-2 text-[var(--color-text-muted)] hover:text-white transition-colors text-sm"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Volver a Leads
-      </button>
-
-      <div>
-        <h1 className="text-2xl font-bold text-white">Crear Nuevo Lead</h1>
-        <p className="text-[var(--color-text-muted)] mt-1">
-          Ingreso manual de un contacto al sistema
-        </p>
+    <div className="max-w-4xl mx-auto pb-20 animate-fadeIn">
+      {/* ── Breadcrumb & Action ── */}
+      <div className="flex items-center justify-between mb-8">
+        <button
+          onClick={() => router.push("/dashboard/leads")}
+          className="btn-ghost flex items-center gap-2 group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Volver a la lista
+        </button>
+        <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] bg-white/5 px-3 py-1 rounded-full border border-white/5">
+          Creación Manual • v3.0
+        </div>
       </div>
 
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8">
+      {/* ── Header Section ── */}
+      <div className="flex items-center gap-6 mb-10">
+        <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl shadow-blue-500/20 relative group overflow-hidden">
+          <UserPlus className="w-10 h-10 text-white relative z-10 group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-black text-white tracking-tight">Ingresar Nuevo Prospecto</h1>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
+            Completa los datos para iniciar el flujo de conversión
+          </p>
+        </div>
+      </div>
+
+      {/* ── Form Container ── */}
+      <div className="glass-container rounded-[2.5rem] p-10 relative">
+        {/* Decorative corner accent */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
+
         <Formik
           initialValues={{
             original_email: "",
@@ -84,171 +115,171 @@ export default function NewLeadPage() {
               await createLead(token, payload);
               router.push("/dashboard/leads");
             } catch (err: unknown) {
-              const message = err instanceof Error ? err.message : "Error al crear el lead";
+              const message = err instanceof Error ? err.message : "Error crítico al guardar el lead";
               setError(message);
             } finally {
               setSubmitting(false);
             }
           }}
         >
-          {({ isSubmitting }) => (
-            <Form className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1.5">
-                    Email *
-                  </label>
-                  <Field
-                    type="email"
-                    name="original_email"
-                    placeholder="contacto@ejemplo.com"
-                    className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white placeholder-[var(--color-text-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-                  />
-                  <ErrorMessage
-                    name="original_email"
-                    component="p"
-                    className="text-xs text-[var(--color-danger)] mt-1"
-                  />
+          {({ isSubmitting, values }) => (
+            <Form className="space-y-12">
+              
+              {/* ── SECCIÓN 1: IDENTIDAD ── */}
+              <section className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                  <UserIcon className="w-4 h-4 text-blue-500" />
+                  <h2 className="section-label text-white">Información de Identidad</h2>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre</label>
+                    <div className="input-icon-wrapper">
+                      <UserIcon className="w-4 h-4 text-slate-500" />
+                      <Field name="first_name" placeholder="Ej: Juan" className="input-premium input-premium-icon" />
+                    </div>
+                    <ErrorMessage name="first_name" component="p" className="text-[10px] font-bold text-red-500 ml-1" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Apellido</label>
+                    <div className="input-icon-wrapper">
+                      <UserIcon className="w-4 h-4 text-slate-500" />
+                      <Field name="last_name" placeholder="Ej: Pérez" className="input-premium input-premium-icon" />
+                    </div>
+                    <ErrorMessage name="last_name" component="p" className="text-[10px] font-bold text-red-500 ml-1" />
+                  </div>
+                </div>
+              </section>
+
+              {/* ── SECCIÓN 2: CONTACTO & EMPRESA ── */}
+              <section className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                  <Zap className="w-4 h-4 text-cyan-500" />
+                  <h2 className="section-label text-white">Canales de Contacto</h2>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1.5">
-                    Nombre
-                  </label>
-                  <Field
-                    type="text"
-                    name="first_name"
-                    placeholder="Juan"
-                    className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white placeholder-[var(--color-text-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-                  />
-                  <ErrorMessage
-                    name="first_name"
-                    component="p"
-                    className="text-xs text-[var(--color-danger)] mt-1"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+                      Email Principal <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
+                    </label>
+                    <div className="input-icon-wrapper">
+                      <Mail className="w-4 h-4 text-slate-500" />
+                      <Field type="email" name="original_email" placeholder="cliente@empresa.com" className="input-premium input-premium-icon" />
+                    </div>
+                    <ErrorMessage name="original_email" component="p" className="text-[10px] font-bold text-red-500 ml-1" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Teléfono Móvil</label>
+                    <div className="input-icon-wrapper">
+                      <Phone className="w-4 h-4 text-slate-500" />
+                      <Field name="phone" placeholder="+1 809-555-0000" className="input-premium input-premium-icon" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Empresa / Organización</label>
+                    <div className="input-icon-wrapper">
+                      <Building2 className="w-4 h-4 text-slate-500" />
+                      <Field name="company" placeholder="Nombre de la empresa" className="input-premium input-premium-icon" />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Dirección Física</label>
+                    <div className="input-icon-wrapper">
+                      <MapPin className="w-4 h-4 text-slate-500" />
+                      <Field name="address" placeholder="Calle, Ciudad, País" className="input-premium input-premium-icon" />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* ── SECCIÓN 3: CLASIFICACIÓN ── */}
+              <section className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                  <Target className="w-4 h-4 text-emerald-500" />
+                  <h2 className="section-label text-white">Asignación Operativa</h2>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1.5">
-                    Apellido
-                  </label>
-                  <Field
-                    type="text"
-                    name="last_name"
-                    placeholder="Pérez"
-                    className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white placeholder-[var(--color-text-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-                  />
-                  <ErrorMessage
-                    name="last_name"
-                    component="p"
-                    className="text-xs text-[var(--color-danger)] mt-1"
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fuente de Origen</label>
+                    <div className="input-icon-wrapper">
+                      <Zap className="w-4 h-4 text-slate-500" />
+                      <Field as="select" name="first_source" className="input-premium input-premium-icon appearance-none cursor-pointer">
+                        <option value="" className="bg-slate-900">Seleccionar fuente...</option>
+                        {sources.map((s) => (
+                          <option key={s.id} value={s.id} className="bg-slate-900">
+                            {s.name}
+                          </option>
+                        ))}
+                      </Field>
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1.5">
-                    Teléfono
-                  </label>
-                  <Field
-                    type="text"
-                    name="phone"
-                    placeholder="809-555-1234"
-                    className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white placeholder-[var(--color-text-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-                  />
-                  <ErrorMessage
-                    name="phone"
-                    component="p"
-                    className="text-xs text-[var(--color-danger)] mt-1"
-                  />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Vendedor Asignado</label>
+                    <div className="input-icon-wrapper">
+                      <ShieldCheck className="w-4 h-4 text-slate-500" />
+                      {user?.isStaff ? (
+                        <Field as="select" name="assigned_to" className="input-premium input-premium-icon appearance-none cursor-pointer">
+                          <option value="" className="bg-slate-900">Sin asignar (Libre)</option>
+                          {users.map((u) => (
+                            <option key={u.id} value={u.id} className="bg-slate-900">
+                              {u.first_name} {u.last_name} ({u.username})
+                            </option>
+                          ))}
+                        </Field>
+                      ) : (
+                        <div className="input-premium input-premium-icon opacity-50 cursor-not-allowed flex items-center">
+                          <span className="text-xs font-bold">Auto-asignado a ti</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1.5">
-                    Empresa
-                  </label>
-                  <Field
-                    type="text"
-                    name="company"
-                    placeholder="Empresa S.A."
-                    className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white placeholder-[var(--color-text-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1.5">
-                    Dirección
-                  </label>
-                  <Field
-                    type="text"
-                    name="address"
-                    placeholder="Calle Principal #123, Ciudad"
-                    className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white placeholder-[var(--color-text-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1.5">
-                    Fuente
-                  </label>
-                  <Field
-                    as="select"
-                    name="first_source"
-                    className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-                  >
-                    <option value="">Seleccionar fuente...</option>
-                    {sources.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </Field>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1.5">
-                    Asignar a Vendedor
-                  </label>
-                  {user?.isStaff ? (
-                    <Field
-                      as="select"
-                      name="assigned_to"
-                      className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50"
-                    >
-                      <option value="">Sin asignar</option>
-                      {users.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.first_name} {u.last_name} ({u.username})
-                        </option>
-                      ))}
-                    </Field>
-                  ) : (
-                    <input
-                      type="text"
-                      value="Asignado a ti (automáticamente)"
-                      disabled
-                      className="w-full px-4 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text-muted)] opacity-60 cursor-not-allowed"
-                    />
-                  )}
-                </div>
-              </div>
+              </section>
 
               {error && (
-                <div className="text-sm text-[var(--color-danger)] bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 rounded-lg px-4 py-2.5">
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-xs font-bold animate-fadeIn">
+                  <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">!</div>
                   {error}
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)] text-white font-medium hover:shadow-lg hover:shadow-[var(--color-primary)]/25 transition-all disabled:opacity-50"
-              >
-                <UserPlus className="w-5 h-5" />
-                {isSubmitting ? "Creando..." : "Crear Lead"}
-              </button>
+              {/* ── Final Action ── */}
+              <div className="pt-6">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn-primary w-full h-14 flex items-center justify-center gap-3 group/submit"
+                >
+                  <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm">
+                    {isSubmitting ? "Sincronizando con Servidor..." : "Finalizar Registro de Lead"}
+                  </span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform opacity-50" />
+                </button>
+              </div>
             </Form>
           )}
         </Formik>
+      </div>
+      
+      {/* ── Footer Info ── */}
+      <div className="mt-8 flex justify-center gap-10">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Resolución de Identidad</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Validación de Datos</span>
+        </div>
       </div>
     </div>
   );

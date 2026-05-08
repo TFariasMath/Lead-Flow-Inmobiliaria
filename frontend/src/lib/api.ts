@@ -205,9 +205,41 @@ export interface Source {
   description: string;
   is_active: boolean;
 }
-
 export function getSources(token: string) {
   return apiFetch<PaginatedResponse<Source>>("/sources/", { token });
+}
+
+export interface MediaAsset {
+  id: number;
+  title: string;
+  file: string;
+  alt_text: string;
+  created_at: string;
+}
+
+export function getMediaAssets(token: string) {
+  return apiFetch<PaginatedResponse<MediaAsset>>("/media-assets/", { token });
+}
+
+export async function uploadMediaAsset(token: string, file: File, title: string) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("title", title);
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/media-assets/`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Error uploading file");
+  }
+
+  return res.json() as Promise<MediaAsset>;
 }
 
 // ─── Campaigns ────────────────────────────────────────────────────────────────
@@ -238,6 +270,7 @@ export interface Property {
   delivery_date: string;
   amenities: string[];
   main_image: number | null;
+  main_image_url?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

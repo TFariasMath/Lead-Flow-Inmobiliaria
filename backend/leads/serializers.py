@@ -24,12 +24,15 @@ class SourceSerializer(serializers.ModelSerializer):
 
 class PropertySerializer(serializers.ModelSerializer):
     """Representación de una propiedad o proyecto inmobiliario."""
+    main_image_url = serializers.ImageField(source="main_image.file", read_only=True)
+    
     class Meta:
         model = Property
         fields = [
             "id", "name", "slug", "description", "location",
             "min_investment", "estimated_return", "delivery_date",
-            "amenities", "main_image", "created_at", "updated_at"
+            "amenities", "main_image", "main_image_url", "is_active", 
+            "created_at", "updated_at"
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 

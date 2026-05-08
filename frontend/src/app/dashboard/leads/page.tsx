@@ -190,16 +190,18 @@ function LeadsListContent() {
 
       {/* ── Filters & Search ── */}
       <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 lg:col-span-6 relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
-          <input
-            id="lead-search"
-            type="text"
-            placeholder="Buscar por email, nombre o teléfono..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="input-premium w-full pl-11 h-11"
-          />
+        <div className="col-span-12 lg:col-span-6">
+          <div className="input-icon-wrapper group">
+            <Search className="w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              id="lead-search"
+              type="text"
+              placeholder="Buscar por email, nombre o teléfono..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="input-premium input-premium-icon h-11"
+            />
+          </div>
         </div>
         <div className="col-span-12 lg:col-span-6 flex gap-3">
           <select

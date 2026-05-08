@@ -302,34 +302,43 @@ class CampaignViewSet(viewsets.ModelViewSet):
     filterset_fields = ["is_active"]
     permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
 
-    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny], url_path='brochure-preview')
     def brochure_preview(self, request, pk=None):
         """
         GET /api/v1/campaigns/{id}/brochure-preview/?token=...
         Retorna el HTML renderizado del brochure para previsualización en el dashboard.
-        Soporta pasar el token por query param para compatibilidad con iframes.
         """
+        from django.views.decorators.clickjacking import xframe_options_exempt
+        from django.utils.decorators import method_decorator
+
         # Validación manual de token para el iframe
         token = request.query_params.get('token')
         if not token:
             return HttpResponse("No autorizado: Falta token", status=403)
+        
+        # Limpiar prefijo 'Bearer ' si existe
+        if token.startswith('Bearer '):
+            token = token.split(' ')[1]
             
         from rest_framework_simplejwt.tokens import AccessToken
         try:
-            # Validamos que el token sea legítimo y no haya expirado
             valid_token = AccessToken(token)
-            # Podríamos verificar si valid_token['user_id'] tiene permisos, 
-            # pero para previsualización de brochure de campaña es suficiente.
         except Exception:
             return HttpResponse("No autorizado: Token inválido o expirado", status=403)
 
+        # Recuperamos la campaña
         campaign = self.get_object()
         
         # Simulamos un lead para el preview
         context = {
             'lead': {
                 'first_name': 'Inversionista Prueba',
-                'id': 'preview-id'
+                'id': 'preview-id',
+                'assigned_to': {
+                    'get_full_name': 'Asesor LeadFlow',
+                    'username': 'asesor_demo',
+                    'email': 'asesor@leadflow.dev'
+                }
             },
             'campaign': campaign,
             'properties': campaign.properties.all().select_related('main_image'),
@@ -341,8 +350,11 @@ class CampaignViewSet(viewsets.ModelViewSet):
         }
         
         from django.template.loader import render_to_string
+        # Generar HTML
         html = render_to_string('leads/brochure_template.html', context)
-        return HttpResponse(html)
+        response = HttpResponse(html)
+        response["X-Frame-Options"] = "ALLOWALL" # Permitir visualización en el iframe del dashboard
+        return response
 
 
 class PropertyViewSet(viewsets.ModelViewSet):

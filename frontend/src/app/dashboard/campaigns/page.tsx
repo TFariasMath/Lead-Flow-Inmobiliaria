@@ -1,7 +1,8 @@
 /**
- * Lead Flow - Campaigns Management
- * ===============================
- * Listado de campañas de marketing y acceso a la configuración del brochure.
+ * Lead Flow - Campaigns Management (Premium v3)
+ * ============================================
+ * Dashboard de control de marketing. Gestión de campañas activas,
+ * rendimiento de captación y vinculación de proyectos.
  */
 
 "use client";
@@ -14,11 +15,14 @@ import {
   Target, 
   Plus, 
   Calendar, 
-  TrendingUp, 
   ChevronRight,
   FileText,
   Search,
-  Activity
+  Activity,
+  Zap,
+  TrendingUp,
+  Globe,
+  Layout
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,113 +55,144 @@ export default function CampaignsPage() {
   );
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Header */}
-      <div className="flex items-end justify-between">
+    <div className="space-y-8 animate-fadeIn pb-12">
+      
+      {/* ── Metric Strip ── */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 stagger-children">
+        <MiniCard icon={Target} label="Campañas" value={campaigns.length} color="#3b82f6" />
+        <MiniCard icon={Activity} label="En Ejecución" value={campaigns.filter(c => c.is_active).length} color="#10b981" />
+        <MiniCard icon={TrendingUp} label="Conversión Global" value="8.4%" color="#f59e0b" trend="+0.5%" />
+        <MiniCard icon={Zap} label="Inversión Estimada" value="$12.4k" color="#6366f1" />
+      </div>
+
+      {/* ── Header Section ── */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase">Gestión de Campañas</h1>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-2 flex items-center gap-2">
-            <Target className="w-3 h-3 text-blue-500" />
-            Control de captación y configuración de documentos
+          <h1 className="section-title">Estrategias de Captación</h1>
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
+            <Globe className="w-3 h-3 text-blue-500" />
+            Control de orígenes y optimización de conversión
           </p>
         </div>
-        <button
-          onClick={() => router.push("/dashboard/campaigns/new")}
-          className="h-12 px-6 rounded-2xl bg-blue-600 text-white text-xs font-black uppercase tracking-widest hover:bg-blue-500 shadow-xl shadow-blue-600/20 transition-all flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Nueva Campaña
-        </button>
-      </div>
-
-      {/* Stats Ticker */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard label="Campañas Activas" value={campaigns.filter(c => c.is_active).length} color="#3b82f6" />
-        <StatCard label="Leads este mes" value="1,240" color="#10b981" />
-        <StatCard label="Conversión Promedio" value="12.5%" color="#f59e0b" />
-        <StatCard label="Presupuesto Total" value="$45,000" color="#ef4444" />
-      </div>
-
-      {/* Main Content */}
-      <div className="glass-container rounded-[2.5rem] p-6 border border-white/5 space-y-6">
-        <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+        <div className="flex items-center gap-3">
+          <div className="input-icon-wrapper group">
+            <Search className="w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="text"
-              placeholder="Filtrar campañas por nombre..."
+              placeholder="Buscar campaña..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white/[0.02] border border-white/5 rounded-2xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+              className="input-premium input-premium-icon h-12 w-64 lg:w-80"
             />
           </div>
+          <button
+            onClick={() => router.push("/dashboard/campaigns/new")}
+            className="btn-primary h-12 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Crear Campaña
+          </button>
         </div>
+      </div>
 
+      {/* ── Campaigns Grid ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 stagger-children">
         {loading ? (
-          <div className="py-20 text-center">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="col-span-full py-40 flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando Motores...</p>
+          </div>
+        ) : filteredCampaigns.length === 0 ? (
+          <div className="col-span-full py-40 glass-container rounded-[2rem] flex flex-col items-center justify-center gap-4 text-slate-500 border-dashed border-2">
+            <Layout className="w-12 h-12 opacity-20" />
+            <p className="font-bold text-sm">No hay estrategias configuradas actualmente</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {filteredCampaigns.map((campaign) => (
-              <div 
-                key={campaign.id}
-                onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}
-                className="group flex items-center gap-6 p-6 bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 rounded-3xl cursor-pointer transition-all duration-300"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-white/5 flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-inner">
-                  <Target className="w-6 h-6" />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-black text-white truncate">{campaign.name}</h3>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                      <Calendar className="w-3 h-3" />
-                      {campaign.start_date || 'Sin fecha'}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                      <FileText className="w-3 h-3" />
-                      Brochure: {campaign.properties?.length || 0} Proyectos
-                    </span>
+          filteredCampaigns.map((campaign, idx) => (
+            <div 
+              key={campaign.id}
+              onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}
+              className="glass-card rounded-[2rem] p-8 cursor-pointer group relative overflow-hidden"
+              style={{ animationDelay: `${idx * 50}ms` }}
+            >
+              {/* Background gradient hint */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-white/5 flex items-center justify-center text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 group-hover:scale-110 shadow-xl">
+                    <Target className="w-7 h-7" />
                   </div>
-                </div>
-
-                <div className="hidden md:flex items-center gap-12 px-6">
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Leads</p>
-                    <p className="text-sm font-black text-white">458</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estado</p>
+                  <div className={cn(
+                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all",
+                    campaign.is_active 
+                      ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" 
+                      : "text-slate-500 bg-white/5 border-white/5"
+                  )}>
                     {campaign.is_active ? (
-                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1">
-                        <Activity className="w-3 h-3 animate-pulse" /> Activa
+                      <span className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Activa
                       </span>
-                    ) : (
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Inactiva</span>
-                    )}
+                    ) : "Pausada"}
                   </div>
                 </div>
 
-                <div className="w-10 h-10 rounded-full border border-white/5 flex items-center justify-center text-slate-500 group-hover:text-white group-hover:bg-white/10 transition-all">
-                  <ChevronRight className="w-5 h-5" />
+                <h3 className="text-xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors truncate">
+                  {campaign.name}
+                </h3>
+                
+                <div className="space-y-3 mb-8">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">
+                      Inicia: {campaign.start_date || 'Inmediato'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <FileText className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">
+                      {campaign.properties?.length || 0} Proyectos Vinculados
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-6 border-t border-white/[0.04]">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Prospectos</span>
+                    <span className="text-lg font-black text-white">458</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-slate-600 group-hover:text-white group-hover:bg-blue-600 transition-all">
+                    <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))
         )}
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: string | number; color: string }) {
+function MiniCard({ icon: Icon, label, value, color, trend }: { icon: any; label: string; value: string | number; color: string; trend?: string }) {
   return (
-    <div className="glass-card rounded-3xl p-6 border border-white/5 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-24 h-24 bg-current opacity-[0.03] -mr-8 -mt-8 rounded-full" style={{ color }} />
-      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{label}</p>
-      <p className="text-2xl font-black text-white" style={{ color }}>{value}</p>
+    <div className="glass-card rounded-2xl p-4 flex items-center justify-between group relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-1 h-full opacity-40 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: color }} />
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-slate-500 group-hover:scale-110 transition-transform duration-500" style={{ color }}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div>
+          <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">{label}</p>
+          <p className="text-xl font-black text-white">{value}</p>
+        </div>
+      </div>
+      {trend && (
+        <div className="text-[9px] font-black px-1.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+          {trend}
+        </div>
+      )}
     </div>
   );
 }
