@@ -16,21 +16,22 @@ Seguridad implementada:
 import logging  # Para registro de eventos y errores en consola/logs
 
 # Importaciones de Django para base de datos y modelos
-from django.contrib.auth.models import User  # Modelo de usuario estándar
+from django.contrib.auth.models import User, Group, Permission # Modelos de usuario y seguridad
 from django.db.models import Count, Q        # Herramientas para consultas complejas
 from django.http import HttpResponse         # Para respuestas binarias (ej: PDF)
 
 # Importaciones de Django Rest Framework (DRF)
-from rest_framework import viewsets, status, permissions # Clases base para el API
+from rest_framework import viewsets, status, permissions, filters # Clases base para el API
 from rest_framework.decorators import api_view, permission_classes, action # Decoradores de funciones
 from rest_framework.response import Response # Objeto para devolver JSON
 from rest_framework.views import APIView     # Clase base para vistas personalizadas
 from rest_framework_simplejwt.views import TokenObtainPairView # Base para login JWT
+from django_filters.rest_framework import DjangoFilterBackend # Motor de filtrado
 
 # Importaciones locales (Modelos, Serializadores y Servicios)
 from .models import (
     Lead, Source, Interaction, WebhookLog, Campaign, 
-    LandingPage, SentEmail, MediaAsset, LandingPageVisit
+    LandingPage, SentEmail, MediaAsset, LandingPageVisit, Property
 )
 from .utils_pdf import generate_personalized_brochure  # Utilidad para crear PDFs
 from .serializers import (
@@ -39,7 +40,8 @@ from .serializers import (
     WebhookLogSerializer, WebhookReceiveSerializer, ReprocessSerializer,
     LandingPageSerializer, LandingPageSubmitSerializer, MediaAssetSerializer,
     SentEmailSerializer, UserSerializer, DashboardStatsSerializer,
-    CustomTokenObtainPairSerializer,
+    CustomTokenObtainPairSerializer, PermissionSerializer, GroupSerializer,
+    PropertySerializer,
 )
 from .services import WebhookProcessor, ReprocessWebhook # Lógica centralizada
 
@@ -145,8 +147,10 @@ class LeadViewSet(viewsets.ModelViewSet):
     y respeta los permisos de Django.
     """
     permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
-    # Campos por los que se puede filtrar en la URL
-    filterset_fields = ["status", "first_source", "assigned_to"]
+    # Motores de filtrado activados para esta vista
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    # Campos por los que se puede filtrar exactamente via URL (?status=...)
+    filterset_fields = ["status", "assigned_to", "campaign", "first_source"]
     # Campos en los que se puede buscar texto
     search_fields = ["original_email", "contact_email", "first_name", "last_name", "phone"]
     # Campos por los que se puede ordenar
@@ -240,7 +244,10 @@ class WebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     serializer_class = WebhookLogSerializer
     permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
+    # Motores de filtrado activados
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["status", "source_type"]
+    search_fields = ["raw_body", "error_message"]
     ordering_fields = ["created_at", "status"]
 
     def get_queryset(self):
@@ -295,6 +302,61 @@ class CampaignViewSet(viewsets.ModelViewSet):
     filterset_fields = ["is_active"]
     permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
 
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
+    def brochure_preview(self, request, pk=None):
+        """
+        GET /api/v1/campaigns/{id}/brochure-preview/?token=...
+        Retorna el HTML renderizado del brochure para previsualización en el dashboard.
+        Soporta pasar el token por query param para compatibilidad con iframes.
+        """
+        # Validación manual de token para el iframe
+        token = request.query_params.get('token')
+        if not token:
+            return HttpResponse("No autorizado: Falta token", status=403)
+            
+        from rest_framework_simplejwt.tokens import AccessToken
+        try:
+            # Validamos que el token sea legítimo y no haya expirado
+            valid_token = AccessToken(token)
+            # Podríamos verificar si valid_token['user_id'] tiene permisos, 
+            # pero para previsualización de brochure de campaña es suficiente.
+        except Exception:
+            return HttpResponse("No autorizado: Token inválido o expirado", status=403)
+
+        campaign = self.get_object()
+        
+        # Simulamos un lead para el preview
+        context = {
+            'lead': {
+                'first_name': 'Inversionista Prueba',
+                'id': 'preview-id'
+            },
+            'campaign': campaign,
+            'properties': campaign.properties.all().select_related('main_image'),
+            'primary_color': campaign.landing_pages.first().primary_color if campaign.landing_pages.exists() else '#3b82f6',
+            'brochure_title': campaign.brochure_title or f"Propuesta para Cliente",
+            'brochure_description': campaign.brochure_description,
+            'brochure_features': campaign.brochure_features,
+            'is_preview': True
+        }
+        
+        from django.template.loader import render_to_string
+        html = render_to_string('leads/brochure_template.html', context)
+        return HttpResponse(html)
+
+
+class PropertyViewSet(viewsets.ModelViewSet):
+    """
+    Controlador para gestionar el catálogo maestro de propiedades/proyectos.
+    """
+    queryset = Property.objects.all().select_related('main_image')
+    serializer_class = PropertySerializer
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["is_active", "location"]
+    search_fields = ["name", "location", "description"]
+    ordering_fields = ["created_at", "min_investment"]
+
 
 # ─── Historial / Timeline ───────────────────────────────────────────────────
 
@@ -316,17 +378,25 @@ class InteractionViewSet(viewsets.ReadOnlyModelViewSet):
         return qs
 
 
-# ─── Usuarios (Dropdowns de Asignación) ──────────────────────────────────────
+# ─── Usuarios (Gestión de Perfiles) ──────────────────────────────────────────
 
-class UserListView(APIView):
+class UserViewSet(viewsets.ModelViewSet):
     """
-    Lista simplificada de usuarios activos.
-    Se usa para que el administrador pueda elegir a quién asignar un lead.
+    Gestión completa de usuarios (vendedores y administradores).
+    Permite crear nuevos perfiles y asignarles roles.
     """
-    def get(self, request):
-        users = User.objects.filter(is_active=True)
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
+    queryset = User.objects.all().prefetch_related('groups')
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    pagination_class = None # Mantenemos lista plana para compatibilidad con dropdowns
+
+    def perform_create(self, serializer):
+        # Guardar usuario y manejar password si viene en el request
+        # (Idealmente se debería usar un serializer específico para creación con password)
+        user = serializer.save()
+        if 'password' in self.request.data:
+            user.set_password(self.request.data['password'])
+            user.save()
 
 
 # ─── Exportación de Datos ────────────────────────────────────────────────────
@@ -487,8 +557,8 @@ class PerformanceAnalyticsView(APIView):
     permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 
     def get(self, request):
-        # Solo consideramos usuarios activos que no son administradores (vendedores)
-        vendors = User.objects.filter(is_active=True, is_staff=False)
+        # Consideramos a todos los usuarios activos para el ranking de rendimiento
+        vendors = User.objects.filter(is_active=True)
         data = []
 
         for vendor in vendors:
@@ -686,4 +756,20 @@ class LeadBrochureView(APIView):
             return response
             
         return Response({"error": "Error técnico generando el documento."}, status=500)
+
+
+# ─── Seguridad y Roles ───────────────────────────────────────────────────────
+
+class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
+    """Visualización de los permisos disponibles en el sistema."""
+    queryset = Permission.objects.filter(content_type__app_label="leads")
+    serializer_class = PermissionSerializer
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    pagination_class = None # Retornamos lista plana para simplificar el frontend
+
+class GroupViewSet(viewsets.ModelViewSet):
+    """Gestión de Roles (Grupos de Django) y sus permisos asociados."""
+    queryset = Group.objects.all().prefetch_related('permissions', 'user_set')
+    serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
 

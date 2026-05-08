@@ -22,9 +22,14 @@ def generate_personalized_brochure(lead, campaign):
     # 1. Preparar el Contexto (Datos dinámicos)
     # Buscamos el color de la landing page vinculada para mantener la identidad visual
     landing = campaign.landing_pages.first()
+    
+    # Traemos las propiedades vinculadas a la campaña (con su imagen principal)
+    properties = campaign.properties.all().select_related('main_image')
+    
     context = {
         'lead': lead,
         'campaign': campaign,
+        'properties': properties, # Lista de proyectos seleccionados
         'primary_color': landing.primary_color if landing else '#3b82f6',
         'brochure_title': campaign.brochure_title or f"Propuesta para {lead.first_name}",
         'brochure_description': campaign.brochure_description,

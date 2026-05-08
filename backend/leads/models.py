@@ -70,6 +70,15 @@ class Campaign(models.Model):
     is_active = models.BooleanField(default=True)        # Control de vigencia de la campaña
     start_date = models.DateField(null=True, blank=True) # Cuándo inicia la campaña
     end_date = models.DateField(null=True, blank=True)   # Cuándo finaliza
+    
+    # ── Relación con Propiedades (Catálogo) ──
+    properties = models.ManyToManyField(
+        "Property", 
+        blank=True, 
+        related_name="campaigns",
+        help_text="Selecciona las propiedades que se mostrarán en el brochure de esta campaña."
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True) # Registro de creación
 
     class Meta:
@@ -94,6 +103,66 @@ class MediaAsset(models.Model):
 
     def __str__(self):
         return self.title or self.file.name
+
+
+# ─── Catálogo de Propiedades / Proyectos ─────────────────────────────────────
+
+class Property(models.Model):
+    """
+    Catálogo maestro de proyectos inmobiliarios.
+    Contiene la información técnica que se inyecta en los Brochures PDF.
+    """
+    name = models.CharField(max_length=200, unique=True)
+    slug = models.SlugField(max_length=200, unique=True)
+    description = models.TextField(blank=True, default="")
+    location = models.CharField(max_length=255, help_text="Ej: Punta Cana, República Dominicana")
+    
+    # Datos de Inversión (Estilo 'Somos Rentable')
+    min_investment = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0,
+        help_text="Monto mínimo de inversión inicial."
+    )
+    estimated_return = models.CharField(
+        max_length=100, 
+        blank=True, 
+        default="", 
+        help_text="Ej: 8% - 12% Anual"
+    )
+    delivery_date = models.CharField(
+        max_length=100, 
+        blank=True, 
+        default="", 
+        help_text="Ej: Diciembre 2025"
+    )
+    
+    # Características & Media
+    amenities = models.JSONField(
+        default=list, 
+        blank=True, 
+        help_text="Lista de amenidades (ej: ['Piscina', 'Playa privada'])."
+    )
+    main_image = models.ForeignKey(
+        MediaAsset, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name="properties",
+        help_text="Imagen principal que aparecerá en el PDF."
+    )
+    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Propiedad"
+        verbose_name_plural = "Propiedades"
+
+    def __str__(self):
+        return self.name
 
 
 # ─── Páginas de Aterrizaje Dinámicas ─────────────────────────────────────────

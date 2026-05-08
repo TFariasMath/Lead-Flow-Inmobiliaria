@@ -16,7 +16,7 @@ from .api import (
     SourceViewSet,
     CampaignViewSet,
     InteractionViewSet,
-    UserListView,
+    UserViewSet,
     DashboardStatsView,
     PerformanceAnalyticsView,
     LeadExportView,
@@ -27,7 +27,8 @@ from .api import (
     LandingPageViewSet,
     MediaAssetViewSet,
     GroupViewSet,
-    PermissionListView,
+    PermissionViewSet,
+    PropertyViewSet,
 )
 
 # 1. Configuración del Router de Django Rest Framework
@@ -42,6 +43,9 @@ router.register(r"media-assets", MediaAssetViewSet, basename="media-assets")
 router.register(r"interactions", InteractionViewSet, basename="interaction")
 router.register(r"sent-emails", SentEmailViewSet, basename="sentemail")
 router.register(r"groups", GroupViewSet, basename="group")
+router.register(r"users", UserViewSet, basename="user")
+router.register(r"permissions", PermissionViewSet, basename="permission")
+router.register(r"properties", PropertyViewSet, basename="property")
 
 # 2. Definición de URLs específicas (Endpoints de lógica de negocio)
 urlpatterns = [
@@ -55,9 +59,7 @@ urlpatterns = [
     # UTILIDADES: Exportación a CSV para reportes externos
     path("leads/export/", LeadExportView.as_view(), name="leads-export"),
     
-    # SEGURIDAD: Listado de usuarios para asignación manual y gestión de roles
-    path("users/", UserListView.as_view(), name="user-list"),
-    path("permissions/", PermissionListView.as_view(), name="permission-list"),
+    # SEGURIDAD: Gestión de roles
     
     # LANDINGS: Endpoints públicos para el funcionamiento de las páginas de aterrizaje
     path("landings/<slug:slug>/", LandingPageDetailView.as_view(), name="landing-detail"),

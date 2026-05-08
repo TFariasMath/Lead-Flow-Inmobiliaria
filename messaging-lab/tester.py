@@ -10,7 +10,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'lab_config.settings')
 django.setup()
 
 def send_test(template_name, to_email):
-    print(f"🚀 Iniciando envío de prueba: {template_name} -> {to_email}")
+    print(f"[LOG] Iniciando envio de prueba: {template_name} -> {to_email}")
     
     # Datos de prueba (Simulando un Lead real)
     context = {
@@ -50,13 +50,13 @@ def send_test(template_name, to_email):
         
         # Enviar
         msg.send()
-        print(f"✅ ¡Correo enviado con éxito! Revisa tu bandeja de entrada.")
+        print(f"[OK] Correo enviado con exito! Revisa tu bandeja de entrada.")
         
         if os.getenv('EMAIL_HOST_USER') == '':
-            print("⚠️ NOTA: Como no hay EMAIL_HOST_USER en el .env, el correo se imprimió en la CONSOLA (modo debug).")
+            print("[WARN] NOTA: Como no hay EMAIL_HOST_USER en el .env, el correo se imprimio en la CONSOLA.")
             
     except Exception as e:
-        print(f"❌ Error al enviar: {str(e)}")
+        print(f"[ERROR] Error al enviar: {str(e)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Lead Flow Messaging Lab - Email Tester')

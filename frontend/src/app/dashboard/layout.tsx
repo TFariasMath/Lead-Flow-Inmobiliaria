@@ -1,8 +1,7 @@
 /**
- * Lead Flow - Dashboard Layout
- * ============================
- * Layout protegido que requiere autenticación.
- * Incluye sidebar y redirige al login si no hay sesión.
+ * Lead Flow - Dashboard Layout (Premium v3)
+ * ==========================================
+ * Layout protegido con sidebar, noise overlay y main content area.
  */
 
 "use client";
@@ -30,9 +29,11 @@ export default function DashboardLayout({
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-[var(--color-text-muted)]">Cargando...</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-600 font-bold uppercase tracking-[0.2em]">
+            Cargando sistema...
+          </p>
         </div>
       </div>
     );
@@ -41,10 +42,12 @@ export default function DashboardLayout({
   if (!token) return null;
 
   return (
-    <div className="min-h-screen relative flex p-4 gap-4 overflow-hidden">
+    <div className="min-h-screen relative flex p-3 gap-3 overflow-hidden noise-overlay">
       <Sidebar />
       <NotificationPortal />
-      <main className="flex-1 glass-container rounded-[2rem] overflow-hidden relative">
+      <main className="flex-1 glass-container rounded-[1.75rem] overflow-hidden relative">
+        {/* Top gradient accent line */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent z-10" />
         <div className="h-full overflow-y-auto p-8 custom-scrollbar">
           {children}
         </div>

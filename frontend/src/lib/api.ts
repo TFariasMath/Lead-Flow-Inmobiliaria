@@ -220,10 +220,77 @@ export interface Campaign {
   is_active: boolean;
   start_date: string | null;
   end_date: string | null;
+  brochure_title: string;
+  brochure_description: string;
+  brochure_features: string[];
+  properties: number[];
+  properties_details?: Property[];
+}
+
+export interface Property {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  location: string;
+  min_investment: string;
+  estimated_return: string;
+  delivery_date: string;
+  amenities: string[];
+  main_image: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export function getCampaigns(token: string) {
   return apiFetch<PaginatedResponse<Campaign>>("/campaigns/", { token });
+}
+
+export function getCampaign(token: string, id: string) {
+  return apiFetch<Campaign>(`/campaigns/${id}/`, { token });
+}
+
+export function updateCampaign(token: string, id: string, data: Partial<Campaign>) {
+  return apiFetch<Campaign>(`/campaigns/${id}/`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function getProperties(token: string, params?: string) {
+  const query = params ? `?${params}` : "";
+  return apiFetch<PaginatedResponse<Property>>(`/properties/${query}`, {
+    token,
+  });
+}
+
+export function getProperty(token: string, id: string) {
+  return apiFetch<Property>(`/properties/${id}/`, { token });
+}
+
+export function createProperty(token: string, data: Partial<Property>) {
+  return apiFetch<Property>("/properties/", {
+    token,
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateProperty(token: string, id: string, data: Partial<Property>) {
+  return apiFetch<Property>(`/properties/${id}/`, {
+    token,
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteProperty(token: string, id: string) {
+  return apiFetch(`/properties/${id}/`, {
+    token,
+    method: "DELETE",
+  });
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────

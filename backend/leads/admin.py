@@ -9,8 +9,17 @@ from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin # Para ver historial de cambios
 from .models import (
     Lead, Source, Interaction, WebhookLog, VendorProfile, 
-    SessionAudit, Campaign, LandingPage, SentEmail
+    SessionAudit, Campaign, LandingPage, SentEmail, Property
 )
+
+
+@admin.register(Property)
+class PropertyAdmin(admin.ModelAdmin):
+    """Catálogo de proyectos inmobiliarios."""
+    list_display = ("name", "location", "min_investment", "is_active", "created_at")
+    list_filter = ("is_active", "location")
+    search_fields = ("name", "location", "description")
+    prepopulated_fields = {"slug": ("name",)}
 
 
 @admin.register(VendorProfile)
@@ -60,11 +69,12 @@ class CampaignAdmin(admin.ModelAdmin):
     list_filter = ["is_active"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
+    filter_horizontal = ["properties"]
     
     # Agrupamos los campos para que el formulario se vea ordenado
     fieldsets = (
         ("Información General", {
-            "fields": ("name", "slug", "budget", "is_active")
+            "fields": ("name", "slug", "budget", "is_active", "properties")
         }),
         ("Fechas de Vigencia", {
             "fields": ("start_date", "end_date")

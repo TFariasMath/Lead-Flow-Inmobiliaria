@@ -9,7 +9,7 @@ from django.contrib.auth.models import User, Group, Permission
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage, SentEmail, MediaAsset
+from .models import Lead, Source, Interaction, WebhookLog, Campaign, LandingPage, SentEmail, MediaAsset, Property
 
 
 # ─── Catálogos de Marketing ──────────────────────────────────────────────────
@@ -22,11 +22,28 @@ class SourceSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
 
+class PropertySerializer(serializers.ModelSerializer):
+    """Representación de una propiedad o proyecto inmobiliario."""
+    class Meta:
+        model = Property
+        fields = [
+            "id", "name", "slug", "description", "location",
+            "min_investment", "estimated_return", "delivery_date",
+            "amenities", "main_image", "created_at", "updated_at"
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
 class CampaignSerializer(serializers.ModelSerializer):
     """Representación de una campaña comercial (ej: Inversión 2024)."""
+    properties_details = PropertySerializer(source="properties", many=True, read_only=True)
+
     class Meta:
         model = Campaign
-        fields = ["id", "name", "slug", "budget", "is_active", "start_date", "end_date", "created_at"]
+        fields = [
+            "id", "name", "slug", "budget", "is_active", 
+            "start_date", "end_date", "properties", "properties_details", "created_at"
+        ]
         read_only_fields = ["id", "created_at"]
 
 
@@ -271,11 +288,21 @@ class SentEmailSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Información pública del vendedor."""
+    """Información completa del usuario/vendedor."""
+    group_names = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='name',
+        source='groups'
+    )
+
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "email", "is_staff"]
-        read_only_fields = fields
+        fields = ["id", "username", "first_name", "last_name", "email", "is_staff", "groups", "group_names", "password"]
+        extra_kwargs = {
+            'password': {'write_only': True, 'required': False},
+            'groups': {'required': False}
+        }
 
 
 class DashboardStatsSerializer(serializers.Serializer):

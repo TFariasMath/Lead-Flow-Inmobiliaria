@@ -1,17 +1,31 @@
 /**
- * Lead Flow - Leads List Page
- * ===========================
- * Tabla principal de gestión comercial con filtros y Slide-over de detalle.
+ * Lead Flow - Leads List Page (Premium v3)
+ * ========================================
+ * Tabla principal de gestión comercial con filtros avanzados,
+ * micro-métricas y Slide-over de detalle.
  */
 
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getLeads, getSources, getCampaigns, updateLead, type Lead, type Source, type Campaign } from "@/lib/api";
-import { Search, Filter, ChevronLeft, ChevronRight, Eye, MoreHorizontal } from "lucide-react";
+import { 
+  Search, 
+  Filter, 
+  ChevronLeft, 
+  ChevronRight, 
+  Eye, 
+  MoreHorizontal, 
+  Download, 
+  Plus, 
+  Activity, 
+  Target, 
+  Zap,
+  MousePointer2
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
 
@@ -24,24 +38,31 @@ const STATUS_OPTIONS = [
   "cierre_perdido",
 ];
 
-const STATUS_BADGES: Record<string, { label: string; color: string }> = {
-  Nuevo: { label: "Nuevo", color: "bg-blue-500/10 text-blue-400 border border-blue-500/20" },
-  nuevo: { label: "Nuevo", color: "bg-blue-500/10 text-blue-400 border border-blue-500/20" },
-  Contactado: { label: "Contactado", color: "bg-sky-500/10 text-sky-400 border border-sky-500/20" },
-  contactado: { label: "Contactado", color: "bg-sky-500/10 text-sky-400 border border-sky-500/20" },
-  "En Calificación": { label: "Calificación", color: "bg-amber-500/10 text-amber-400 border border-amber-500/20" },
-  en_calificacion: { label: "Calificación", color: "bg-amber-500/10 text-amber-400 border border-amber-500/20" },
-  "Propuesta Enviada": { label: "Propuesta", color: "bg-violet-500/10 text-violet-400 border border-violet-500/20" },
-  propuesta_enviada: { label: "Propuesta", color: "bg-violet-500/10 text-violet-400 border border-violet-500/20" },
-  "Cierre Ganado": { label: "Ganado", color: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
-  cierre_ganado: { label: "Ganado", color: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
-  "Cierre Perdido": { label: "Perdido", color: "bg-slate-500/10 text-slate-400 border border-slate-500/20" },
-  cierre_perdido: { label: "Perdido", color: "bg-slate-500/10 text-slate-400 border border-slate-500/20" },
+const STATUS_BADGE_MAP: Record<string, string> = {
+  nuevo: "badge-blue",
+  contactado: "badge-cyan",
+  en_calificacion: "badge-amber",
+  propuesta_enviada: "badge-violet",
+  cierre_ganado: "badge-emerald",
+  cierre_perdido: "badge-slate",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  nuevo: "Nuevo",
+  contactado: "Contactado",
+  en_calificacion: "Calificación",
+  propuesta_enviada: "Propuesta",
+  cierre_ganado: "Ganado",
+  cierre_perdido: "Perdido",
 };
 
 export default function LeadsListPage() {
   return (
-    <Suspense fallback={<div>Cargando...</div>}>
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
       <LeadsListContent />
     </Suspense>
   );
@@ -59,27 +80,17 @@ function LeadsListContent() {
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
   const [sourceFilter, setSourceFilter] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
-  const [isStaleFilter, setIsStaleFilter] = useState(false);
+  const [isStaleFilter, setIsStaleFilter] = useState(searchParams.get("filter") === "stale");
   
-  // Slide-over state
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
-
-  // Sync with URL params on mount
-  useEffect(() => {
-    const status = searchParams.get("status");
-    const filter = searchParams.get("filter");
-    const selected = searchParams.get("selected");
-
-    if (status) setStatusFilter(status);
-    if (filter === "stale") setIsStaleFilter(true);
-    if (selected) setSelectedLeadId(selected);
-  }, [searchParams]);
+  const fetchLock = useRef(false);
 
   const fetchLeads = useCallback(async () => {
-    if (!token) return;
+    if (!token || fetchLock.current) return;
+    fetchLock.current = true;
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -89,25 +100,22 @@ function LeadsListContent() {
       if (sourceFilter) params.set("first_source", sourceFilter);
       if (campaignFilter) params.set("campaign", campaignFilter);
       
-      // Manejar filtro de leads estancados (opcional, si el backend lo soporta)
-      if (isStaleFilter) {
-         // Si el backend no tiene filtro explícito 'stale', podríamos
-         // filtrar localmente o añadir el param si lo implementamos
-         // params.set("stale", "true");
-      }
-
       const data = await getLeads(token, params.toString());
-      setLeads(data.results);
-      setTotalCount(data.count);
+      setLeads(data.results || []);
+      setTotalCount(data.count || 0);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching leads:", err);
     } finally {
       setLoading(false);
+      fetchLock.current = false;
     }
-  }, [token, page, search, statusFilter, sourceFilter, campaignFilter, isStaleFilter]);
+  }, [token, page, search, statusFilter, sourceFilter, campaignFilter]);
 
   useEffect(() => {
-    fetchLeads();
+    const timer = setTimeout(() => {
+      fetchLeads();
+    }, 50);
+    return () => clearTimeout(timer);
   }, [fetchLeads]);
 
   useEffect(() => {
@@ -134,12 +142,11 @@ function LeadsListContent() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Error exporting CSV");
-      
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "leads_export.csv";
+      a.download = `leads_export_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -150,182 +157,179 @@ function LeadsListContent() {
 
   const totalPages = Math.ceil(totalCount / 20);
 
-  const newToday = leads.filter(l => {
-    const d = new Date(l.created_at);
-    const today = new Date();
-    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
-  }).length;
-  
-  const unattended = leads.filter(l => l.status.toLowerCase() === "nuevo").length;
-
   return (
-    <div className="space-y-6 animate-fadeIn relative">
-      {/* Mini-Dashboard Ticker */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <TickerCard label="Nuevos Hoy" value={newToday} color="#3b82f6" trend="+2" />
-        <TickerCard label="Sin Atender" value={unattended} color="#f59e0b" trend={unattended > 5 ? "Alert" : "OK"} />
-        <TickerCard label="Meta Mensual" value="85%" color="#10b981" trend="↑ 5%" />
+    <div className="space-y-6 animate-fadeIn pb-10">
+      
+      {/* ── Metric Strip ── */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 stagger-children">
+        <MiniCard icon={Activity} label="Contactos Totales" value={totalCount} color="#3b82f6" />
+        <MiniCard icon={Zap} label="Nuevos Hoy" value={leads.filter(l => new Date(l.created_at).toDateString() === new Date().toDateString()).length} color="#0ea5e9" trend="+12%" />
+        <MiniCard icon={Target} label="Sin Atender" value={leads.filter(l => l.status === "nuevo").length} color="#f59e0b" alert={leads.filter(l => l.status === "nuevo").length > 10} />
+        <MiniCard icon={MousePointer2} label="CTR Promedio" value="4.2%" color="#10b981" />
       </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between pt-4">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-2">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight uppercase">Leads</h1>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
-            {totalCount} contactos en sistema
+          <h1 className="section-title mb-1">Listado de Leads</h1>
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            Gestión centralizada de oportunidades comerciales
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleExportCSV}
-            className="h-10 px-4 rounded-xl bg-slate-900/50 border border-white/5 text-slate-300 text-xs font-bold uppercase tracking-widest hover:text-white transition-all"
-          >
+          <button onClick={handleExportCSV} className="btn-ghost flex items-center gap-2">
+            <Download className="w-3.5 h-3.5" />
             Exportar
           </button>
-          <button
-            onClick={() => router.push("/dashboard/leads/new")}
-            className="h-10 px-6 rounded-xl bg-blue-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-500 shadow-lg shadow-blue-600/20 transition-all"
-          >
-            + Nuevo Lead
+          <button onClick={() => router.push("/dashboard/leads/new")} className="btn-primary flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            Nuevo Lead
           </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+      {/* ── Filters & Search ── */}
+      <div className="grid grid-cols-12 gap-4">
+        <div className="col-span-12 lg:col-span-6 relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
           <input
             id="lead-search"
             type="text"
             placeholder="Buscar por email, nombre o teléfono..."
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-900/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all"
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="input-premium w-full pl-11 h-11"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-500 mr-2" />
+        <div className="col-span-12 lg:col-span-6 flex gap-3">
           <select
             id="filter-status"
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="px-3 py-2.5 bg-slate-900/50 border border-white/5 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="input-premium flex-1 h-11 cursor-pointer font-bold text-[10px] uppercase tracking-widest"
           >
-            <option value="">Estado</option>
-            {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt.replace('_', ' ')}</option>)}
+            <option value="">Todos los Estados</option>
+            {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{STATUS_LABELS[opt] || opt}</option>)}
           </select>
           <select
             id="filter-source"
             value={sourceFilter}
-            onChange={(e) => {
-              setSourceFilter(e.target.value);
-              setPage(1);
-            }}
-            className="px-3 py-2.5 bg-slate-900/50 border border-white/5 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+            onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
+            className="input-premium flex-1 h-11 cursor-pointer font-bold text-[10px] uppercase tracking-widest"
           >
-            <option value="">Fuente</option>
-            {sources.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
+            <option value="">Todas las Fuentes</option>
+            {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="glass-container rounded-3xl overflow-hidden border border-white/5">
+      {/* ── Table Container ── */}
+      <div className="glass-container rounded-[1.5rem] overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full border-collapse">
+          <table className="w-full table-premium">
             <thead>
-              <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contacto</th>
-                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Score</th>
-                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Email</th>
-                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estado</th>
-                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Vendedor</th>
-                <th className="text-center px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Acciones</th>
+              <tr>
+                <th className="w-[30%]">Lead / Contacto</th>
+                <th className="w-[10%] text-center">Score</th>
+                <th className="w-[20%]">Email de Contacto</th>
+                <th className="w-[15%]">Estado</th>
+                <th className="w-[15%]">Vendedor</th>
+                <th className="w-[10%] text-center">Detalle</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-20 text-center">
-                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                  <td colSpan={6} className="py-32 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                      <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando Leads...</p>
+                    </div>
                   </td>
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-20 text-center text-slate-500 font-medium">No se encontraron leads</td>
+                  <td colSpan={6} className="py-32 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <Filter className="w-8 h-8 text-slate-800" />
+                      <p className="text-sm font-bold text-slate-500">No se encontraron leads con estos filtros</p>
+                    </div>
+                  </td>
                 </tr>
               ) : (
-                leads.map((lead, i) => (
+                leads.map((lead, idx) => (
                   <tr
                     key={lead.id}
-                    className="group hover:bg-white/[0.03] transition-colors cursor-pointer"
+                    className="group cursor-pointer"
                     onClick={() => setSelectedLeadId(lead.id)}
+                    style={{ animationDelay: `${idx * 30}ms` }}
                   >
-                    <td className="px-6 py-4 max-w-[200px]">
+                    <td>
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/5 flex items-center justify-center text-xs font-black text-blue-400 group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white transition-all duration-300">
                           {(lead.first_name || lead.original_email).charAt(0).toUpperCase()}
                         </div>
-                        <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate">
-                          {lead.first_name} {lead.last_name}
-                        </span>
+                        <div className="overflow-hidden">
+                          <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate uppercase">
+                            {lead.first_name} {lead.last_name}
+                          </p>
+                          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest truncate">
+                            {lead.first_source_name || "Fuente Directa"}
+                          </p>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: lead.score >= 80 ? '#10b981' : lead.score >= 50 ? '#f59e0b' : '#ef4444' }} />
-                         <span className="text-xs font-bold text-white">{lead.score}</span>
+                    <td className="text-center font-mono">
+                      <div className="inline-flex items-center gap-2 px-2 py-1 rounded-lg bg-white/[0.03] border border-white/5">
+                        <div className={cn("w-1.5 h-1.5 rounded-full", lead.score >= 80 ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : lead.score >= 50 ? "bg-amber-500" : "bg-red-500")} />
+                        <span className="text-xs font-bold text-white">{lead.score}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 max-w-[180px]">
-                      <span className="text-xs font-medium text-slate-400 truncate block">{lead.original_email}</span>
+                    <td className="font-mono">
+                      <span className="text-[11px] text-slate-400 group-hover:text-slate-300 transition-colors truncate block">
+                        {lead.original_email}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td>
                       <select 
                         value={lead.status}
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
                         className={cn(
-                          "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-transparent border border-white/5 focus:outline-none focus:ring-1 focus:ring-blue-600/50 cursor-pointer",
-                          STATUS_BADGES[lead.status]?.color || "text-slate-400"
+                          "badge outline-none cursor-pointer hover:scale-105 transition-transform",
+                          STATUS_BADGE_MAP[lead.status] || "badge-slate"
                         )}
                       >
-                        {STATUS_OPTIONS.map(opt => <option key={opt} value={opt} className="bg-slate-900 text-white">{opt.replace('_', ' ')}</option>)}
+                        {STATUS_OPTIONS.map(opt => (
+                          <option key={opt} value={opt} className="bg-slate-950 text-white uppercase text-[10px]">
+                            {STATUS_LABELS[opt] || opt}
+                          </option>
+                        ))}
                       </select>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-medium text-slate-400">{lead.assigned_to_name || "Sin asignar"}</span>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-md bg-slate-800 border border-white/5 flex items-center justify-center text-[8px] font-black text-slate-400">
+                          {(lead.assigned_to_name || "S").charAt(0)}
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-500 group-hover:text-slate-300 transition-colors">
+                          {lead.assigned_to_name || "Sin asignar"}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="text-center">
+                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedLeadId(lead.id);
-                          }}
-                          className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                          onClick={(e) => { e.stopPropagation(); setSelectedLeadId(lead.id); }}
+                          className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-500 hover:text-white hover:bg-blue-600/20 hover:border-blue-500/20 border border-transparent transition-all"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/dashboard/leads/${lead.id}`);
-                          }}
-                          className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/leads/${lead.id}`); }}
+                          className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/10 transition-all"
                         >
-                          <MoreHorizontal className="w-4 h-4" />
+                          <MoreHorizontal className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -336,33 +340,35 @@ function LeadsListContent() {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* ── Pagination ── */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-white/[0.01]">
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-              Página {page} de {totalPages}
+          <div className="flex items-center justify-between px-8 py-5 border-t border-white/[0.04] bg-white/[0.01]">
+            <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest">
+              Mostrando <span className="text-white">{leads.length}</span> de <span className="text-white">{totalCount}</span> resultados
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="p-2 rounded-lg border border-white/5 text-slate-500 hover:bg-white/5 disabled:opacity-30"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="p-2 rounded-lg border border-white/5 text-slate-500 hover:bg-white/5 disabled:opacity-30"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-black text-slate-500 uppercase">Página {page} / {totalPages}</span>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl border border-white/5 text-slate-600 hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:pointer-events-none transition-all"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl border border-white/5 text-slate-600 hover:text-white hover:bg-white/5 disabled:opacity-20 disabled:pointer-events-none transition-all"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Slide-over Detail Panel */}
       <LeadDetailPanel 
         leadId={selectedLeadId}
         token={token}
@@ -373,22 +379,30 @@ function LeadsListContent() {
   );
 }
 
-function TickerCard({ label, value, color, trend }: { label: string; value: string | number; color: string; trend: string }) {
+function MiniCard({ icon: Icon, label, value, color, trend, alert }: { icon: any; label: string; value: string | number; color: string; trend?: string; alert?: boolean }) {
   return (
-    <div className="glass-card rounded-2xl p-4 flex items-center justify-between group overflow-hidden relative">
-      <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: color }} />
-      <div>
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</p>
-        <p className="text-xl font-black text-white mt-0.5">{value}</p>
+    <div className={cn(
+      "glass-card rounded-2xl p-4 flex items-center justify-between group relative overflow-hidden",
+      alert && "border-red-500/20 bg-red-500/[0.02]"
+    )}>
+      <div className="absolute top-0 left-0 w-1 h-full opacity-40 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: color }} />
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-slate-500 group-hover:scale-110 transition-transform duration-500" style={{ color: alert ? '#ef4444' : color }}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div>
+          <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">{label}</p>
+          <p className="text-xl font-black text-white">{value}</p>
+        </div>
       </div>
-      <div className="text-right">
-        <span className={cn(
-          "text-[10px] font-bold px-1.5 py-0.5 rounded",
-          trend === "Alert" ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"
+      {trend && (
+        <div className={cn(
+          "text-[9px] font-black px-1.5 py-0.5 rounded-lg border",
+          trend.includes('+') ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"
         )}>
           {trend}
-        </span>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
