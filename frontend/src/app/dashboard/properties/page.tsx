@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import PropertyEditor from "@/components/PropertyEditor";
+import MapSection from "@/components/MapSection";
+import { Grid, Map as MapIcon } from "lucide-react";
 
 export default function PropertiesPage() {
   const { token } = useAuth();
@@ -34,6 +36,7 @@ export default function PropertiesPage() {
   const [search, setSearch] = useState("");
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
 
   const fetchProperties = useCallback(async () => {
     if (!token) return;
@@ -98,6 +101,30 @@ export default function PropertiesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* View Toggle */}
+          <div className="flex bg-slate-900/50 border border-white/5 p-1 rounded-xl mr-2">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "p-2 rounded-lg transition-all",
+                viewMode === "grid" ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+              )}
+              title="Vista de Cuadrícula"
+            >
+              <Grid className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setViewMode("map")}
+              className={cn(
+                "p-2 rounded-lg transition-all",
+                viewMode === "map" ? "bg-blue-600 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+              )}
+              title="Vista de Mapa"
+            >
+              <MapIcon className="w-5 h-5" />
+            </button>
+          </div>
+
           <div className="input-icon-wrapper group">
             <Search className="w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
             <input
@@ -130,6 +157,14 @@ export default function PropertiesPage() {
           <Building2 className="w-12 h-12 opacity-20" />
           <p className="font-bold text-sm">No se encontraron proyectos en el catálogo</p>
           <button onClick={handleNew} className="btn-ghost mt-2">Crear primer activo</button>
+        </div>
+      ) : viewMode === "map" ? (
+        <div className="h-[600px] w-full animate-fadeInUp">
+          <MapSection 
+            properties={filteredProperties} 
+            primaryColor="#3b82f6" 
+            onPropertyClick={handleEdit}
+          />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 stagger-children">

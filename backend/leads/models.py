@@ -116,6 +116,9 @@ class Property(models.Model):
     slug = models.SlugField(max_length=200, unique=True)
     description = models.TextField(blank=True, default="")
     location = models.CharField(max_length=255, help_text="Ej: Punta Cana, República Dominicana")
+    address = models.CharField(max_length=255, blank=True, null=True, help_text="Calle, Número, Oficina/Depto")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     
     # Datos de Inversión (Estilo 'Somos Rentable')
     min_investment = models.DecimalField(
@@ -196,6 +199,11 @@ class LandingPage(models.Model):
     
     primary_color = models.CharField(max_length=20, default="#3b82f6", help_text="Color HEX para el botón y detalles.")
     image_url = models.URLField(blank=True, default="") # Link a imagen externa
+    
+    # ── Coordenadas (Override opcional para el mapa) ──
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
     image_asset = models.ForeignKey(
         MediaAsset, 
         on_delete=models.SET_NULL, 

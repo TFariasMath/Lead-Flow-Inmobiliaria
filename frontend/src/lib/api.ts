@@ -265,12 +265,16 @@ export interface Property {
   slug: string;
   description: string;
   location: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
   min_investment: string;
   estimated_return: string;
   delivery_date: string;
   amenities: string[];
   main_image: number | null;
   main_image_url?: string | null;
+  campaign_name?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;

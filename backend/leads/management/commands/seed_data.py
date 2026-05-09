@@ -10,7 +10,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from leads.models import Source, Campaign, LandingPage, Lead, Interaction, LandingPageVisit
+from leads.models import Source, Campaign, LandingPage, Lead, Interaction, LandingPageVisit, Property
 
 class Command(BaseCommand):
     help = 'Puebla la base de datos con 90 días de datos históricos realistas.'
@@ -43,15 +43,29 @@ class Command(BaseCommand):
 
         # 3. Campañas y Landings
         campanas_info = [
-            {"name": "Edificio SkyView", "slug": "skyview", "color": "#3b82f6"},
-            {"name": "Barrio Universitario", "slug": "barrio-u", "color": "#10b981"},
-            {"name": "Lofts Industriales", "slug": "lofts", "color": "#f59e0b"},
+            {"name": "Edificio SkyView", "slug": "skyview", "color": "#3b82f6", "lat": -33.4372, "lng": -70.6506},
+            {"name": "Barrio Universitario", "slug": "barrio-u", "color": "#10b981", "lat": -33.4489, "lng": -70.6607},
+            {"name": "Lofts Industriales", "slug": "lofts", "color": "#f59e0b", "lat": -33.4429, "lng": -70.6300},
         ]
 
         landings = []
         for c in campanas_info:
             camp, _ = Campaign.objects.get_or_create(slug=c["slug"], defaults={"name": c["name"], "budget": random.randint(1000, 5000)})
             
+            # Crear Propiedad asociada
+            prop, _ = Property.objects.get_or_create(
+                slug=c["slug"],
+                defaults={
+                    "name": c["name"],
+                    "location": "Santiago, Chile",
+                    "latitude": c["lat"],
+                    "longitude": c["lng"],
+                    "min_investment": random.randint(2000, 5000),
+                    "estimated_return": "8% - 12%"
+                }
+            )
+            camp.properties.add(prop)
+
             landing, _ = LandingPage.objects.get_or_create(
                 slug=c["slug"],
                 defaults={

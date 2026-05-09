@@ -2,6 +2,7 @@
 
 import React from "react";
 import * as LucideIcons from "lucide-react";
+import MapSection from "./MapSection";
 
 export interface Benefit {
   icon: string;
@@ -21,6 +22,10 @@ export interface LandingData {
   campaign_name?: string;
   visits_count?: number;
   conversion_rate?: number;
+  latitude?: number;
+  longitude?: number;
+  campaign?: number;
+  properties_details?: any[];
 }
 
 interface LandingLayoutProps {
@@ -122,9 +127,20 @@ export default function LandingLayout({
             ))}
           </div>
 
+          {(data.latitude || (data.properties_details && data.properties_details.length > 0)) && (
+            <div className="mt-8 @[40rem]:mt-12 h-[350px] w-full animate-fadeInUp" style={{ animationDelay: '0.4s' }}>
+                <MapSection 
+                    latitude={data.latitude} 
+                    longitude={data.longitude} 
+                    properties={data.properties_details} 
+                    primaryColor={primaryColor} 
+                />
+            </div>
+          )}
+
           {data.image_url && (
-            <div className="mt-4 rounded-2xl overflow-hidden border border-white/10 shadow-2xl max-w-lg hidden @[40rem]:block">
-                <img src={data.image_url} alt="Preview" className="w-full h-48 object-cover opacity-80 hover:opacity-100 transition-opacity" />
+            <div className="mt-8 rounded-2xl overflow-hidden border border-white/10 shadow-2xl max-w-lg hidden @[40rem]:block opacity-60 hover:opacity-100 transition-opacity">
+                <img src={data.image_url} alt="Preview" className="w-full h-48 object-cover" />
             </div>
           )}
         </div>
@@ -143,21 +159,21 @@ export default function LandingLayout({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 @[30rem]:grid-cols-2 gap-4">
-                {data.form_config?.fields.includes("first_name") && (
+                {data.form_config?.fields?.includes("first_name") && (
                   <Input name="first_name" placeholder="Nombre" icon="User" value={form.first_name} onChange={(v: string) => setForm(f => ({...f, first_name: v}))} />
                 )}
-                {data.form_config?.fields.includes("last_name") && (
+                {data.form_config?.fields?.includes("last_name") && (
                   <Input name="last_name" placeholder="Apellido" icon="User" value={form.last_name} onChange={(v: string) => setForm(f => ({...f, last_name: v}))} />
                 )}
               </div>
               
               <Input name="email" type="email" placeholder="Correo electrónico" icon="Mail" value={form.email} onChange={(v: string) => setForm(f => ({...f, email: v}))} required />
               
-              {data.form_config?.fields.includes("phone") && (
+              {data.form_config?.fields?.includes("phone") && (
                 <Input name="phone" type="tel" placeholder="Teléfono" icon="Phone" value={form.phone} onChange={(v: string) => setForm(f => ({...f, phone: v}))} />
               )}
               
-              {data.form_config?.fields.includes("company") && (
+              {data.form_config?.fields?.includes("company") && (
                 <Input name="company" placeholder="Empresa (Opcional)" icon="Building" value={form.company} onChange={(v: string) => setForm(f => ({...f, company: v}))} />
               )}
 

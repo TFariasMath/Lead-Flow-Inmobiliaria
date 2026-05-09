@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import LandingLayout, { type LandingData } from "@/components/LandingLayout";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export default function PublicLandingPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -16,13 +16,21 @@ export default function PublicLandingPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!slug) return;
     fetch(`${API_BASE}/landings/${slug}/`)
       .then((r) => {
-        if (!r.ok) { setNotFound(true); return null; }
+        if (!r.ok) { 
+          console.error(`Landing fetch failed: ${r.status} ${r.statusText}`);
+          setNotFound(true); 
+          return null; 
+        }
         return r.json();
       })
       .then((data) => { if (data) setLanding(data); })
-      .catch(() => setNotFound(true))
+      .catch((err) => {
+        console.error("Landing fetch error:", err);
+        setNotFound(true);
+      })
       .finally(() => setLoading(false));
   }, [slug]);
 

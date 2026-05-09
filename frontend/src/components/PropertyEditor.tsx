@@ -30,6 +30,8 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
     slug: "",
     description: "",
     location: "",
+    latitude: 0,
+    longitude: 0,
     min_investment: "0",
     estimated_return: "10%",
     delivery_date: "",
@@ -57,6 +59,8 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
         slug: "",
         description: "",
         location: "",
+        latitude: 0,
+        longitude: 0,
         min_investment: "0",
         estimated_return: "10%",
         delivery_date: "",
@@ -209,6 +213,38 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
                    />
                  </div>
                </div>
+
+               <div className="space-y-2">
+                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dirección Completa</label>
+                 <input
+                   value={formData.address || ""}
+                   onChange={e => setFormData({...formData, address: e.target.value})}
+                   placeholder="Ej: Av. Costanera 123, Oficina 402"
+                   className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+                 />
+               </div>
+               <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Latitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={formData.latitude}
+                      onChange={e => setFormData({...formData, latitude: parseFloat(e.target.value) || 0})}
+                      className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Longitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={formData.longitude}
+                      onChange={e => setFormData({...formData, longitude: parseFloat(e.target.value) || 0})}
+                      className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+                    />
+                  </div>
+                </div>
              </div>
           </div>
 

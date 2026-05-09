@@ -25,16 +25,23 @@ class SourceSerializer(serializers.ModelSerializer):
 class PropertySerializer(serializers.ModelSerializer):
     """Representación de una propiedad o proyecto inmobiliario."""
     main_image_url = serializers.ImageField(source="main_image.file", read_only=True)
+    campaign_name = serializers.SerializerMethodField()
     
     class Meta:
         model = Property
         fields = [
             "id", "name", "slug", "description", "location",
+            "latitude", "longitude",
             "min_investment", "estimated_return", "delivery_date",
             "amenities", "main_image", "main_image_url", "is_active", 
+            "campaign_name", "location", "address",
             "created_at", "updated_at"
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def get_campaign_name(self, obj):
+        campaign = obj.campaigns.first()
+        return campaign.name if campaign else "Sin Proyecto"
 
 
 class CampaignSerializer(serializers.ModelSerializer):
@@ -245,6 +252,7 @@ class LandingPageSerializer(serializers.ModelSerializer):
     campaign_name = serializers.ReadOnlyField(source="campaign.name")
     source_name = serializers.ReadOnlyField(source="source.name")
     conversion_rate = serializers.ReadOnlyField()
+    properties_details = PropertySerializer(source="campaign.properties", many=True, read_only=True)
 
     class Meta:
         model = LandingPage
@@ -253,7 +261,9 @@ class LandingPageSerializer(serializers.ModelSerializer):
             "benefits", "form_config",
             "cta_text", "success_message",
             "primary_color", "image_url", "image_asset",
+            "latitude", "longitude",
             "campaign", "campaign_name", "source", "source_name",
+            "properties_details",
             "visits_count", "conversion_rate",
             "is_active", "created_at",
         ]
