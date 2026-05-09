@@ -23,38 +23,46 @@ import {
   Building2,
   Target,
 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, useAuth as useAuthHook } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
+import { prefetchData } from "@/hooks/useData";
 
 interface NavItem {
   href: string;
   label: string;
   icon: any;
   section?: string;
+  swrKey?: string; // Llave de SWR para pre-carga
 }
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
 
   const navItems: NavItem[] = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "principal" },
-    { href: "/dashboard/leads", label: "Leads", icon: Users, section: "principal" },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "principal", swrKey: "/dashboard/stats" },
+    { href: "/dashboard/leads", label: "Leads", icon: Users, section: "principal", swrKey: "/leads" },
     { href: "/dashboard/leads/new", label: "Nuevo Lead", icon: UserPlus, section: "principal" },
   ];
 
   if (user && (user.isStaff || user.groups.includes("Administrador"))) {
     navItems.push(
       { href: "/dashboard/landings", label: "Landing Pages", icon: Globe, section: "marketing" },
-      { href: "/dashboard/campaigns", label: "Campañas", icon: Target, section: "marketing" },
-      { href: "/dashboard/properties", label: "Propiedades", icon: Building2, section: "marketing" },
-      { href: "/dashboard/analytics", label: "Rendimiento", icon: BarChart, section: "analytics" },
+      { href: "/dashboard/campaigns", label: "Campañas", icon: Target, section: "marketing", swrKey: "/campaigns" },
+      { href: "/dashboard/properties", label: "Propiedades", icon: Building2, section: "marketing", swrKey: "/properties" },
+      { href: "/dashboard/analytics", label: "Rendimiento", icon: BarChart, section: "analytics", swrKey: "/analytics/performance" },
       { href: "/dashboard/emails", label: "Email Sandbox", icon: Mail, section: "analytics" },
       { href: "/dashboard/webhooks", label: "Webhook Logs", icon: Webhook, section: "analytics" },
       { href: "/dashboard/settings/users", label: "Usuarios", icon: Users, section: "config" },
       { href: "/dashboard/settings/roles", label: "Roles", icon: Shield, section: "config" },
     );
   }
+
+  const handlePrefetch = (key?: string) => {
+    if (key && token) {
+        prefetchData(key, token);
+    }
+  };
 
   // Group items by section
   const sections = navItems.reduce((acc, item) => {
@@ -92,6 +100,7 @@ export default function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onMouseEnter={() => handlePrefetch(item.swrKey)}
                     className={cn(
                       "w-full h-11 flex items-center justify-center rounded-xl transition-all duration-300 relative group/nav",
                       isActive

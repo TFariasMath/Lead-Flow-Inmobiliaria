@@ -203,7 +203,6 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
                      />
                    </div>
                  </div>
-iv>
                  <div className="space-y-2">
                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">URL Amigable (Slug)</label>
                    <input

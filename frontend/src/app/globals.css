@@ -39,12 +39,7 @@
   }
 
   body {
-    background-color: var(--color-bg);
-    background-image:
-      radial-gradient(ellipse 80% 50% at 10% 0%, rgba(59, 130, 246, 0.12) 0px, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 90% 10%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
-      radial-gradient(ellipse 70% 60% at 80% 100%, rgba(139, 92, 246, 0.10) 0px, transparent 50%),
-      radial-gradient(ellipse 50% 40% at 10% 90%, rgba(236, 72, 153, 0.06) 0px, transparent 50%);
+    background-color: #02040a;
     background-attachment: fixed;
     color: var(--color-text);
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -88,18 +83,20 @@
 
 .glass-container {
   background: var(--glass-background);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
+  will-change: transform, opacity; /* Aceleración GPU */
 }
 
 .glass-card {
   background: rgba(255, 255, 255, 0.015);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.04);
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  contain: content; /* Optimización de renderizado */
 }
 
 .glass-card:hover {
