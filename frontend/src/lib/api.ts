@@ -85,6 +85,7 @@ export interface Lead {
   utm_campaign: string;
   utm_term: string;
   utm_content: string;
+  interested_properties: number[];
   interaction_count?: number;
   score: number;
   interactions?: Interaction[];
@@ -286,6 +287,14 @@ export function getCampaigns(token: string) {
 
 export function getCampaign(token: string, id: string) {
   return apiFetch<Campaign>(`/campaigns/${id}/`, { token });
+}
+
+export function createCampaign(token: string, data: Partial<Campaign>) {
+  return apiFetch<Campaign>("/campaigns/", {
+    token,
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export function updateCampaign(token: string, id: string, data: Partial<Campaign>) {

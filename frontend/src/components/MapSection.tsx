@@ -52,17 +52,36 @@ const MapSection: React.FC<MapSectionProps> = ({
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const markers = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const [activeProject, setActiveProject] = useState<string | null>(null);
 
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 
-  // Extract unique projects for navigation
+  const geojson: any = useMemo(() => ({
+    type: 'FeatureCollection',
+    features: properties
+      .filter(p => p.latitude && p.longitude && Number(p.latitude) !== 0)
+      .map(p => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [Number(p.longitude), Number(p.latitude)] },
+        properties: {
+          id: p.id,
+          name: p.name,
+          campaign_name: p.campaign_name || 'General',
+          color: getProjectColor(p.campaign_name, primaryColor),
+          min_investment: p.min_investment,
+          estimated_return: p.estimated_return,
+          location: p.location,
+          address: p.address,
+          main_image_url: p.main_image_url
+        }
+      }))
+  }), [properties, primaryColor]);
+
   const projects = useMemo(() => {
     const uniqueProjects = new Set<string>();
     properties.forEach(p => {
-        if (p.campaign_name && p.latitude && p.longitude && p.latitude !== 0) {
-            uniqueProjects.add(p.campaign_name);
-        }
+        if (p.campaign_name && p.latitude && p.longitude && p.latitude !== 0) uniqueProjects.add(p.campaign_name);
     });
     return Array.from(uniqueProjects);
   }, [properties]);
@@ -70,191 +89,178 @@ const MapSection: React.FC<MapSectionProps> = ({
   const goToProject = (projectName: string) => {
     if (!map.current) return;
     setActiveProject(projectName);
-    
     const projectProperties = properties.filter(p => p.campaign_name === projectName);
     if (projectProperties.length === 0) return;
 
-    if (projectProperties.length === 1) {
-        map.current.flyTo({
-            center: [Number(projectProperties[0].longitude), Number(projectProperties[0].latitude)],
-            zoom: 15,
-            pitch: 60,
-            duration: 2000
-        });
-    } else {
-        const bounds = new mapboxgl.LngLatBounds();
-        projectProperties.forEach(p => bounds.extend([Number(p.longitude), Number(p.latitude)]));
-        map.current.fitBounds(bounds, { padding: 100, maxZoom: 15, duration: 2000 });
-    }
+    const bounds = new mapboxgl.LngLatBounds();
+    projectProperties.forEach(p => bounds.extend([Number(p.longitude), Number(p.latitude)]));
+    map.current.fitBounds(bounds, { padding: 100, maxZoom: 16, duration: 2000 });
   };
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
     const defaultCenter: [number, number] = [-70.6483, -33.4569];
-    let center = defaultCenter;
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: defaultCenter,
+      zoom: 11,
+      pitch: 45,
+      bearing: -17,
+      attributionControl: false,
+      antialias: true
+    });
 
-    if (latitude && longitude) {
-        center = [Number(longitude), Number(latitude)];
-    } else if (properties.length > 0 && properties[0].latitude && properties[0].longitude) {
-        center = [Number(properties[0].longitude), Number(properties[0].latitude)];
-    }
+    map.current.on('style.load', () => {
+      map.current?.setFog({ 'range': [0.5, 10], 'color': '#0f172a', 'horizon-blend': 0.1, 'high-color': '#020617', 'space-color': '#020617', 'star-intensity': 0.15 });
+    });
 
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
-        center: center,
-        zoom: 12,
-        pitch: 45,
-        bearing: -17,
-        attributionControl: false,
-        antialias: true
+    map.current.on('load', () => {
+      if (!map.current) return;
+      map.current.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+      map.current.addSource('properties', {
+        type: 'geojson',
+        data: geojson,
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50
       });
 
-      map.current.on('style.load', () => {
-        map.current?.setFog({
-            'range': [0.5, 10],
-            'color': '#0f172a',
-            'horizon-blend': 0.1,
-            'high-color': '#020617',
-            'space-color': '#020617',
-            'star-intensity': 0.15
-        });
-      });
-
-      map.current.on('load', () => {
-        map.current?.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
-
-        mapContainer.current?.addEventListener('click', (e) => {
-            const target = e.target as HTMLElement;
-            if (target.classList.contains('popup-btn')) {
-                const propertyId = target.getAttribute('data-id');
-                if (propertyId && onPropertyClick) {
-                    const prop = properties.find(p => p.id === Number(propertyId));
-                    if (prop) onPropertyClick(prop);
-                }
-            }
-        });
-
-        if (properties.length > 0) {
-          const bounds = new mapboxgl.LngLatBounds();
-          let hasMarkers = false;
-
-          properties.forEach(prop => {
-            const lat = Number(prop.latitude);
-            const lng = Number(prop.longitude);
-            
-            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-              const projectColor = getProjectColor(prop.campaign_name, primaryColor);
-              const imageUrl = getFullImageUrl(prop.main_image_url);
-              
-              const el = document.createElement('div');
-              el.className = 'custom-marker';
-              el.innerHTML = `
-                <div class="marker-pulse" style="background-color: ${projectColor}33"></div>
-                <div class="marker-dot" style="background-color: ${projectColor}"></div>
-              `;
-
-              const popupContent = `
-                <div class="premium-popup">
-                  ${imageUrl ? `
-                    <div class="popup-image" style="background-image: url('${imageUrl}')">
-                       <div class="popup-badge" style="background: ${projectColor}dd">${prop.estimated_return || '12%'} ROI</div>
-                    </div>
-                  ` : `
-                    <div class="popup-image-placeholder">
-                       <div class="popup-badge" style="background: ${projectColor}dd">${prop.estimated_return || '12%'} ROI</div>
-                       <span>Lead Flow Asset</span>
-                    </div>
-                  `}
-                  <div class="popup-info">
-                    <span class="popup-sector" style="color: ${projectColor}">${prop.campaign_name || 'Inversión Directa'}</span>
-                    <h3>${prop.name}</h3>
-                    <p class="popup-address">${prop.address || 'Ubicación Premium'}</p>
-                    <p class="popup-location"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> ${prop.location || 'Chile'}</p>
-                    <div class="popup-meta">
-                      <div class="meta-item">
-                        <span>Desde</span>
-                        <strong>$${Number(prop.min_investment || 0).toLocaleString()}</strong>
-                      </div>
-                      <button class="popup-btn" data-id="${prop.id}" style="--hover-bg: ${projectColor}">Explorar</button>
-                    </div>
-                  </div>
-                </div>
-              `;
-
-              new mapboxgl.Marker(el)
-                .setLngLat([lng, lat])
-                .setPopup(new mapboxgl.Popup({ offset: 25, maxWidth: '280px' }).setHTML(popupContent))
-                .addTo(map.current!);
-              
-              el.addEventListener('click', () => {
-                map.current?.flyTo({
-                    center: [lng, lat],
-                    zoom: 15,
-                    pitch: 60,
-                    duration: 2000,
-                    essential: true
-                });
-              });
-
-              bounds.extend([lng, lat]);
-              hasMarkers = true;
-            }
-          });
-
-          if (hasMarkers && !latitude) {
-            if (properties.length > 1) {
-                map.current?.fitBounds(bounds, { padding: 100, maxZoom: 14, duration: 2500 });
-            } else {
-                const first = properties.find(p => p.latitude && p.longitude);
-                if (first) {
-                    map.current?.flyTo({ center: [Number(first.longitude), Number(first.latitude)], zoom: 14, duration: 2500 });
-                }
-            }
-          }
+      // Layer for CLUSTERS
+      map.current.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: 'properties',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': ['step', ['get', 'point_count'], '#3b82f6', 5, '#8b5cf6', 15, '#ec4899'],
+          'circle-radius': ['step', ['get', 'point_count'], 20, 5, 25, 15, 30],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#fff',
+          'circle-opacity': 0.8
         }
       });
-    } catch (err) {
-      console.error("Critical error initializing Mapbox:", err);
-    }
 
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
-  }, [latitude, longitude, properties, primaryColor, onPropertyClick]);
+      map.current.addLayer({
+        id: 'cluster-count',
+        type: 'symbol',
+        source: 'properties',
+        filter: ['has', 'point_count'],
+        layout: { 'text-field': '{point_count}', 'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'], 'text-size': 12 },
+        paint: { 'text-color': '#ffffff' }
+      });
+
+      // Layer for UNCLUSTERED POINTS (Solitary assets)
+      map.current.addLayer({
+        id: 'unclustered-point',
+        type: 'circle',
+        source: 'properties',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': ['get', 'color'],
+          'circle-radius': 8,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#fff'
+        }
+      });
+
+      // Handlers
+      map.current.on('click', 'clusters', (e) => {
+        const features = map.current?.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+        const clusterId = features?.[0].properties?.cluster_id;
+        (map.current?.getSource('properties') as mapboxgl.GeoJSONSource).getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (!err) map.current?.easeTo({ center: (features?.[0].geometry as any).coordinates, zoom });
+        });
+      });
+
+      map.current.on('click', 'unclustered-point', (e) => {
+        const features = map.current?.queryRenderedFeatures(e.point, { layers: ['unclustered-point'] });
+        if (!features?.length) return;
+        const prop = features[0].properties;
+        const coords = (features[0].geometry as any).coordinates;
+
+        const imageUrl = getFullImageUrl(prop.main_image_url);
+        const projectColor = prop.color;
+
+        const popupContent = `
+          <div class="premium-popup">
+            ${imageUrl ? `<div class="popup-image" style="background-image: url('${imageUrl}')"><div class="popup-badge" style="background: ${projectColor}dd">${prop.estimated_return || '12%'} ROI</div></div>` : `<div class="popup-image-placeholder"><span>Lead Flow Asset</span></div>`}
+            <div class="popup-info">
+              <span class="popup-sector" style="color: ${projectColor}">${prop.campaign_name}</span>
+              <h3>${prop.name}</h3>
+              <p class="popup-address">${prop.address || 'Ubicación Premium'}</p>
+              <p class="popup-location">Chile</p>
+              <div class="popup-actions-grid"><button class="street-view-btn" data-lat="${coords[1]}" data-lng="${coords[0]}">Street View</button></div>
+              <div class="popup-meta"><div class="meta-item"><span>Inversión</span><strong>$${Number(prop.min_investment || 0).toLocaleString()}</strong></div><button class="popup-btn" data-id="${prop.id}" style="--hover-bg: ${projectColor}">Gestionar</button></div>
+            </div>
+          </div>
+        `;
+
+        new mapboxgl.Popup({ offset: 15, maxWidth: '280px' })
+          .setLngLat(coords)
+          .setHTML(popupContent)
+          .addTo(map.current!);
+          
+        map.current?.flyTo({ center: coords, zoom: 16, pitch: 60, duration: 2000 });
+      });
+
+      map.current.on('mouseenter', 'unclustered-point', () => { if (map.current) map.current.getCanvas().style.cursor = 'pointer'; });
+      map.current.on('mouseleave', 'unclustered-point', () => { if (map.current) map.current.getCanvas().style.cursor = ''; });
+
+      mapContainer.current?.addEventListener('click', (e) => {
+          const target = e.target as HTMLElement;
+          
+          // Use closest to detect click on button even if clicking icon/text
+          const manageBtn = target.closest('.popup-btn');
+          if (manageBtn && onPropertyClick) {
+              const propertyId = manageBtn.getAttribute('data-id');
+              const found = properties.find(p => p.id === Number(propertyId));
+              if (found) onPropertyClick(found);
+          }
+
+          const streetBtn = target.closest('.street-view-btn');
+          if (streetBtn) {
+              const lat = streetBtn.getAttribute('data-lat');
+              const lng = streetBtn.getAttribute('data-lng');
+              // More robust Street View URL
+              const url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+              window.open(url, '_blank');
+          }
+      });
+    });
+
+    return () => { map.current?.remove(); map.current = null; };
+  }, []);
+
+  useEffect(() => {
+    if (map.current && map.current.getSource('properties')) {
+        (map.current.getSource('properties') as mapboxgl.GeoJSONSource).setData(geojson);
+    }
+  }, [geojson]);
 
   return (
     <div className="w-full h-full min-h-[600px] rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl relative group bg-[#020617]">
       <style jsx global>{`
-        .custom-marker { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .marker-dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px rgba(0,0,0,0.8); z-index: 2; }
-        .marker-pulse { position: absolute; width: 50px; height: 50px; border-radius: 50%; animation: pulse 2s infinite; z-index: 1; }
-        @keyframes pulse { 0% { transform: scale(0.4); opacity: 0.9; } 100% { transform: scale(2.2); opacity: 0; } }
         .mapboxgl-popup-content { background: #0f172a !important; color: white !important; border-radius: 24px !important; padding: 0 !important; border: 1px solid rgba(255,255,255,0.1) !important; box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important; overflow: hidden; }
         .mapboxgl-popup-tip { border-top-color: #0f172a !important; }
         .premium-popup { width: 280px; }
-        .popup-image { height: 150px; background-size: cover; background-position: center; position: relative; }
-        .popup-image-placeholder { height: 150px; background: linear-gradient(45deg, #1e293b, #0f172a); display: flex; align-items: center; justify-content: center; position: relative; }
-        .popup-image-placeholder span { font-size: 10px; font-weight: 900; color: rgba(255,255,255,0.1); text-transform: uppercase; letter-spacing: 2px; }
-        .popup-badge { position: absolute; top: 12px; right: 12px; color: white; padding: 5px 12px; border-radius: 10px; font-size: 10px; font-weight: 900; text-transform: uppercase; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .popup-image { height: 130px; background-size: cover; background-position: center; position: relative; }
+        .popup-image-placeholder { height: 130px; background: linear-gradient(45deg, #1e293b, #0f172a); display: flex; align-items: center; justify-content: center; position: relative; }
+        .popup-badge { position: absolute; top: 12px; right: 12px; color: white; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
         .popup-info { padding: 20px; }
         .popup-sector { display: block; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; opacity: 0.8; }
-        .popup-info h3 { margin: 0 0 4px 0; font-size: 18px; font-weight: 900; color: white; letter-spacing: -0.5px; }
+        .popup-info h3 { margin: 0 0 4px 0; font-size: 18px; font-weight: 900; color: white; }
         .popup-address { margin: 0 0 4px 0; font-size: 11px; color: white; font-weight: 600; }
-        .popup-location { margin: 0 0 20px 0; font-size: 10px; color: #64748b; display: flex; align-items: center; gap: 6px; font-weight: 600; text-transform: uppercase; }
+        .popup-location { margin: 0 0 15px 0; font-size: 10px; color: #64748b; display: flex; align-items: center; gap: 6px; font-weight: 600; text-transform: uppercase; }
+        .street-view-btn { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; color: #94a3b8; font-size: 11px; font-weight: 700; padding: 8px; cursor: pointer; margin-bottom: 12px; }
         .popup-meta { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px; }
-        .meta-item span { display: block; font-size: 9px; text-transform: uppercase; color: #475569; font-weight: 900; margin-bottom: 2px; }
+        .meta-item span { display: block; font-size: 9px; text-transform: uppercase; color: #475569; font-weight: 900; }
         .meta-item strong { font-size: 16px; color: white; font-weight: 900; }
-        .popup-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 10px 18px; border-radius: 12px; cursor: pointer; transition: all 0.3s; }
-        .popup-btn:hover { background: var(--hover-bg); border-color: transparent; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .popup-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 10px 18px; border-radius: 12px; cursor: pointer; }
       `}</style>
       
-      {/* Map Header with Sector Navigation */}
       <div className="absolute top-0 left-0 right-0 z-20 p-6 flex flex-col gap-4 pointer-events-none">
         <div className="flex items-center justify-between">
             <div className="px-5 py-2.5 bg-[#0f172a]/90 backdrop-blur-2xl border border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] text-blue-400 shadow-2xl flex items-center gap-4 pointer-events-auto">
@@ -265,21 +271,11 @@ const MapSection: React.FC<MapSectionProps> = ({
                 Red Global de Activos
             </div>
         </div>
-
-        {/* Project/Sector Shortcuts */}
         <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar pointer-events-auto">
             {projects.map((projectName) => {
                 const color = getProjectColor(projectName, primaryColor);
                 return (
-                    <button
-                        key={projectName}
-                        onClick={() => goToProject(projectName)}
-                        className={`flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${
-                            activeProject === projectName 
-                            ? 'bg-white text-[#020617] border-white shadow-xl scale-105' 
-                            : 'bg-[#0f172a]/80 backdrop-blur-md text-white/70 border-white/10 hover:border-white/30'
-                        }`}
-                    >
+                    <button key={projectName} onClick={() => goToProject(projectName)} className={`flex-shrink-0 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${activeProject === projectName ? 'bg-white text-[#020617] border-white shadow-xl scale-105' : 'bg-[#0f172a]/80 backdrop-blur-md text-white/70 border-white/10 hover:border-white/30'}`}>
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></div>
                         {projectName}
                     </button>
@@ -287,7 +283,6 @@ const MapSection: React.FC<MapSectionProps> = ({
             })}
         </div>
       </div>
-
       <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
     </div>
   );

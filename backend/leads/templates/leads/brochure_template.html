@@ -2,253 +2,416 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <title>Brochure LeadFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100;300;400;600;900&display=swap" rel="stylesheet">
     <style>
-        @page {
-            size: A4;
-            margin: 0;
-        }
+        /* ── RESET & CORE ── */
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; }
+        
         body {
-            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-family: 'Outfit', sans-serif;
             margin: 0;
             padding: 0;
             color: #1e293b;
-            background-color: #ffffff;
+            background-color: white;
+            {% if is_preview %}
+            zoom: 0.65; 
+            background-color: #f8fafc;
+            {% endif %}
         }
-        .header {
-            background-color: {{ primary_color }};
+
+        .page-break { page-break-after: always; }
+
+        /* ── PORTADA CINEMÁTICA ── */
+        .cover-page {
+            height: 297mm;
+            width: 210mm;
+            background-color: #020617;
+            background-image: linear-gradient(rgba(2, 6, 23, 0.7), rgba(2, 6, 23, 0.95)), url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2000&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
             color: white;
-            padding: 60px 40px;
-            text-align: center;
+            position: relative;
+            overflow: hidden;
+            {% if is_preview %}
+            margin: 40px auto;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+            {% endif %}
         }
-        .header h1 {
-            margin: 0;
-            font-size: 32pt;
-            letter-spacing: -1px;
+
+        .cover-accent {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(90deg, #2563eb, #60a5fa, #2563eb);
         }
-        .header p {
-            margin: 10px 0 0;
-            font-size: 14pt;
-            opacity: 0.9;
+
+        .cover-content {
+            padding: 60mm 25mm;
+            position: relative;
+            z-index: 10;
         }
-        .content {
-            padding: 40px 60px;
+
+        .company-badge {
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 1.2em;
+            color: #60a5fa;
+            margin-bottom: 50mm;
+            opacity: 0.8;
         }
-        .personalized-greeting {
-            font-size: 18pt;
-            font-weight: bold;
-            color: {{ primary_color }};
+
+        .cover-title {
+            font-size: 72px;
+            font-weight: 900;
+            line-height: 0.9;
+            margin-bottom: 30px;
+            color: white;
+            letter-spacing: -0.04em;
+        }
+
+        .cover-divider {
+            width: 120px;
+            height: 2px;
+            background: #60a5fa;
+            margin-bottom: 40px;
+        }
+
+        .cover-subtitle {
+            font-size: 14px;
+            font-weight: 300;
+            letter-spacing: 0.5em;
+            color: #94a3b8;
             margin-bottom: 20px;
         }
-        .intro-text {
-            font-size: 12pt;
-            line-height: 1.6;
-            margin-bottom: 30px;
+
+        .client-badge {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #f1f5f9;
+            letter-spacing: 0.2em;
         }
-        .features-grid {
-            margin-top: 40px;
-        }
-        .feature-item {
-            margin-bottom: 15px;
-            font-size: 11pt;
-            color: #475569;
-        }
-        .feature-item span {
-            color: {{ primary_color }};
-            font-weight: bold;
-            margin-right: 10px;
-        }
-        .footer {
+
+        .cover-footer {
             position: absolute;
-            bottom: 0;
-            width: 100%;
-            background-color: #f8fafc;
-            padding: 30px 60px;
-            border-top: 1px solid #e2e8f0;
+            bottom: 30mm;
+            left: 25mm;
+            right: 25mm;
         }
-        .footer-content {
+
+        .footer-info {
+            display: table;
+            width: 100%;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 10mm;
+        }
+
+        .info-cell {
+            display: table-cell;
+            vertical-align: bottom;
+        }
+
+        .info-label {
+            display: block;
+            font-size: 8px;
+            font-weight: 900;
+            color: #64748b;
+            letter-spacing: 0.2em;
+            margin-bottom: 8px;
+        }
+
+        .info-value {
+            font-size: 11px;
+            font-weight: 400;
+            color: #f1f5f9;
+        }
+
+        /* ── CONTENEDOR STUDIO ── */
+        .container {
+            padding: 25mm;
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            {% if is_preview %}
+            margin: 40px auto;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.1);
+            {% endif %}
+        }
+
+        .studio-header {
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 10mm;
+            margin-bottom: 15mm;
             display: table;
             width: 100%;
         }
-        .footer-col {
+
+        .logo-studio {
             display: table-cell;
-            vertical-align: middle;
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 0.5em;
+            color: #0f172a;
         }
-        .vendor-info {
-            font-size: 10pt;
-            color: #64748b;
+
+        .page-tag {
+            display: table-cell;
+            text-align: right;
+            font-size: 9px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 0.1em;
         }
-        .vendor-name {
-            font-weight: bold;
-            color: #1e293b;
+
+        /* ── SECCIONES DE TEXTO ── */
+        .intro-title {
+            font-size: 42px;
+            font-weight: 900;
+            color: #020617;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            margin-bottom: 40px;
         }
-        /* Estilos de Propiedades */
-        .property-page {
-            page-break-before: always;
-            padding: 40px 60px;
+
+        .intro-text {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #475569;
+            font-weight: 300;
+            text-align: justify;
         }
-        .property-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            overflow: hidden;
+
+        /* ── FICHA DE PROPIEDAD STUDIO ── */
+        .prop-title-large {
+            font-size: 48px;
+            font-weight: 900;
+            color: #020617;
+            letter-spacing: -0.03em;
+            margin-bottom: 10px;
+        }
+
+        .prop-location-tag {
+            font-size: 10px;
+            font-weight: 700;
+            color: #3b82f6;
+            letter-spacing: 0.3em;
             margin-bottom: 30px;
         }
-        .property-image {
+
+        .prop-gallery-frame {
             width: 100%;
-            height: 250px;
-            background-color: #f1f5f9;
-            text-align: center;
+            height: 500px;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #f8fafc;
+            margin-bottom: 30px;
         }
-        .property-image img {
+
+        .prop-gallery-img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-        .property-info {
-            padding: 25px;
-        }
-        .property-title {
-            font-size: 20pt;
-            font-weight: bold;
-            color: #0f172a;
-            margin-bottom: 5px;
-        }
-        .property-location {
-            font-size: 10pt;
-            color: {{ primary_color }};
-            text-transform: uppercase;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-        .metrics-grid {
+
+        .prop-grid-stats {
             display: table;
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 40px;
+            border-top: 1px solid #f1f5f9;
+            border-bottom: 1px solid #f1f5f9;
+            padding: 20px 0;
         }
-        .metric-box {
+
+        .stat-cell {
             display: table-cell;
-            width: 33%;
-            padding: 15px;
-            background-color: #f8fafc;
-            border: 1px solid #f1f5f9;
-            text-align: center;
+            width: 33.33%;
+            padding: 0 20px;
+            border-right: 1px solid #f1f5f9;
         }
-        .metric-label {
-            font-size: 8pt;
-            color: #64748b;
-            text-transform: uppercase;
-            display: block;
-            margin-bottom: 5px;
+        .stat-cell:last-child { border-right: none; }
+
+        .stat-label-s {
+            font-size: 8px;
+            font-weight: 900;
+            color: #94a3b8;
+            letter-spacing: 0.15em;
+            margin-bottom: 10px;
         }
-        .metric-value {
-            font-size: 14pt;
-            font-weight: bold;
-            color: #1e293b;
+
+        .stat-value-s {
+            font-size: 20px;
+            font-weight: 600;
+            color: #0f172a;
         }
-        .amenities-list {
-            margin-top: 15px;
+
+        .roi-highlight {
+            color: #10b981;
+            font-weight: 900;
         }
-        .amenity-tag {
-            display: inline-block;
-            padding: 4px 10px;
-            background-color: #f1f5f9;
-            color: #475569;
-            font-size: 9pt;
+
+        .prop-content-split {
+            display: table;
+            width: 100%;
+        }
+
+        .prop-text-side {
+            display: table-cell;
+            width: 60%;
+            padding-right: 50px;
+            font-size: 13px;
+            line-height: 1.8;
+            color: #334155;
+            vertical-align: top;
+        }
+
+        .prop-map-side {
+            display: table-cell;
+            width: 40%;
+            vertical-align: top;
+        }
+
+        .map-frame-studio {
             border-radius: 4px;
-            margin-right: 5px;
-            margin-bottom: 5px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            filter: grayscale(0.2);
         }
     </style>
 </head>
 <body>
-    <!-- PORTADA -->
-    <div class="header">
-        <h1>{{ brochure_title|default:campaign.name }}</h1>
-        <p>Propuesta Exclusiva de Inversión</p>
+    <!-- PÁGINA 1: PORTADA CINEMÁTICA -->
+    <div class="cover-page">
+        <div class="cover-accent"></div>
+        <div class="cover-content">
+            <div class="company-badge">LEADFLOW</div>
+            <h1 class="cover-title">ESTRATEGIA<br>INMOBILIARIA</h1>
+            <div class="cover-divider"></div>
+            <p class="cover-subtitle">BROCHURE CORPORATIVO EXCLUSIVO</p>
+            <div class="client-badge">PREPARADO PARA {{ lead.first_name|upper }}</div>
+        </div>
+
+        <div class="cover-footer">
+            <div class="footer-info">
+                <div class="info-cell">
+                    <span class="info-label">ASESOR DE INVERSIÓN</span>
+                    <span class="info-value">{{ lead.assigned_to.get_full_name|default:lead.assigned_to.username|upper }}</span>
+                </div>
+                <div class="info-cell" style="text-align: right;">
+                    <span class="info-label">CÓDIGO DE DOCUMENTO</span>
+                    <span class="info-value">#{{ campaign.id|stringformat:"04d" }} - {% now "Y" %}</span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="content">
-        <div class="personalized-greeting">
-            Hola {{ lead.first_name|default:"Inversionista" }},
-        </div>
-        
-        <div class="intro-text">
-            {{ brochure_description|default:"Hemos preparado esta selección especial de propiedades pensando en tus objetivos de inversión. Nuestro equipo ha analizado cada detalle para asegurar la mejor rentabilidad." }}
+    <div class="page-break"></div>
+
+    <!-- PÁGINA 2: TU PROPUESTA PERSONALIZADA -->
+    <div class="container">
+        <div class="studio-header">
+            <div class="logo-studio">LEADFLOW</div>
+            <div class="page-tag">01 / PROPUESTA</div>
         </div>
 
-        <h2 style="font-size: 16pt; border-bottom: 2px solid {{ primary_color }}; padding-bottom: 5px; margin-top: 40px;">
-            ¿Por qué invertir con nosotros?
-        </h2>
+        <div style="margin-top: 30mm;">
+            <h1 class="intro-title">
+                {{ brochure_title|default:"Análisis de Activos Seleccionados" }}
+            </h1>
+            
+            <div class="intro-text">
+                {{ brochure_description|default:"Hemos analizado el mercado actual para identificar oportunidades que se alineen con una estrategia de crecimiento patrimonial sostenible." }}
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- PÁGINA 3: POR QUÉ NOSOTROS -->
+    <div class="container">
+        <div class="studio-header">
+            <div class="logo-studio">LEADFLOW</div>
+            <div class="page-tag">02 / VALORES</div>
+        </div>
+
+        <h2 class="intro-title">¿Por qué invertir con nosotros?</h2>
         
-        <div class="features-grid">
+        <div style="margin-top: 10mm;">
             {% for feature in brochure_features %}
-            <div class="feature-item">
-                <span>✓</span> {{ feature }}
+            <div style="padding: 20px 0; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; font-size: 15px; color: #334155; font-weight: 400;">
+                <span style="color: #2563eb; margin-right: 20px; font-weight: 900;">—</span>
+                {{ feature }}
             </div>
             {% empty %}
-            <div class="feature-item"><span>✓</span> Alta Rentabilidad y ROI Garantizado</div>
-            <div class="feature-item"><span>✓</span> Ubicación Estratégica en Zonas de Alta Plusvalía</div>
-            <div class="feature-item"><span>✓</span> Proyectos de Desarrolladores con Trayectoria</div>
+            <div style="padding: 20px 0; border-bottom: 1px solid #f1f5f9; font-size: 15px; color: #334155;">
+                <span style="color: #2563eb; margin-right: 20px; font-weight: 900;">—</span> Alta Rentabilidad y ROI Garantizado
+            </div>
+            <div style="padding: 20px 0; border-bottom: 1px solid #f1f5f9; font-size: 15px; color: #334155;">
+                <span style="color: #2563eb; margin-right: 20px; font-weight: 900;">—</span> Ubicación Estratégica en Zonas de Plusvalía
+            </div>
             {% endfor %}
         </div>
     </div>
 
-    <!-- FICHA DE PROPIEDADES -->
+    <!-- PÁGINAS SIGUIENTES: PROPIEDADES -->
     {% for prop in properties %}
-    <div class="property-page">
-        <div class="property-title">{{ prop.name }}</div>
-        <div class="property-location">{{ prop.location }}</div>
+    <div class="page-break"></div>
+    <div class="container">
+        <div class="studio-header">
+            <div class="logo-studio">LEADFLOW</div>
+            <div class="page-tag">CATÁLOGO / {{ forloop.counter|stringformat:"02d" }}</div>
+        </div>
 
-        <div class="property-card">
-            <div class="property-image">
-                {% if prop.main_image %}
-                    <img src="{{ request.scheme }}://{{ request.get_host }}{{ prop.main_image.file.url }}" alt="{{ prop.name }}">
-                {% else %}
-                    <div style="padding-top: 100px; color: #cbd5e1;">Imagen no disponible</div>
-                {% endif %}
+        <h2 class="prop-title-large">{{ prop.name }}</h2>
+        <div class="prop-location-tag">{{ prop.location|upper }}</div>
+
+        <div class="prop-gallery-frame">
+            {% if prop.image_url %}
+            <img src="{{ prop.image_url }}" class="prop-gallery-img">
+            {% else %}
+            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px; font-weight: 600;">IMAGEN EN ALTA RESOLUCIÓN PENDIENTE</div>
+            {% endif %}
+        </div>
+
+        <div class="prop-grid-stats">
+            <div class="stat-cell">
+                <div class="stat-label-s">INVERSIÓN DESDE</div>
+                <div class="stat-value-s">${{ prop.min_investment|default:prop.price }}</div>
             </div>
-            <div class="property-info">
-                <div class="metrics-grid">
-                    <div class="metric-box">
-                        <span class="metric-label">Inversión Mínima</span>
-                        <span class="metric-value">${{ prop.min_investment }}</span>
-                    </div>
-                    <div class="metric-box" style="border-left: 0; border-right: 0;">
-                        <span class="metric-label">Retorno Est.</span>
-                        <span class="metric-value" style="color: #10b981;">{{ prop.estimated_return }}</span>
-                    </div>
-                    <div class="metric-box">
-                        <span class="metric-label">Entrega</span>
-                        <span class="metric-value">{{ prop.delivery_date }}</span>
-                    </div>
-                </div>
+            <div class="stat-cell">
+                <div class="stat-label-s">RENTABILIDAD EST.</div>
+                <div class="stat-value-s roi-highlight">{{ prop.estimated_return|default:prop.roi }}%</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-label-s">FECHA ENTREGA</div>
+                <div class="stat-value-s">{{ prop.delivery_date|default:"Inmediata" }}</div>
+            </div>
+        </div>
 
-                <div style="font-size: 11pt; line-height: 1.5; color: #475569; margin-bottom: 20px;">
-                    {{ prop.description }}
+        <div class="prop-content-split">
+            <div class="prop-text-side">
+                <div style="font-size: 8px; font-weight: 900; color: #94a3b8; margin-bottom: 20px; letter-spacing: 0.2em;">ANÁLISIS DEL PROYECTO</div>
+                <div style="white-space: pre-line;">{{ prop.description }}</div>
+            </div>
+            
+            <div class="prop-map-side">
+                {% if prop.map_static_url %}
+                <div style="font-size: 8px; font-weight: 900; color: #94a3b8; margin-bottom: 20px; letter-spacing: 0.2em;">UBICACIÓN</div>
+                <div class="map-frame-studio">
+                    <img src="{{ prop.map_static_url }}" style="width: 100%; display: block;">
                 </div>
-
-                <div class="amenities-list">
-                    {% for amenity in prop.amenities %}
-                    <span class="amenity-tag">{{ amenity }}</span>
-                    {% endfor %}
-                </div>
+                {% endif %}
             </div>
         </div>
     </div>
     {% endfor %}
-
-    <div class="footer">
-        <div class="footer-content">
-            <div class="footer-col">
-                <div class="vendor-info">
-                    Tu Asesor Asignado:<br>
-                    <span class="vendor-name">{{ lead.assigned_to.get_full_name|default:lead.assigned_to.username|default:"Asesor Experto" }}</span><br>
-                    Email: {{ lead.assigned_to.email|default:"contacto@leadflow.com" }}
-                </div>
-            </div>
-            <div class="footer-col" style="text-align: right;">
-                <span style="font-weight: 800; font-size: 14pt; color: {{ primary_color }};">LEAD FLOW</span>
-            </div>
-        </div>
-    </div>
 </body>
 </html>

@@ -371,6 +371,12 @@ class Lead(models.Model):
         blank=True,
         related_name="leads",
     )
+    interested_properties = models.ManyToManyField(
+        Property,
+        related_name="interested_leads",
+        blank=True,
+        help_text="Proyectos específicos en los que el inversionista ha mostrado interés."
+    )
     utm_source = models.CharField(max_length=200, blank=True, default="")
     utm_medium = models.CharField(max_length=200, blank=True, default="")
     utm_campaign = models.CharField(max_length=200, blank=True, default="")

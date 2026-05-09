@@ -52,7 +52,9 @@ class CampaignSerializer(serializers.ModelSerializer):
         model = Campaign
         fields = [
             "id", "name", "slug", "budget", "is_active", 
-            "start_date", "end_date", "properties", "properties_details", "created_at"
+            "start_date", "end_date", "properties", "properties_details", 
+            "brochure_title", "brochure_description", "brochure_features",
+            "created_at"
         ]
         read_only_fields = ["id", "created_at"]
 
@@ -100,6 +102,7 @@ class LeadListSerializer(serializers.ModelSerializer):
             "status", "assigned_to", "assigned_to_name",
             "first_source", "first_source_name",
             "campaign", "campaign_name", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+            "interested_properties",
             "interaction_count", "score",
             "created_at", "updated_at",
         ]
@@ -135,6 +138,7 @@ class LeadDetailSerializer(serializers.ModelSerializer):
             "status", "assigned_to", "assigned_to_name",
             "first_source", "first_source_name",
             "campaign", "campaign_name", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+            "interested_properties",
             "interactions", "score",
             "created_at", "updated_at",
         ]
@@ -170,6 +174,7 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             "address", "company",
             "status", "assigned_to", "first_source", "score",
             "campaign", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+            "interested_properties",
         ]
         read_only_fields = ["score"]
 

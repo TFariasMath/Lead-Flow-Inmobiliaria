@@ -179,7 +179,7 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
 
              <div className="space-y-4">
                <div className="space-y-2">
-                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre del Proyecto</label>
+                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre del Proyecto <span className="text-red-500">*</span></label>
                  <input
                    required
                    value={formData.name}
@@ -188,10 +188,10 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
                    className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all"
                  />
                </div>
-
+ 
                <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-2">
-                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ubicación</label>
+                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ubicación <span className="text-red-500">*</span></label>
                    <div className="relative">
                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                      <input
@@ -203,6 +203,7 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
                      />
                    </div>
                  </div>
+iv>
                  <div className="space-y-2">
                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">URL Amigable (Slug)</label>
                    <input
@@ -258,26 +259,34 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                    <DollarSign className="w-3 h-3" /> Min. Inv.
+                    <DollarSign className="w-3 h-3" /> Min. Inv. <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.min_investment}
-                    onChange={e => setFormData({...formData, min_investment: e.target.value})}
-                    className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-bold">$</span>
+                    <input
+                      type="text"
+                      required
+                      value={formData.min_investment}
+                      onChange={e => setFormData({...formData, min_investment: e.target.value})}
+                      className="w-full bg-slate-900/50 border border-white/5 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                    <TrendingUp className="w-3 h-3" /> ROI Est.
+                    <TrendingUp className="w-3 h-3" /> ROI Est. <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.estimated_return}
-                    onChange={e => setFormData({...formData, estimated_return: e.target.value})}
-                    placeholder="12%"
-                    className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={formData.estimated_return?.replace('%', '')}
+                      onChange={e => setFormData({...formData, estimated_return: e.target.value + '%'})}
+                      placeholder="12"
+                      className="w-full bg-slate-900/50 border border-white/5 rounded-xl pl-4 pr-8 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-bold">%</span>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">

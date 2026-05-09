@@ -28,6 +28,9 @@ SECRET_KEY = os.environ.get(
 # En producción DEBE ser False para no exponer el código al atacante.
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1")
 
+# Permitir que el dashboard incruste el preview del PDF en un iframe
+X_FRAME_OPTIONS = 'ALLOWALL'
+
 # ALLOWED_HOSTS: Lista de dominios que pueden servir esta app (ej: 'crm.tuempresa.com').
 ALLOWED_HOSTS = ["*"]
 

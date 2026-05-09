@@ -321,33 +321,60 @@ class CampaignViewSet(viewsets.ModelViewSet):
             token = token.split(' ')[1]
             
         from rest_framework_simplejwt.tokens import AccessToken
+        from django.contrib.auth.models import User
         try:
             valid_token = AccessToken(token)
-        except Exception:
+            # Recuperamos el usuario real a partir del ID en el token
+            user_id = valid_token['user_id']
+            actual_user = User.objects.get(id=user_id)
+        except Exception as e:
+            print(f"Error validando token: {e}")
             return HttpResponse("No autorizado: Token inválido o expirado", status=403)
 
         # Recuperamos la campaña
         campaign = self.get_object()
         
-        # Simulamos un lead para el preview
-        context = {
-            'lead': {
-                'first_name': 'Inversionista Prueba',
-                'id': 'preview-id',
-                'assigned_to': {
-                    'get_full_name': 'Asesor LeadFlow',
-                    'username': 'asesor_demo',
-                    'email': 'asesor@leadflow.dev'
-                }
-            },
-            'campaign': campaign,
-            'properties': campaign.properties.all().select_related('main_image'),
-            'primary_color': campaign.landing_pages.first().primary_color if campaign.landing_pages.exists() else '#3b82f6',
-            'brochure_title': campaign.brochure_title or f"Propuesta para Cliente",
-            'brochure_description': campaign.brochure_description,
-            'brochure_features': campaign.brochure_features,
-            'is_preview': True
-        }
+        from .utils_pdf import get_brochure_context
+        
+        # Simulamos un lead genérico para el preview
+        class MockUser:
+            def __init__(self, user):
+                self.username = getattr(user, 'username', 'asesor')
+                self.email = getattr(user, 'email', 'asesor@leadflow.dev')
+                self.first_name = getattr(user, 'first_name', '')
+                self.last_name = getattr(user, 'last_name', '')
+            def get_full_name(self):
+                return f"{self.first_name} {self.last_name}".strip() or self.username
+
+        class MockLead:
+            def __init__(self, user):
+                self.first_name = "Inversionista"
+                self.assigned_to = MockUser(user)
+
+        # Usamos el usuario real recuperado del token
+        context = get_brochure_context(MockLead(actual_user), campaign)
+        context['is_preview'] = True
+        
+        # Inyectar Mapas Estáticos en el preview (misma lógica que utils_pdf)
+        import os
+        mapbox_token = os.environ.get("NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN")
+        if not mapbox_token:
+            mapbox_token = None # Evitamos hardcodear tokens por seguridad
+            
+        props_with_maps = []
+        for p in campaign.properties.all().select_related('main_image'):
+            # Lógica de imagen con fallback
+            if p.main_image and hasattr(p.main_image, 'file') and p.main_image.file:
+                p.image_url = f"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=800&auto=format&fit=crop"
+            else:
+                p.image_url = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=800&auto=format&fit=crop"
+
+            if p.latitude and p.longitude and mapbox_token:
+                p.map_static_url = f"https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/pin-s+3b82f6({p.longitude},{p.latitude})/{p.longitude},{p.latitude},15,0/600x300?access_token={mapbox_token}"
+            else:
+                p.map_static_url = None
+            props_with_maps.append(p)
+        context['properties'] = props_with_maps
         
         from django.template.loader import render_to_string
         # Generar HTML
@@ -355,6 +382,63 @@ class CampaignViewSet(viewsets.ModelViewSet):
         response = HttpResponse(html)
         response["X-Frame-Options"] = "ALLOWALL" # Permitir visualización en el iframe del dashboard
         return response
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.AllowAny])
+    def download_pdf(self, request, pk=None):
+        """
+        GET /api/v1/campaigns/{id}/download_pdf/?token=...
+        Genera y descarga el archivo PDF real de la campaña usando Playwright.
+        Soporta autenticación por token en la URL para descargas directas.
+        """
+        from .utils_playwright import generate_campaign_brochure_playwright
+        from django.utils import timezone
+        from rest_framework_simplejwt.authentication import JWTAuthentication
+        from rest_framework.exceptions import AuthenticationFailed
+        
+        # Intentamos autenticar al usuario manualmente si viene el token por URL
+        token = request.query_params.get('token')
+        user = None
+        
+        if token:
+            try:
+                # Validamos el JWT manualmente
+                jwt_auth = JWTAuthentication()
+                validated_token = jwt_auth.get_validated_token(token)
+                user = jwt_auth.get_user(validated_token)
+            except Exception:
+                return Response({"detail": "Token inválido o expirado"}, status=401)
+        
+        # Si no hay token en URL, revisamos si ya está autenticado por sesión/header
+        if not user and request.user.is_authenticated:
+            user = request.user
+            
+        if not user:
+            return Response({"detail": "Se requiere autenticación para descargar este archivo"}, status=401)
+
+        campaign = self.get_object()
+        
+        # Simulamos un lead genérico para el PDF
+        class MockLead:
+            def __init__(self):
+                self.first_name = "Inversionista"
+                self.assigned_to = user
+        
+        # Usamos el nuevo motor de "Estándar de Oro"
+        pdf_content = generate_campaign_brochure_playwright(MockLead(), campaign)
+        
+        if pdf_content:
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            date_str = timezone.now().strftime("%Y-%m-%d")
+            # Limpiamos el nombre del archivo de caracteres raros
+            clean_name = "".join([c for c in campaign.name if c.isalnum() or c in (' ', '_')]).replace(' ', '_')
+            filename = f"Brochure_{clean_name}_{date_str}.pdf"
+            
+            # Forzamos la descarga con attachment
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response['Content-Length'] = len(pdf_content)
+            return response
+            
+        return Response({"error": "Error generando el PDF con el motor premium"}, status=500)
 
 
 class PropertyViewSet(viewsets.ModelViewSet):

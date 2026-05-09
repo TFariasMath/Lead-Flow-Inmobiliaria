@@ -255,7 +255,6 @@ export default function FunnelChart({ data }: FunnelChartProps) {
                   fill="#94a3b8"
                   fontSize="8"
                   fontWeight="800"
-                  textTransform="uppercase"
                   letterSpacing="0.08em"
                   opacity={visible ? 1 : 0}
                   style={{
