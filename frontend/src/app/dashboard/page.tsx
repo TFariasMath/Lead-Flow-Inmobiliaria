@@ -243,6 +243,7 @@ export default function DashboardPage() {
           value={`${conversionRate}%`}
           color="#10b981"
           accent
+          onClick={() => router.push("/dashboard/leads?status=cierre_ganado")}
         />
         <KPICard
           icon={AlertTriangle}
@@ -257,6 +258,7 @@ export default function DashboardPage() {
           label="Salud API"
           value={`${stats.webhook_success_rate || 0}%`}
           color="#f59e0b"
+          onClick={() => router.push("/dashboard/webhooks")}
         />
       </div>
 

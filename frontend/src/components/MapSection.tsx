@@ -56,6 +56,7 @@ const MapSection: React.FC<MapSectionProps> = ({
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<{ [key: string]: mapboxgl.Marker }>({});
   const [activeProject, setActiveProject] = useState<string | null>(null);
+  const [isInteracting, setIsInteracting] = useState(false);
 
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 
@@ -261,7 +262,7 @@ const MapSection: React.FC<MapSectionProps> = ({
   }, [geojson]);
 
   return (
-    <div className="w-full h-full min-h-[600px] rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl relative group bg-[#020617]">
+    <div className="w-full h-full min-h-[400px] lg:min-h-[600px] rounded-[2rem] lg:rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl relative group bg-[#020617]">
       <style jsx global>{`
         .mapboxgl-popup-content { background: #0f172a !important; color: white !important; border-radius: 24px !important; padding: 0 !important; border: 1px solid rgba(255,255,255,0.1) !important; box-shadow: 0 25px 50px rgba(0,0,0,0.5) !important; overflow: hidden; }
         .mapboxgl-popup-tip { border-top-color: #0f172a !important; }
@@ -281,17 +282,18 @@ const MapSection: React.FC<MapSectionProps> = ({
         .popup-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 10px 18px; border-radius: 12px; cursor: pointer; }
       `}</style>
       
-      <div className="absolute top-0 left-0 right-0 z-20 p-6 flex flex-col gap-4 pointer-events-none">
+      {/* UI Overlay - Filters/Project list */}
+      <div className={`absolute top-0 left-0 right-0 z-20 p-4 lg:p-6 flex flex-col gap-4 transition-all duration-500 ${isInteracting ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
         <div className="flex items-center justify-between">
-            <div className="px-5 py-2.5 bg-[#0f172a]/90 backdrop-blur-2xl border border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] text-blue-400 shadow-2xl flex items-center gap-4 pointer-events-auto">
+            <div className="px-5 py-2.5 bg-[#0f172a]/90 backdrop-blur-2xl border border-white/10 rounded-2xl text-[11px] font-black uppercase tracking-[0.25em] text-blue-400 shadow-2xl flex items-center gap-4">
                 <div className="flex gap-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
                 </div>
-                Red Global de Activos
+                Explorador de Ubicaciones
             </div>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar pointer-events-auto">
+        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             {projects.map((projectName) => {
                 const color = getProjectColor(projectName, primaryColor);
                 return (
@@ -303,7 +305,31 @@ const MapSection: React.FC<MapSectionProps> = ({
             })}
         </div>
       </div>
-      <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
+
+      {/* Map Interaction Guard Overlay */}
+      {!isInteracting && (
+          <div 
+            onClick={() => setIsInteracting(true)}
+            className="absolute inset-0 z-30 flex items-center justify-center cursor-pointer group/guard transition-all duration-700"
+          >
+              <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] group-hover/guard:backdrop-blur-none transition-all duration-700" />
+              <div className="relative flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-1000">
+                  <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl group-hover/guard:scale-110 transition-transform duration-500">
+                      <div className="w-8 h-8 text-white">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3z"/><path d="M12 21c-3.5 0-7-4.5-7-9 0-3.866 3.134-7 7-7s7 3.134 7 7c0 4.5-3.5 9-7 9z"/></svg>
+                      </div>
+                  </div>
+                  <span className="px-6 py-2.5 rounded-full bg-white text-[#020617] text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl group-hover/guard:tracking-[0.3em] transition-all duration-500">
+                      Toca para explorar el mapa
+                  </span>
+              </div>
+          </div>
+      )}
+
+      <div 
+        ref={mapContainer} 
+        className={`absolute inset-0 w-full h-full transition-all duration-1000 ${isInteracting ? 'pointer-events-auto' : 'pointer-events-none'}`} 
+      />
     </div>
   );
 };

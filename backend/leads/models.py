@@ -340,6 +340,20 @@ class Lead(models.Model):
     address = models.TextField(blank=True, default="")
     company = models.CharField(max_length=200, blank=True, default="")
 
+    # ── Perfil de Inversión (Calificación) ──
+    investment_goal = models.CharField(
+        max_length=100, 
+        blank=True, 
+        default="",
+        help_text="Objetivo: Renta, Plusvalía o Patrimonio."
+    )
+    investment_capacity = models.CharField(
+        max_length=100, 
+        blank=True, 
+        default="",
+        help_text="Rango de capital disponible para invertir."
+    )
+
     # ── Gestión Comercial ──
     status = models.CharField(
         max_length=30,
@@ -424,6 +438,10 @@ class Lead(models.Model):
             s += 10
         if self.company:
             s += 10
+        if self.investment_goal:
+            s += 5
+        if self.investment_capacity:
+            s += 5
         return min(s, 100)
 
     def save(self, *args, **kwargs):

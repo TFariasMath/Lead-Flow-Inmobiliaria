@@ -8,7 +8,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState, useCallback, useRef, Suspense, memo } from "react";
+import { useState, useCallback, useRef, Suspense, memo, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/hooks/useData";
 import { updateLead, type Lead, type Source, type Campaign, type PaginatedResponse } from "@/lib/api";
@@ -26,7 +26,9 @@ import {
   Activity, 
   Target, 
   Zap,
-  MousePointer2
+  MousePointer2,
+  AlertTriangle,
+  ArrowUpRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +80,8 @@ function LeadsListContent() {
   const [sourceFilter, setSourceFilter] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [staleFilter, setStaleFilter] = useState(searchParams.get("filter") === "stale");
+  const [todayFilter, setTodayFilter] = useState(searchParams.get("filter") === "today");
 
   // SWR Query Keys
   const leadsQuery = new URLSearchParams();
@@ -86,10 +90,20 @@ function LeadsListContent() {
   if (statusFilter) leadsQuery.set("status", statusFilter);
   if (sourceFilter) leadsQuery.set("first_source", sourceFilter);
   if (campaignFilter) leadsQuery.set("campaign", campaignFilter);
+  if (staleFilter) leadsQuery.set("filter", "stale");
+  if (todayFilter) leadsQuery.set("filter", "today");
 
   const { data: leadsData, isLoading: loading, mutate: mutateLeads } = useData<PaginatedResponse<Lead>>(`/leads?${leadsQuery.toString()}`);
   const { data: sourcesData } = useData<PaginatedResponse<Source>>("/sources");
   const { data: campaignsData } = useData<PaginatedResponse<Campaign>>("/campaigns");
+
+  // Efecto para abrir automáticamente un lead si viene por URL (desde Webhooks)
+  useEffect(() => {
+    const autoId = searchParams.get("id");
+    if (autoId) {
+      setSelectedLeadId(autoId);
+    }
+  }, [searchParams]);
 
   const leads = leadsData?.results || [];
   const totalCount = leadsData?.count || 0;
@@ -142,9 +156,30 @@ function LeadsListContent() {
       
       {/* ── Metric Strip ── */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <MemoizedMiniCard icon={Activity} label="Contactos Totales" value={totalCount} color="#3b82f6" />
-        <MemoizedMiniCard icon={Zap} label="Nuevos Hoy" value={leads.filter(l => new Date(l.created_at).toDateString() === new Date().toDateString()).length} color="#0ea5e9" trend="+12%" />
-        <MemoizedMiniCard icon={Target} label="Sin Atender" value={leads.filter(l => l.status === "nuevo").length} color="#f59e0b" alert={leads.filter(l => l.status === "nuevo").length > 10} />
+        <MemoizedMiniCard 
+          icon={Activity} 
+          label="Contactos Totales" 
+          value={totalCount} 
+          color="#3b82f6" 
+          onClick={() => { setStatusFilter(""); setTodayFilter(false); setStaleFilter(false); setPage(1); }}
+        />
+        <MemoizedMiniCard 
+          icon={Zap} 
+          label="Nuevos Hoy" 
+          value={leadsData?.count && todayFilter ? leadsData.count : "..."} 
+          color="#0ea5e9" 
+          trend="+12%" 
+          active={todayFilter}
+          onClick={() => { setTodayFilter(!todayFilter); setStatusFilter(""); setStaleFilter(false); setPage(1); }}
+        />
+        <MemoizedMiniCard 
+          icon={Target} 
+          label="Sin Atender" 
+          value={statusFilter === "nuevo" ? totalCount : "..."} 
+          color="#f59e0b" 
+          active={statusFilter === "nuevo"}
+          onClick={() => { setStatusFilter(statusFilter === "nuevo" ? "" : "nuevo"); setTodayFilter(false); setStaleFilter(false); setPage(1); }}
+        />
         <MemoizedMiniCard icon={MousePointer2} label="CTR Promedio" value="4.2%" color="#10b981" />
       </div>
 
@@ -155,6 +190,15 @@ function LeadsListContent() {
           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Gestión de oportunidades comerciales</p>
         </div>
         <div className="flex items-center gap-3">
+          {staleFilter && (
+            <button 
+              onClick={() => { setStaleFilter(false); setPage(1); }}
+              className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase flex items-center gap-2 hover:bg-red-500/20 transition-all"
+            >
+              <AlertTriangle className="w-3 h-3" /> Leads Estancados Activo
+              <span className="opacity-60">✕</span>
+            </button>
+          )}
           <button onClick={handleExportCSV} className="btn-ghost flex items-center gap-2 text-xs">
             <Download className="w-3.5 h-3.5" /> Exportar
           </button>
@@ -179,6 +223,19 @@ function LeadsListContent() {
           </div>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => { setStaleFilter(!staleFilter); setPage(1); }}
+            className={cn(
+              "h-11 px-4 rounded-xl border flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
+              staleFilter 
+                ? "bg-red-500/20 border-red-500/40 text-red-500 shadow-lg shadow-red-500/10" 
+                : "bg-slate-900/50 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10"
+            )}
+            title="Filtrar por leads estancados (>24h)"
+          >
+            <AlertTriangle className={cn("w-3.5 h-3.5", staleFilter ? "animate-pulse" : "opacity-40")} />
+            <span className="hidden sm:inline">Estancados</span>
+          </button>
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
@@ -266,16 +323,27 @@ function LeadsListContent() {
 
 // --- MEMOIZED COMPONENTS ---
 
-const MemoizedMiniCard = memo(({ icon: Icon, label, value, color, trend, alert }: any) => (
-  <div className={cn("glass-card rounded-2xl p-4 flex items-center justify-between group relative overflow-hidden", alert && "border-red-500/20")}>
-    <div className="absolute top-0 left-0 w-1 h-full opacity-40 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: color }} />
+const MemoizedMiniCard = memo(({ icon: Icon, label, value, color, trend, alert, active, onClick }: any) => (
+  <div 
+    onClick={onClick}
+    className={cn(
+      "glass-card rounded-2xl p-4 flex items-center justify-between group relative overflow-hidden transition-all", 
+      alert && "border-red-500/20",
+      active && "border-white/20 bg-white/5 ring-1 ring-white/10",
+      onClick && "cursor-pointer hover:bg-white/[0.04]"
+    )}
+  >
+    <div className={cn("absolute top-0 left-0 w-1 h-full opacity-40 group-hover:opacity-100 transition-opacity", active && "opacity-100")} style={{ backgroundColor: color }} />
     <div className="flex items-center gap-4">
-      <div className="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center text-slate-500 group-hover:scale-110 transition-transform duration-500" style={{ color: alert ? '#ef4444' : color }}><Icon className="w-5 h-5" /></div>
+      <div className="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center text-slate-500 group-hover:scale-110 transition-transform duration-500" style={{ color: alert || active ? (alert ? '#ef4444' : color) : color }}>
+        <Icon className={cn("w-5 h-5", active && "animate-pulse")} />
+      </div>
       <div>
         <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">{label}</p>
         <p className="text-xl font-black text-white">{value}</p>
       </div>
     </div>
+    {onClick && <ArrowUpRight className="w-3 h-3 text-white/5 group-hover:text-white/20" />}
   </div>
 ));
 MemoizedMiniCard.displayName = "MemoizedMiniCard";

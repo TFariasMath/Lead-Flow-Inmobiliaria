@@ -32,8 +32,11 @@ class WebhookProcessor:
     y transformarla en un Lead calificado y asignado.
     """
 
-    # Campos que el sistema puede actualizar si el lead ya existe pero no tiene datos
-    MERGEABLE_FIELDS = ["first_name", "last_name", "phone", "address", "company"]
+    # Campos que se sincronizan y actualizan automáticamente con cada envío
+    SYNC_FIELDS = [
+        "first_name", "last_name", "phone", "address", "company",
+        "investment_goal", "investment_capacity"
+    ]
 
     def __init__(self, source_type: str, raw_body: dict):
         self.source_type = source_type # Ej: 'facebook', 'web-v1'
@@ -74,11 +77,14 @@ class WebhookProcessor:
             # 4. Sincronizar con la base de datos (Upsert)
             lead, interaction = self._upsert_lead(email, source, lead_data)
 
-            # 5. Actualizar log con éxito
+            # 5. Actualizar log con éxito y vincular al lead
             self.webhook_log.status = WebhookLog.Status.SUCCESS
             self.webhook_log.lead = lead
             self.webhook_log.processed_at = timezone.now()
             self.webhook_log.save()
+            
+            # Forzamos persistencia para asegurar trazabilidad inmediata
+            self.webhook_log.refresh_from_db()
 
             logger.info(f"Éxito: Lead {lead.id} capturado desde {self.source_type}")
 
@@ -140,6 +146,8 @@ class WebhookProcessor:
             "phone": self._safe_str(body.get("phone", body.get("telefono", body.get("tel", ""))), 50),
             "address": self._safe_str(body.get("address", body.get("direccion", ""))), # TextField (sin límite)
             "company": self._safe_str(body.get("company", body.get("empresa", "")), 200),
+            "investment_goal": self._safe_str(body.get("investment_goal", ""), 100),
+            "investment_capacity": self._safe_str(body.get("investment_capacity", ""), 100),
         }
 
     def _upsert_lead(self, email: str, source: Source, data: dict):
@@ -149,20 +157,22 @@ class WebhookProcessor:
         """
         try:
             with transaction.atomic():
-                # select_for_update() bloquea la fila en PostgreSQL hasta que termine la transacción.
-                # Esto evita que otro proceso intente actualizar el mismo lead simultáneamente.
-                try:
-                    lead = (
-                        Lead.objects
-                        .select_for_update()
-                        .get(original_email=email)
-                    )
-                    # El lead ya existe -> Solo llenamos los campos que estén vacíos
-                    self._merge_fields(lead, data)
-                    lead.save()
+                # Búsqueda de Doble Ancla: Buscamos por el mail original O el mail de contacto actual (corregido).
+                # select_for_update() garantiza que nadie más toque estos registros mientras decidimos qué hacer.
+                from django.db.models import Q
+                lead = (
+                    Lead.objects
+                    .select_for_update()
+                    .filter(Q(original_email=email) | Q(contact_email=email))
+                    .first()
+                )
 
-                except Lead.DoesNotExist:
-                    # El lead es nuevo -> Lo creamos y disparamos automatizaciones
+                if lead:
+                    # El lead ya existe (ya sea por su mail original o el editado)
+                    self._sync_fields(lead, data)
+                    lead.save()
+                else:
+                    # El lead es totalmente nuevo
                     lead = Lead.objects.create(
                         original_email=email,
                         contact_email=email,
@@ -192,16 +202,15 @@ class WebhookProcessor:
             interaction = Interaction.objects.create(lead=lead, source=source, raw_payload=self.raw_body)
             return lead, interaction
 
-    def _merge_fields(self, lead: Lead, data: dict):
+    def _sync_fields(self, lead: Lead, data: dict):
         """
-        Política de 'Merge No Destructivo'.
-        NUNCA sobreescribe datos que el vendedor ya pudo haber corregido manualmente.
-        Solo llena 'huecos' (campos vacíos).
+        Política de Sincronización Total.
+        Cualquier dato nuevo sobreescribe al anterior (excepto el email original).
+        Esto asegura que el CRM siempre tenga la información más reciente del cliente.
         """
-        for field in self.MERGEABLE_FIELDS:
-            current_value = getattr(lead, field, "")
+        for field in self.SYNC_FIELDS:
             new_value = data.get(field, "")
-            if not current_value and new_value:
+            if new_value:
                 setattr(lead, field, new_value)
 
 
@@ -210,17 +219,41 @@ class ReprocessWebhook:
     Servicio para re-ejecutar un webhook que falló (ej: por falta de datos).
     """
     @staticmethod
-    def reprocess(webhook_log: WebhookLog, edited_body: dict, user=None) -> WebhookLog:
-        """Guarda los cambios realizados por el admin y vuelve a procesar."""
-        webhook_log.edited_body = edited_body
+    def reprocess(webhook_log: WebhookLog, edited_body: dict = None, user=None) -> WebhookLog:
+        """
+        Guarda los cambios realizados por el admin y vuelve a procesar.
+        """
+        if edited_body:
+            webhook_log.edited_body = edited_body
+        
         webhook_log.edited_by = user
         webhook_log.status = WebhookLog.Status.PENDING
         webhook_log.error_message = ""
         webhook_log.save()
 
-        processor = WebhookProcessor(source_type=webhook_log.source_type, raw_body=webhook_log.raw_body)
+        # Usamos el cuerpo editado si existe, si no el original
+        body_to_process = webhook_log.edited_body if webhook_log.edited_body else webhook_log.raw_body
+        
+        processor = WebhookProcessor(source_type=webhook_log.source_type, raw_body=body_to_process)
         processor.webhook_log = webhook_log
         return processor.process()
+
+    @staticmethod
+    def bulk_reprocess(log_ids: list, user=None) -> dict:
+        """
+        Procesa múltiples logs de una sola vez.
+        """
+        results = {"success": 0, "failed": 0}
+        logs = WebhookLog.objects.filter(id__in=log_ids)
+        
+        for log in logs:
+            try:
+                ReprocessWebhook.reprocess(log, user=user)
+                results["success"] += 1
+            except Exception:
+                results["failed"] += 1
+        
+        return results
 
 
 class LeadDistributionService:

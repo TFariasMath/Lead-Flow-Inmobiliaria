@@ -183,6 +183,22 @@ class LeadViewSet(viewsets.ModelViewSet):
         if not user.is_staff:
             qs = qs.filter(assigned_to=user)
 
+        # FILTROS PERSONALIZADOS:
+        # 1. Leads Estancados (Sin actualizar en > 24h)
+        filter_param = self.request.query_params.get("filter")
+        from django.utils import timezone
+        from datetime import timedelta
+
+        if filter_param == "stale":
+            stale_threshold = timezone.now() - timedelta(hours=24)
+            qs = qs.exclude(
+                status__in=[Lead.Status.CIERRE_GANADO, Lead.Status.CIERRE_PERDIDO]
+            ).filter(updated_at__lt=stale_threshold)
+        
+        # 2. Leads de Hoy
+        elif filter_param == "today":
+            qs = qs.filter(created_at__date=timezone.now().date())
+
         return qs
 
     def perform_create(self, serializer):
@@ -276,7 +292,7 @@ class WebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
         # Ejecutar la lógica de re-procesamiento definida en services.py
         result = ReprocessWebhook.reprocess(
             webhook_log=webhook_log,
-            edited_body=serializer.validated_data["edited_body"],
+            edited_body=serializer.validated_data.get("edited_body"),
             user=request.user,
         )
 
@@ -284,6 +300,19 @@ class WebhookLogViewSet(viewsets.ReadOnlyModelViewSet):
             WebhookLogSerializer(result).data,
             status=status.HTTP_200_OK,
         )
+
+    @action(detail=False, methods=["post"])
+    def bulk_reprocess(self, request):
+        """
+        POST /api/v1/webhook-logs/bulk_reprocess/
+        Recibe una lista de IDs y los intenta procesar todos.
+        """
+        log_ids = request.data.get("log_ids", [])
+        if not log_ids:
+            return Response({"error": "No se enviaron IDs."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        results = ReprocessWebhook.bulk_reprocess(log_ids, user=request.user)
+        return Response(results, status=status.HTTP_200_OK)
 
 
 # ─── Catálogos Auxiliares ────────────────────────────────────────────────────
@@ -713,6 +742,11 @@ class LandingPageSubmitView(APIView):
             lead.utm_campaign = data.get('utm_campaign', '')
             lead.utm_term = data.get('utm_term', '')
             lead.utm_content = data.get('utm_content', '')
+            
+            # Guardar Perfil de Inversión
+            lead.investment_goal = data.get('investment_goal', '')
+            lead.investment_capacity = data.get('investment_capacity', '')
+            
             lead.save()
 
         return Response(

@@ -31,6 +31,10 @@ const createFetcher = (token: string | null) => async (url: string) => {
   if (url.startsWith("/analytics/performance")) {
     return api.getPerformanceAnalytics(token);
   }
+  if (url.startsWith("/webhook-logs")) {
+    const params = url.split("?")[1] || "";
+    return api.getWebhookLogs(token, params);
+  }
 
   throw new Error(`No fetcher defined for URL: ${url}`);
 };

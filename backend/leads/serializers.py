@@ -104,6 +104,7 @@ class LeadListSerializer(serializers.ModelSerializer):
             "campaign", "campaign_name", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
             "interested_properties",
             "interaction_count", "score",
+            "investment_goal", "investment_capacity",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "original_email", "score", "created_at", "updated_at"]
@@ -140,6 +141,7 @@ class LeadDetailSerializer(serializers.ModelSerializer):
             "campaign", "campaign_name", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
             "interested_properties",
             "interactions", "score",
+            "investment_goal", "investment_capacity",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "original_email", "score", "created_at", "updated_at"]
@@ -175,6 +177,7 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             "status", "assigned_to", "first_source", "score",
             "campaign", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
             "interested_properties",
+            "investment_goal", "investment_capacity"
         ]
         read_only_fields = ["score"]
 
@@ -231,7 +234,7 @@ class WebhookLogSerializer(serializers.ModelSerializer):
 
 class ReprocessSerializer(serializers.Serializer):
     """Esquema de datos para corregir un webhook fallido."""
-    edited_body = serializers.DictField()
+    edited_body = serializers.DictField(required=False, allow_null=True)
 
 
 class WebhookReceiveSerializer(serializers.Serializer):
@@ -289,6 +292,8 @@ class LandingPageSubmitSerializer(serializers.Serializer):
     utm_campaign = serializers.CharField(max_length=200, required=False, default="")
     utm_term = serializers.CharField(max_length=200, required=False, default="")
     utm_content = serializers.CharField(max_length=200, required=False, default="")
+    investment_goal = serializers.CharField(max_length=100, required=False, default="")
+    investment_capacity = serializers.CharField(max_length=100, required=False, default="")
 
 
 # ─── Otros Serializadores ───────────────────────────────────────────────────
