@@ -198,54 +198,46 @@ function LeadsListContent() {
         </div>
       </div>
 
-      {/* ── Table Container (Virtualizada) ── */}
+      {/* ── List Container (Virtualizada) ── */}
       <div className="glass-container rounded-[1.5rem] overflow-hidden flex flex-col h-[600px]">
+        {/* Header Grid */}
+        <div className="grid grid-cols-[3fr_1fr_2fr_1.5fr_1.5fr_1fr] items-center px-6 py-4 bg-[#080e1e]/90 backdrop-blur-md border-b border-white/[0.04] z-20">
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lead / Contacto</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Score</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Email</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Vendedor</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Acciones</div>
+        </div>
+
         <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar relative">
-          <table className="w-full table-premium border-separate border-spacing-0">
-            <thead className="sticky top-0 z-20 bg-[#080e1e]/90 backdrop-blur-md">
-              <tr>
-                <th className="w-[30%]">Lead / Contacto</th>
-                <th className="w-[10%] text-center">Score</th>
-                <th className="w-[20%]">Email</th>
-                <th className="w-[15%]">Estado</th>
-                <th className="w-[15%]">Vendedor</th>
-                <th className="w-[10%] text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-              {loading && leads.length === 0 ? (
-                <tr className="absolute inset-x-0 top-0">
-                  <td colSpan={6} className="py-32 text-center">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-                      <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : leads.length === 0 ? (
-                <tr className="absolute inset-x-0 top-0">
-                  <td colSpan={6} className="py-32 text-center">
-                    <p className="text-sm font-bold text-slate-500">No se encontraron leads</p>
-                  </td>
-                </tr>
-              ) : (
-                rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const lead = leads[virtualRow.index];
-                  if (!lead) return null;
-                  return (
-                    <MemoizedLeadRow
-                      key={lead.id}
-                      lead={lead}
-                      virtualRow={virtualRow}
-                      onSelect={() => setSelectedLeadId(lead.id)}
-                      onStatusUpdate={handleStatusUpdate}
-                      onAction={() => router.push(`/dashboard/leads/${lead.id}`)}
-                    />
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }}>
+            {loading && leads.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-32 gap-4">
+                <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando...</p>
+              </div>
+            ) : leads.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-32">
+                <p className="text-sm font-bold text-slate-500">No se encontraron leads</p>
+              </div>
+            ) : (
+              rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const lead = leads[virtualRow.index];
+                if (!lead) return null;
+                return (
+                  <MemoizedLeadRow
+                    key={lead.id}
+                    lead={lead}
+                    virtualRow={virtualRow}
+                    onSelect={() => setSelectedLeadId(lead.id)}
+                    onStatusUpdate={handleStatusUpdate}
+                    onAction={() => router.push(`/dashboard/leads/${lead.id}`)}
+                  />
+                );
+              })
+            )}
+          </div>
         </div>
 
         {/* Pagination */}
@@ -253,8 +245,8 @@ function LeadsListContent() {
           <div className="flex items-center justify-between px-8 py-4 border-t border-white/[0.04] bg-white/[0.01]">
             <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Total: {totalCount} leads</p>
             <div className="flex gap-2">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/5 disabled:opacity-20"><ChevronLeft className="w-4 h-4" /></button>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/5 disabled:opacity-20"><ChevronRight className="w-4 h-4" /></button>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/5 disabled:opacity-20 transition-all hover:bg-white/5"><ChevronLeft className="w-4 h-4" /></button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/5 disabled:opacity-20 transition-all hover:bg-white/5"><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
         )}
@@ -290,34 +282,39 @@ MemoizedMiniCard.displayName = "MemoizedMiniCard";
 
 const MemoizedLeadRow = memo(({ lead, virtualRow, onSelect, onStatusUpdate, onAction }: any) => {
   return (
-    <tr
-      className="group cursor-pointer absolute top-0 left-0 w-full hover:bg-white/[0.02] transition-colors"
+    <div
+      className="grid grid-cols-[3fr_1fr_2fr_1.5fr_1.5fr_1fr] items-center px-6 absolute top-0 left-0 w-full hover:bg-white/[0.02] transition-colors border-b border-white/[0.02] group"
       onClick={onSelect}
       style={{ height: `${virtualRow.size}px`, transform: `translateY(${virtualRow.start}px)` }}
     >
-      <td className="px-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center text-xs font-black text-blue-400">{(lead.first_name || lead.original_email).charAt(0).toUpperCase()}</div>
-          <div className="truncate"><p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors uppercase">{lead.first_name} {lead.last_name}</p></div>
+      <div className="flex items-center gap-3 pr-4 overflow-hidden">
+        <div className="w-9 h-9 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center text-xs font-black text-blue-400 shrink-0">{(lead.first_name || lead.original_email).charAt(0).toUpperCase()}</div>
+        <div className="truncate">
+          <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors uppercase truncate">{lead.first_name} {lead.last_name}</p>
         </div>
-      </td>
-      <td className="text-center">
-        <span className="text-xs font-bold text-white px-2 py-1 bg-white/5 rounded-lg border border-white/5">{lead.score}</span>
-      </td>
-      <td className="text-[11px] text-slate-400 font-mono truncate px-2">{lead.original_email}</td>
-      <td className="px-2">
-        <select value={lead.status} onClick={e => e.stopPropagation()} onChange={e => onStatusUpdate(lead.id, e.target.value)} className={cn("badge outline-none", STATUS_BADGE_MAP[lead.status] || "badge-slate")}>
+      </div>
+      <div className="text-center">
+        <span className="text-[10px] font-black text-white px-2 py-1 bg-white/5 rounded-lg border border-white/5">{lead.score}</span>
+      </div>
+      <div className="text-[11px] text-slate-400 font-mono truncate pr-4">{lead.original_email}</div>
+      <div className="pr-4">
+        <select 
+          value={lead.status} 
+          onClick={e => e.stopPropagation()} 
+          onChange={e => onStatusUpdate(lead.id, e.target.value)} 
+          className={cn("badge outline-none cursor-pointer hover:scale-105 transition-transform", STATUS_BADGE_MAP[lead.status] || "badge-slate")}
+        >
           {STATUS_OPTIONS.map(opt => <option key={opt} value={opt} className="bg-slate-950">{STATUS_LABELS[opt] || opt}</option>)}
         </select>
-      </td>
-      <td className="text-[11px] font-bold text-slate-500 px-2">{lead.assigned_to_name || "Sin asignar"}</td>
-      <td className="text-center">
-        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity px-2">
-          <button onClick={e => { e.stopPropagation(); onSelect(); }} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all"><Eye className="w-3.5 h-3.5" /></button>
-          <button onClick={e => { e.stopPropagation(); onAction(); }} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all"><MoreHorizontal className="w-3.5 h-3.5" /></button>
+      </div>
+      <div className="text-[11px] font-bold text-slate-500 truncate pr-4">{lead.assigned_to_name || "Sin asignar"}</div>
+      <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+          <button onClick={e => { e.stopPropagation(); onSelect(); }} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all hover:bg-blue-500/20"><Eye className="w-3.5 h-3.5" /></button>
+          <button onClick={e => { e.stopPropagation(); onAction(); }} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all hover:bg-blue-500/20"><MoreHorizontal className="w-3.5 h-3.5" /></button>
         </div>
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 });
 MemoizedLeadRow.displayName = "MemoizedLeadRow";

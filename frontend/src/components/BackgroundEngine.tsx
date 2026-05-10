@@ -58,27 +58,27 @@ export const BackgroundEngine = () => {
       {/* CSS Keyframes for the Liquid Motion */}
       <style jsx>{`
         @keyframes liquid-1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(10%, 15%) scale(1.1); }
-          66% { transform: translate(-5%, 20%) scale(0.9); }
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+          33% { transform: translate3d(10%, 15%, 0) scale(1.1); }
+          66% { transform: translate3d(-5%, 20%, 0) scale(0.9); }
         }
         @keyframes liquid-2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(-15%, -10%) scale(0.9); }
-          66% { transform: translate(10%, -20%) scale(1.2); }
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+          33% { transform: translate3d(-15%, -10%, 0) scale(0.9); }
+          66% { transform: translate3d(10%, -20%, 0) scale(1.2); }
         }
         @keyframes liquid-3 {
-          0%, 100% { transform: translate(0, 0) scale(1.1); }
-          50% { transform: translate(20%, -10%) scale(0.8); }
+          0%, 100% { transform: translate3d(0, 0, 0) scale(1.1); }
+          50% { transform: translate3d(20%, -10%, 0) scale(0.8); }
         }
         @keyframes liquid-4 {
-          0%, 100% { transform: translate(0, 0) scale(0.9); }
-          50% { transform: translate(-10%, 10%) scale(1.1); }
+          0%, 100% { transform: translate3d(0, 0, 0) scale(0.9); }
+          50% { transform: translate3d(-10%, 10%, 0) scale(1.1); }
         }
-        .animate-liquid-1 { animation: liquid-1 25s ease-in-out infinite; }
-        .animate-liquid-2 { animation: liquid-2 30s ease-in-out infinite; }
-        .animate-liquid-3 { animation: liquid-3 20s ease-in-out infinite; }
-        .animate-liquid-4 { animation: liquid-4 28s ease-in-out infinite; }
+        .animate-liquid-1 { animation: liquid-1 15s ease-in-out infinite; }
+        .animate-liquid-2 { animation: liquid-2 18s ease-in-out infinite; }
+        .animate-liquid-3 { animation: liquid-3 12s ease-in-out infinite; }
+        .animate-liquid-4 { animation: liquid-4 16s ease-in-out infinite; }
       `}</style>
     </div>
   );

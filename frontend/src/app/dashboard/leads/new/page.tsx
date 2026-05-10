@@ -28,6 +28,21 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const COUNTRY_CODES = [
+  { code: "+56", country: "Chile", flag: "🇨🇱" },
+  { code: "+54", country: "Argentina", flag: "🇦🇷" },
+  { code: "+51", country: "Perú", flag: "🇵🇪" },
+  { code: "+57", country: "Colombia", flag: "🇨🇴" },
+  { code: "+52", country: "México", flag: "🇲🇽" },
+  { code: "+34", country: "España", flag: "🇪🇸" },
+  { code: "+1", country: "USA/Dom", flag: "🇺🇸" },
+  { code: "+598", country: "Uruguay", flag: "🇺🇾" },
+  { code: "+591", country: "Bolivia", flag: "🇧🇴" },
+  { code: "+593", country: "Ecuador", flag: "🇪🇨" },
+  { code: "+506", country: "Costa Rica", flag: "🇨🇷" },
+  { code: "+507", country: "Panamá", flag: "🇵🇦" },
+];
+
 const validationSchema = Yup.object({
   original_email: Yup.string()
     .email("Ingresa un correo electrónico válido")
@@ -97,7 +112,8 @@ export default function NewLeadPage() {
             original_email: "",
             first_name: "",
             last_name: "",
-            phone: "",
+            phone_code: "+56",
+            phone_number: "",
             address: "",
             company: "",
             first_source: "",
@@ -108,7 +124,18 @@ export default function NewLeadPage() {
             if (!token) return;
             setError("");
             try {
-              const payload: Record<string, unknown> = { ...values };
+              const payload: Record<string, any> = { ...values };
+              
+              // Combinar código de país con el número
+              if (values.phone_number) {
+                payload.phone = `${values.phone_code}${values.phone_number.replace(/\s+/g, '')}`;
+              } else {
+                delete payload.phone;
+              }
+              
+              delete payload.phone_code;
+              delete payload.phone_number;
+
               if (!payload.first_source) delete payload.first_source;
               if (!payload.assigned_to) delete payload.assigned_to;
 
@@ -174,9 +201,20 @@ export default function NewLeadPage() {
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Teléfono Móvil</label>
-                    <div className="input-icon-wrapper">
-                      <Phone className="w-4 h-4 text-slate-500" />
-                      <Field name="phone" placeholder="+1 809-555-0000" className="input-premium input-premium-icon" />
+                    <div className="flex gap-2">
+                      <div className="w-[120px] shrink-0">
+                        <Field as="select" name="phone_code" className="input-premium appearance-none cursor-pointer h-full py-0 px-3 text-sm">
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={c.code} value={c.code} className="bg-slate-900">
+                              {c.flag} {c.code}
+                            </option>
+                          ))}
+                        </Field>
+                      </div>
+                      <div className="input-icon-wrapper flex-1">
+                        <Phone className="w-4 h-4 text-slate-500" />
+                        <Field name="phone_number" placeholder="9 1234 5678" className="input-premium input-premium-icon" />
+                      </div>
                     </div>
                   </div>
 

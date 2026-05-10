@@ -3,6 +3,22 @@
 import React from "react";
 import * as LucideIcons from "lucide-react";
 import MapSection from "./MapSection";
+import PropertyCarousel from "./PropertyCarousel";
+
+const COUNTRY_CODES = [
+  { code: "+56", country: "Chile", flag: "🇨🇱" },
+  { code: "+54", country: "Argentina", flag: "🇦🇷" },
+  { code: "+51", country: "Perú", flag: "🇵🇪" },
+  { code: "+57", country: "Colombia", flag: "🇨🇴" },
+  { code: "+52", country: "México", flag: "🇲🇽" },
+  { code: "+34", country: "España", flag: "🇪🇸" },
+  { code: "+1", country: "USA/Dom", flag: "🇺🇸" },
+  { code: "+598", country: "Uruguay", flag: "🇺🇾" },
+  { code: "+591", country: "Bolivia", flag: "🇧🇴" },
+  { code: "+593", country: "Ecuador", flag: "🇪🇨" },
+  { code: "+506", country: "Costa Rica", flag: "🇨🇷" },
+  { code: "+507", country: "Panamá", flag: "🇵🇦" },
+];
 
 export interface Benefit {
   icon: string;
@@ -52,13 +68,21 @@ export default function LandingLayout({
     email: "",
     first_name: "",
     last_name: "",
+    phone_code: "+56",
     phone: "",
     company: "",
   });
+  
+  const [activePropertyIndex, setActivePropertyIndex] = React.useState(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(form);
+    const finalForm = { ...form };
+    if (form.phone) {
+        finalForm.phone = `${form.phone_code}${form.phone.replace(/\s+/g, '')}`;
+    }
+    const { phone_code, ...rest } = finalForm;
+    onSubmit(rest);
   };
 
   const primaryColor = data.primary_color || "#3b82f6";
@@ -87,148 +111,266 @@ export default function LandingLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white selection:bg-blue-500/30 flex relative overflow-hidden font-sans @container">
+    <div className="min-h-screen bg-[#0f172a] text-white selection:bg-blue-500/30 flex flex-col relative overflow-x-hidden font-sans @container">
       <style>{`
         :root { --primary: ${primaryColor}; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fadeInUp { animation: fadeInUp 0.6s ease forwards; }
         
-        /* Fluid Typography based on container width */
-        .fluid-h1 { font-size: clamp(1.8rem, 8cqw, 3.5rem); line-height: 1.1; }
-        .fluid-p { font-size: clamp(0.9rem, 2.5cqw, 1.15rem); line-height: 1.6; }
+        .fluid-h1 { font-size: clamp(2.5rem, 8cqw, 4rem); line-height: 1.1; }
+        .fluid-p { font-size: clamp(1rem, 2.5cqw, 1.25rem); line-height: 1.6; }
       `}</style>
 
-      {/* Decorative Background */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full opacity-20 blur-[120px] pointer-events-none" style={{ backgroundColor: primaryColor }} />
-      <div className="absolute bottom-[-10%] right-[-5%] w-[30%] h-[50%] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none" />
-
-      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 @[50rem]:grid-cols-2 min-h-screen">
-        {/* Left Column: Content */}
-        <div className="flex flex-col justify-center p-6 @[50rem]:p-12 lg:p-16 z-10 animate-fadeInUp">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 text-sm font-semibold mb-6 border border-white/10 w-fit" style={{ color: primaryColor }}>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: primaryColor }}></span>
-              <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: primaryColor }}></span>
-            </span>
-            {data.campaign_name || "Oportunidad de Inversión"}
+      {/* 1. Header Section (Title & Subtitle) */}
+      <div className="w-full max-w-7xl mx-auto px-6 pt-16 pb-8 md:pt-24 md:pb-12 text-center animate-fadeInUp">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 text-xs font-black uppercase tracking-[0.2em] mb-4 border border-white/10" style={{ color: primaryColor }}>
+              {data.campaign_name || "Oportunidad Exclusiva"}
           </div>
-          
-          <h1 className="fluid-h1 font-extrabold tracking-tight text-white mb-6">
-            {data.title}
+          <h1 className="fluid-h1 font-black tracking-tight text-white">
+              {data.title}
           </h1>
-          
-          <p className="fluid-p text-slate-400 mb-10 max-w-lg">
-            {data.subtitle}
+          <p className="fluid-p text-slate-400 max-w-2xl mx-auto">
+              {data.subtitle}
           </p>
-          
-          <div className="space-y-4 mb-10">
-            {data.benefits?.map((benefit, idx) => (
-              <FeatureItem key={idx} icon={benefit.icon} title={benefit.title} />
-            ))}
-          </div>
+        </div>
+      </div>
 
-          {(data.latitude || (data.properties_details && data.properties_details.length > 0)) && (
-            <div className="mt-8 @[40rem]:mt-12 h-[350px] w-full animate-fadeInUp" style={{ animationDelay: '0.4s' }}>
+      {/* 2. Visual Block (Carousel & Map Together) */}
+      <div className="w-full flex flex-col animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
+        <PropertyCarousel 
+          properties={data.properties_details || []} 
+          primaryColor={primaryColor} 
+          currentIndex={activePropertyIndex}
+          onIndexChange={setActivePropertyIndex}
+        />
+        
+        {(data.latitude || (data.properties_details && data.properties_details.length > 0)) && (
+            <div className="w-full h-[400px] md:h-[500px] border-b border-white/10">
                 <MapSection 
                     latitude={data.latitude} 
                     longitude={data.longitude} 
                     properties={data.properties_details} 
                     primaryColor={primaryColor} 
+                    activePropertyIndex={activePropertyIndex}
                 />
             </div>
-          )}
+        )}
+      </div>
 
-          {data.image_url && (
-            <div className="mt-8 rounded-2xl overflow-hidden border border-white/10 shadow-2xl max-w-lg hidden @[40rem]:block opacity-60 hover:opacity-100 transition-opacity">
-                <img src={data.image_url} alt="Preview" className="w-full h-48 object-cover" />
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Form */}
-        <div className="flex items-center justify-center p-4 @[50rem]:p-8 lg:p-12 z-10 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
-          <div className="w-full max-w-md bg-[#1a1d27]/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 @[50rem]:p-8 shadow-2xl">
-            <h2 className="text-xl @[50rem]:text-2xl font-bold text-white mb-2">Déjanos tus datos</h2>
-            <p className="text-xs @[50rem]:text-sm text-slate-400 mb-6 @[50rem]:mb-8">{data.description}</p>
+      {/* 3. Dynamic Property Details Section */}
+      {data.properties_details && data.properties_details.length > 0 && (
+        <div className="w-full max-w-7xl mx-auto px-6 py-16 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[3rem] p-8 md:p-12 overflow-hidden relative">
+            {/* Background Glow */}
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/5 to-purple-500/5 -z-10" />
             
-            {error && (
-              <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+              {/* Left: Description & Basic Info */}
+              <div className="space-y-8">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4 border border-blue-500/20">
+                    Sobre esta propiedad
+                  </div>
+                  <h2 className="text-3xl md:text-4xl font-black text-white mb-6 leading-tight">
+                    {data.properties_details[activePropertyIndex].name}
+                  </h2>
+                  <p className="text-lg text-slate-400 leading-relaxed">
+                    {data.properties_details[activePropertyIndex].description || "Una excelente oportunidad de inversión en una ubicación privilegiada, diseñada con los más altos estándares de calidad y confort."}
+                  </p>
+                </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 @[30rem]:grid-cols-2 gap-4">
-                {data.form_config?.fields?.includes("first_name") && (
-                  <Input name="first_name" placeholder="Nombre" icon="User" value={form.first_name} onChange={(v: string) => setForm(f => ({...f, first_name: v}))} />
-                )}
-                {data.form_config?.fields?.includes("last_name") && (
-                  <Input name="last_name" placeholder="Apellido" icon="User" value={form.last_name} onChange={(v: string) => setForm(f => ({...f, last_name: v}))} />
-                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ubicación Exacta</span>
+                    <div className="flex items-center gap-3 text-white">
+                      <LucideIcons.MapPin className="w-5 h-5 text-blue-400" />
+                      <span className="font-bold">{data.properties_details[activePropertyIndex].address || data.properties_details[activePropertyIndex].location || "Sector Privilegiado"}</span>
+                    </div>
+                  </div>
+                  <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Entrega Estimada</span>
+                    <div className="flex items-center gap-3 text-white">
+                      <LucideIcons.Calendar className="w-5 h-5 text-emerald-400" />
+                      <span className="font-bold">{data.properties_details[activePropertyIndex].delivery_date || "Consultar Fecha"}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              
-              <Input name="email" type="email" placeholder="Correo electrónico" icon="Mail" value={form.email} onChange={(v: string) => setForm(f => ({...f, email: v}))} required />
-              
-              {data.form_config?.fields?.includes("phone") && (
-                <Input name="phone" type="tel" placeholder="Teléfono" icon="Phone" value={form.phone} onChange={(v: string) => setForm(f => ({...f, phone: v}))} />
-              )}
-              
-              {data.form_config?.fields?.includes("company") && (
-                <Input name="company" placeholder="Empresa (Opcional)" icon="Building" value={form.company} onChange={(v: string) => setForm(f => ({...f, company: v}))} />
-              )}
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full mt-4 @[50rem]:mt-6 flex items-center justify-center gap-2 py-3 @[50rem]:py-4 rounded-xl text-white font-bold text-base @[50rem]:text-lg shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`, boxShadow: `0 10px 25px -5px ${primaryColor}40` }}
-              >
-                {submitting ? (
-                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    {data.cta_text}
-                    <LucideIcons.Send className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-              <p className="text-center text-[10px] text-slate-500 mt-6 uppercase tracking-widest font-semibold">
-                🔒 Privacidad Garantizada
-              </p>
-            </form>
+              {/* Right: Amenities & Highlights */}
+              <div className="space-y-8">
+                <div className="p-8 rounded-[2rem] bg-black/20 border border-white/5 h-full flex flex-col justify-between">
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                      <LucideIcons.Sparkles className="w-6 h-6 text-yellow-400" />
+                      Equipamiento & Amenidades
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {data.properties_details[activePropertyIndex].amenities ? (
+                        data.properties_details[activePropertyIndex].amenities.split(',').map((amenity: string, idx: number) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
+                            <LucideIcons.Check className="w-4 h-4 text-blue-500" />
+                            {amenity.trim()}
+                          </div>
+                        ))
+                      ) : (
+                        ['Gimnasio Equipado', 'Piscina Panorámica', 'Quinchos', 'Sala Cowork', 'Seguridad 24/7', 'Bicicletero'].map((amenity, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
+                            <LucideIcons.Check className="w-4 h-4 text-blue-500" />
+                            {amenity}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-8 mt-8 border-t border-white/10">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Inversión Desde</span>
+                        <div className="text-2xl font-black text-white">
+                          {data.properties_details[activePropertyIndex].min_investment}
+                        </div>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rentabilidad</span>
+                        <div className="text-2xl font-black text-emerald-400">
+                          {data.properties_details[activePropertyIndex].estimated_return}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* 4. Benefits Section (Global) */}
+      <div className="w-full max-w-7xl mx-auto px-6 py-20 z-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
+            {data.benefits?.map((benefit, idx) => (
+              <FeatureCard key={idx} icon={benefit.icon} title={benefit.title} />
+            ))}
+          </div>
+      </div>
+
+      {/* 4. Registration Form (At the Bottom) */}
+      <div id="register" className="w-full bg-[#1a1d27]/40 backdrop-blur-3xl border-t border-white/10 py-24 px-6 animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-8">
+                <div className="space-y-4">
+                    <h2 className="text-4xl md:text-5xl font-black text-white">Inscríbete para más información</h2>
+                    <p className="text-xl text-slate-400 leading-relaxed">
+                        {data.description || "Déjanos tus datos y un asesor experto se pondrá en contacto contigo para brindarte todos los detalles de esta oportunidad de inversión."}
+                    </p>
+                </div>
+                
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-4 text-slate-300">
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                            <LucideIcons.CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                        </div>
+                        <span className="font-medium uppercase tracking-widest text-[10px] font-bold">Asesoría de inversión gratuita</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm font-bold text-slate-500">
+                        <div className="w-12 h-px bg-slate-800" />
+                        PRIVACIDAD GARANTIZADA
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-[#0f172a] border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[100px] -z-10" />
+                
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Input label="Nombre" placeholder="Tu nombre" icon="User" value={form.first_name} onChange={(v: string) => setForm(f => ({...f, first_name: v}))} required />
+                        <Input label="Apellido" placeholder="Tu apellido" icon="User" value={form.last_name} onChange={(v: string) => setForm(f => ({...f, last_name: v}))} />
+                    </div>
+                    
+                    <Input label="Email" type="email" placeholder="ejemplo@correo.com" icon="Mail" value={form.email} onChange={(v: string) => setForm(f => ({...f, email: v}))} required />
+                    
+                    <div className="flex flex-col gap-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Teléfono de contacto</label>
+                        <div className="flex gap-2">
+                            <div className="w-[110px] shrink-0">
+                                <select
+                                    value={form.phone_code}
+                                    onChange={(e) => setForm(f => ({...f, phone_code: e.target.value}))}
+                                    className="w-full h-[52px] bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 appearance-none cursor-pointer px-4"
+                                >
+                                    {COUNTRY_CODES.map(c => (
+                                        <option key={c.code} value={c.code} className="bg-[#1a1d27]">{c.flag} {c.code}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex-1">
+                                <Input noLabel placeholder="9 1234 5678" type="tel" icon="Phone" value={form.phone} onChange={(v: string) => setForm(f => ({...f, phone: v}))} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-5 rounded-2xl text-white font-black text-lg shadow-2xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
+                        style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`, boxShadow: `0 15px 35px -10px ${primaryColor}60` }}
+                    >
+                        {submitting ? (
+                            <LucideIcons.Loader2 className="w-6 h-6 animate-spin" />
+                        ) : (
+                            <>
+                                {data.cta_text || "Solicitar Información"}
+                                <LucideIcons.ArrowRight className="w-5 h-5" />
+                            </>
+                        )}
+                    </button>
+                    <p className="text-center text-[10px] text-slate-500 uppercase tracking-widest font-bold">Respuesta en menos de 5 minutos</p>
+                </form>
+            </div>
+        </div>
+      </div>
+
+      {/* Decorative Background Glows */}
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full opacity-20 blur-[150px]" style={{ backgroundColor: primaryColor }} />
+          <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[60%] rounded-full bg-purple-600/10 blur-[150px]" />
       </div>
     </div>
   );
 }
 
-function FeatureItem({ icon, title }: { icon: string; title: string }) {
+function FeatureCard({ icon, title }: { icon: string; title: string }) {
   return (
-    <div className="flex items-center gap-4 group">
-      <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors">
-        <DynamicIcon name={icon} className="w-6 h-6 text-slate-300" />
+    <div className="flex flex-col items-center gap-6 p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group hover:-translate-y-2">
+      <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+        <DynamicIcon name={icon} className="w-8 h-8 text-slate-300" />
       </div>
-      <span className="text-slate-300 font-semibold text-lg">{title}</span>
+      <span className="text-white font-bold text-xl text-center">{title}</span>
     </div>
   );
 }
 
-function Input({ name, type = "text", placeholder, icon, value, onChange, required = false }: any) {
+function Input({ label, placeholder, type = "text", icon, value, onChange, required = false, noLabel = false }: any) {
   return (
-    <div className="relative">
-      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <DynamicIcon name={icon} className="h-4 w-4 text-slate-500" />
+    <div className="space-y-2">
+      {!noLabel && <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest px-1">{label}</label>}
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <DynamicIcon name={icon} className="h-5 w-5 text-slate-500" />
+        </div>
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+          className="w-full pl-12 pr-4 h-[52px] bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 transition-all"
+        />
       </div>
-      <input
-        type={type}
-        name={name}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        className="w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:border-transparent transition-all"
-      />
     </div>
   );
 }

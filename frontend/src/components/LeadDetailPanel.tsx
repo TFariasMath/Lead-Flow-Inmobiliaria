@@ -17,6 +17,9 @@ import {
   Plus,
   Trash2,
   MapPin,
+  Copy,
+  ExternalLink,
+  Search,
 } from "lucide-react";
 import { Lead, HistoryEntry, getLead, getLeadHistory, updateLead, getProperties, Property } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -64,6 +67,7 @@ export default function LeadDetailPanel({ leadId, token, onClose, onUpdate }: Le
   const [loading, setLoading] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showPropertySelect, setShowPropertySelect] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (leadId && token) {
@@ -164,26 +168,108 @@ export default function LeadDetailPanel({ leadId, token, onClose, onUpdate }: Le
                     <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{lead.company || "Persona Natural"}</span>
                     <span className="text-slate-800">•</span>
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Score {lead.score}</span>
+                    {(() => {
+                      const lastStatusChange = history.find(h => h.changes.status && h.changes.status.new === lead.status);
+                      if (lastStatusChange) {
+                        return (
+                          <>
+                            <span className="text-slate-800">•</span>
+                            <span className="flex items-center gap-1 text-[9px] font-black text-amber-500/80 uppercase tracking-widest bg-amber-500/5 px-2 py-0.5 rounded-full border border-amber-500/10">
+                              <Clock className="w-2.5 h-2.5" />
+                              {format(new Date(lastStatusChange.history_date), "dd MMM", { locale: es })}
+                            </span>
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
               </div>
 
-              <div>
-                <p className="section-label text-slate-600 mb-3 ml-1">Pipeline Comercial</p>
-                <div className="flex gap-1.5 flex-wrap">
-                  {STATUS_OPTIONS.map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => handleStatusChange(opt)}
-                      disabled={updatingStatus}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all",
-                        lead.status === opt ? STATUS_COLORS[opt] : "text-slate-700 bg-transparent border-white/[0.04] hover:border-white/10"
-                      )}
-                    >
-                      {STATUS_LABELS[opt]}
-                    </button>
-                  ))}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-4 px-1">
+                   <p className="section-label text-slate-500">Pipeline Comercial</p>
+                   {(() => {
+                      const lastStatusChange = history.find(h => h.changes.status && h.changes.status.new === lead.status);
+                      return lastStatusChange && (
+                        <span className="flex items-center gap-1 text-[9px] font-black text-amber-500/80 uppercase tracking-widest bg-amber-500/5 px-2 py-0.5 rounded-full border border-amber-500/10">
+                          <Clock className="w-2.5 h-2.5" />
+                          {format(new Date(lastStatusChange.history_date), "dd MMM", { locale: es })}
+                        </span>
+                      );
+                   })()}
+                </div>
+                
+                <div className="flex items-center w-full h-12 gap-0.5 overflow-hidden">
+                  {STATUS_OPTIONS.map((opt, idx) => {
+                    const isCompleted = STATUS_OPTIONS.indexOf(lead.status) > idx;
+                    const isActive = lead.status === opt;
+                    
+                    // Specific color mapping for the pipeline blocks
+                    const themeColors: Record<string, string> = {
+                      nuevo: "bg-blue-500",
+                      contactado: "bg-cyan-500",
+                      en_calificacion: "bg-amber-500",
+                      propuesta_enviada: "bg-violet-500",
+                      cierre_ganado: "bg-emerald-500",
+                      cierre_perdido: "bg-red-500",
+                    };
+
+                    const themeColor = themeColors[opt];
+                    
+                    // Clip path logic for chevrons
+                    let clipPath = "polygon(0% 0%, 95% 0%, 100% 50%, 95% 100%, 0% 100%, 5% 50%)";
+                    if (idx === 0) clipPath = "polygon(0% 0%, 95% 0%, 100% 50%, 95% 100%, 0% 100%)";
+                    if (idx === STATUS_OPTIONS.length - 1) clipPath = "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 5% 50%)";
+
+                    return (
+                      <button
+                        key={opt}
+                        onClick={() => handleStatusChange(opt)}
+                        disabled={updatingStatus}
+                        style={{ clipPath }}
+                        className={cn(
+                          "flex-1 h-full flex items-center justify-center transition-all duration-500 relative group",
+                          isCompleted ? `${themeColor} opacity-40 hover:opacity-100 text-white` :
+                          isActive ? `${themeColor} text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] z-20` :
+                          "bg-white/[0.03] text-slate-500 hover:bg-white/[0.08]"
+                        )}
+                      >
+                        <span className={cn(
+                          "text-[6px] @[30rem]:text-[8px] font-black uppercase tracking-tighter text-center leading-tight px-1 transition-transform",
+                          isActive && "scale-110"
+                        )}>
+                          {opt === "cierre_ganado" ? "GANADO" : 
+                           opt === "cierre_perdido" ? "PERDIDO" : 
+                           opt === "en_calificacion" ? "CALIFIC." :
+                           opt === "propuesta_enviada" ? "PROPUESTA" :
+                           STATUS_LABELS[opt].split(' ')[0]}
+                        </span>
+                        
+                        {isActive && (
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                        )}
+                        
+                        {isActive && (
+                           <div className="absolute bottom-1 w-1 h-1 rounded-full bg-white animate-pulse" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-between mt-3 px-1">
+                   <p className="text-[9px] font-bold text-slate-600 uppercase">Prospección</p>
+                   <div className="flex flex-col items-center">
+                     <p className={cn(
+                       "text-[10px] font-black uppercase tracking-[0.1em]",
+                       STATUS_COLORS[lead.status].split(' ')[0]
+                     )}>
+                       {STATUS_LABELS[lead.status]}
+                     </p>
+                   </div>
+                   <p className="text-[9px] font-bold text-slate-600 uppercase">Resultado</p>
                 </div>
               </div>
             </div>
@@ -204,22 +290,47 @@ export default function LeadDetailPanel({ leadId, token, onClose, onUpdate }: Le
                 </div>
 
                 {showPropertySelect && (
-                  <div className="mb-6 grid grid-cols-1 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-2">
-                    {allProperties.map(prop => (
-                      <button
-                        key={prop.id}
-                        onClick={() => toggleProperty(prop.id)}
-                        className={cn(
-                          "flex items-center justify-between p-3 rounded-xl border text-left transition-all",
-                          lead.interested_properties?.includes(prop.id)
-                            ? "bg-blue-500/20 border-blue-500/30 text-white"
-                            : "bg-white/[0.02] border-white/[0.05] text-slate-400 hover:border-white/20"
-                        )}
-                      >
-                        <span className="text-xs font-bold">{prop.name}</span>
-                        {lead.interested_properties?.includes(prop.id) && <CheckCircle2 className="w-3 h-3 text-blue-400" />}
-                      </button>
-                    ))}
+                  <div className="mb-6 space-y-3">
+                    <div className="relative">
+                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                       <input 
+                         type="text" 
+                         placeholder="Buscar por nombre o ubicación..." 
+                         className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
+                         autoFocus
+                         value={searchQuery}
+                         onChange={(e) => setSearchQuery(e.target.value)}
+                       />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto custom-scrollbar pr-2">
+                      {allProperties
+                        .filter(p => 
+                          p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          p.location.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .map(prop => (
+                        <button
+                          key={prop.id}
+                          onClick={() => toggleProperty(prop.id)}
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-xl border text-left transition-all group",
+                            lead.interested_properties?.includes(prop.id)
+                              ? "bg-blue-600/20 border-blue-500/30 text-white"
+                              : "bg-white/[0.02] border-white/[0.05] text-slate-400 hover:border-white/20"
+                          )}
+                        >
+                          <div>
+                            <p className="text-xs font-bold">{prop.name}</p>
+                            <p className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter">{prop.location}</p>
+                          </div>
+                          {lead.interested_properties?.includes(prop.id) && <CheckCircle2 className="w-3 h-3 text-blue-400" />}
+                        </button>
+                      ))}
+                      {allProperties.length > 0 && allProperties.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                        <p className="text-center py-4 text-[10px] font-bold text-slate-600 uppercase tracking-widest">No se encontraron proyectos</p>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -249,13 +360,19 @@ export default function LeadDetailPanel({ leadId, token, onClose, onUpdate }: Le
                 </div>
               </section>
 
-              <section>
-                <h3 className="section-label text-slate-600 mb-5 flex items-center gap-2"><User className="w-3 h-3" /> Información de Contacto</h3>
-                <div className="grid grid-cols-1 gap-3">
-                  <InfoItem icon={Mail} label="Email" value={lead.original_email} />
-                  <InfoItem icon={Phone} label="Teléfono" value={lead.phone || "—"} />
-                  <InfoItem icon={Building2} label="Fuente Original" value={lead.first_source_name} />
-                  <InfoItem icon={Calendar} label="Captado el" value={format(new Date(lead.created_at), "PPP", { locale: es })} />
+              <section className="bg-white/[0.02] border border-white/[0.05] rounded-[2rem] p-6 shadow-inner relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl pointer-events-none" />
+                
+                <h3 className="section-label text-slate-500 mb-6 flex items-center gap-2">
+                  <User className="w-3.5 h-3.5 text-blue-400" /> 
+                  Información de Contacto
+                </h3>
+                
+                <div className="grid grid-cols-1 @[30rem]:grid-cols-2 gap-4">
+                  <InfoCard icon={Mail} label="Email Principal" value={lead.original_email} action="mailto" />
+                  <InfoCard icon={Phone} label="Teléfono" value={lead.phone || "—"} action="tel" />
+                  <InfoCard icon={Building2} label="Fuente del Lead" value={lead.first_source_name} />
+                  <InfoCard icon={Calendar} label="Fecha de Captura" value={format(new Date(lead.created_at), "dd MMM, yyyy", { locale: es })} />
                 </div>
               </section>
 
@@ -295,16 +412,48 @@ export default function LeadDetailPanel({ leadId, token, onClose, onUpdate }: Le
   );
 }
 
-function InfoItem({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+function InfoCard({ icon: Icon, label, value, action }: { icon: any; label: string; value: string; action?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="flex items-center gap-4 group p-3 rounded-xl hover:bg-white/[0.02] transition-all -mx-3">
-      <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.04] flex items-center justify-center text-slate-600 group-hover:text-blue-400 group-hover:bg-blue-500/8 group-hover:border-blue-500/15 transition-all">
-        <Icon className="w-4 h-4" />
+    <div className="flex flex-col p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.05] hover:border-white/10 transition-all group relative">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+            <Icon className="w-4 h-4" />
+          </div>
+          <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{label}</p>
+        </div>
+        
+        {value && value !== "—" && (
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button 
+              onClick={handleCopy}
+              className="p-1.5 rounded-md hover:bg-white/10 text-slate-500 hover:text-white transition-colors"
+              title="Copiar"
+            >
+              {copied ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+            </button>
+            {action && (
+              <a 
+                href={`${action}:${value}`}
+                className="p-1.5 rounded-md hover:bg-white/10 text-slate-500 hover:text-white transition-colors"
+                title="Abrir"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        )}
       </div>
-      <div>
-        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{label}</p>
-        <p className="text-sm font-semibold text-white mt-0.5">{value}</p>
-      </div>
+      <p className="text-sm font-bold text-white truncate pr-8">{value}</p>
     </div>
   );
 }

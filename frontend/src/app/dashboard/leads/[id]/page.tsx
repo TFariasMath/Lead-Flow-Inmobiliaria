@@ -32,6 +32,32 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const COUNTRY_CODES = [
+  { code: "+56", country: "Chile", flag: "🇨🇱" },
+  { code: "+54", country: "Argentina", flag: "🇦🇷" },
+  { code: "+51", country: "Perú", flag: "🇵🇪" },
+  { code: "+57", country: "Colombia", flag: "🇨🇴" },
+  { code: "+52", country: "México", flag: "🇲🇽" },
+  { code: "+34", country: "España", flag: "🇪🇸" },
+  { code: "+1", country: "USA/Dom", flag: "🇺🇸" },
+  { code: "+598", country: "Uruguay", flag: "🇺🇾" },
+  { code: "+591", country: "Bolivia", flag: "🇧🇴" },
+  { code: "+593", country: "Ecuador", flag: "🇪🇨" },
+  { code: "+506", country: "Costa Rica", flag: "🇨🇷" },
+  { code: "+507", country: "Panamá", flag: "🇵🇦" },
+];
+
+const splitPhone = (phone: string) => {
+  if (!phone) return { code: "+56", number: "" };
+  const sorted = [...COUNTRY_CODES].sort((a, b) => b.code.length - a.code.length);
+  for (const c of sorted) {
+    if (phone.startsWith(c.code)) {
+      return { code: c.code, number: phone.slice(c.code.length) };
+    }
+  }
+  return { code: "+56", number: phone };
+};
+
 const STATUS_OPTIONS = [
   { value: "nuevo", label: "Nuevo" },
   { value: "contactado", label: "Contactado" },
@@ -55,7 +81,8 @@ interface LeadFormValues {
   contact_email: string;
   first_name: string;
   last_name: string;
-  phone: string;
+  phone_code: string;
+  phone_number: string;
   address: string;
   company: string;
   status: string;
@@ -98,11 +125,21 @@ export default function LeadDetailPage() {
     fetchData();
   }, [fetchData]);
 
-  const handleSave = async (values: LeadFormValues) => {
+  const handleSave = async (values: any) => {
     const payload: Partial<Lead> = {
       ...values,
       assigned_to: values.assigned_to ? Number(values.assigned_to) : null,
     };
+
+    if (values.phone_number) {
+        payload.phone = `${values.phone_code}${values.phone_number.replace(/\s+/g, '')}`;
+    } else {
+        payload.phone = "";
+    }
+    
+    delete (payload as any).phone_code;
+    delete (payload as any).phone_number;
+
     if (!token || !id) return;
     try {
       const updated = await updateLead(token, id, payload);
@@ -178,7 +215,8 @@ export default function LeadDetailPage() {
                 contact_email: lead.contact_email || "",
                 first_name: lead.first_name || "",
                 last_name: lead.last_name || "",
-                phone: lead.phone || "",
+                phone_code: splitPhone(lead.phone || "").code,
+                phone_number: splitPhone(lead.phone || "").number,
                 address: lead.address || "",
                 company: lead.company || "",
                 status: lead.status,
@@ -209,7 +247,16 @@ export default function LeadDetailPage() {
                   <FormField name="contact_email" label="Email de Contacto" type="email" />
                   <FormField name="first_name" label="Nombre" />
                   <FormField name="last_name" label="Apellido" />
-                  <FormField name="phone" label="Teléfono" />
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--color-text-muted)] mb-1">Teléfono</label>
+                    <div className="flex gap-2">
+                        <Field as="select" name="phone_code" className="w-[100px] px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50">
+                            {COUNTRY_CODES.map(c => <option key={c.code} value={c.code} className="bg-slate-900">{c.flag} {c.code}</option>)}
+                        </Field>
+                        <Field name="phone_number" className="flex-1 px-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50" placeholder="9 1234 5678" />
+                    </div>
+                  </div>
                   <FormField name="address" label="Dirección" />
                   <FormField name="company" label="Empresa" />
 

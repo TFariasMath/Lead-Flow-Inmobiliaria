@@ -23,6 +23,7 @@ interface MapSectionProps {
   properties?: Property[];
   primaryColor?: string;
   onPropertyClick?: (property: Property) => void;
+  activePropertyIndex?: number;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
@@ -48,7 +49,8 @@ const MapSection: React.FC<MapSectionProps> = ({
   longitude, 
   properties = [], 
   primaryColor = '#3b82f6',
-  onPropertyClick
+  onPropertyClick,
+  activePropertyIndex
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -56,6 +58,24 @@ const MapSection: React.FC<MapSectionProps> = ({
   const [activeProject, setActiveProject] = useState<string | null>(null);
 
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
+
+  // Synchronize map with the active property in the carousel
+  useEffect(() => {
+    if (map.current && activePropertyIndex !== undefined && properties[activePropertyIndex]) {
+        const prop = properties[activePropertyIndex];
+        if (prop.latitude && prop.longitude) {
+            map.current.flyTo({
+                center: [Number(prop.longitude), Number(prop.latitude)],
+                zoom: 15.5,
+                pitch: 60,
+                bearing: -17,
+                duration: 3000,
+                essential: true
+            });
+            setActiveProject(prop.campaign_name || null);
+        }
+    }
+  }, [activePropertyIndex, properties]);
 
   const geojson: any = useMemo(() => ({
     type: 'FeatureCollection',

@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import LandingLayout, { type LandingData } from "@/components/LandingLayout";
 import { ChevronLeft, Save, Loader2, Eye, Layout as LayoutIcon, Smartphone, Monitor, Zap as ZapIcon } from "lucide-react";
-import BenefitEditor from "@/components/BenefitEditor";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
 
@@ -18,13 +17,20 @@ export default function LandingBuilderPage() {
   const [saving, setSaving] = useState(false);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [sources, setSources] = useState<any[]>([]);
+
   // State for the landing data (form fields)
-  const [data, setData] = useState<LandingData & { slug: string; is_active: boolean; campaign?: any }>({
+  const [data, setData] = useState<any>({
     title: "",
     slug: "",
     subtitle: "",
     description: "",
-    benefits: [],
+    benefits: [
+      { icon: "Check", title: "" },
+      { icon: "Check", title: "" },
+      { icon: "Check", title: "" },
+    ],
     form_config: {
       fields: ["first_name", "last_name", "email", "phone", "company"],
       required: ["first_name", "email"],
@@ -34,19 +40,51 @@ export default function LandingBuilderPage() {
     primary_color: "#3b82f6",
     image_url: "",
     is_active: true,
+    campaign: "",
+    source: "",
   });
 
   useEffect(() => {
-    if (!token || id === "new") {
+    if (!token) return;
+
+    // Fetch Campaigns and Sources
+    const fetchAux = async () => {
+      try {
+        const [cRes, sRes] = await Promise.all([
+          fetch(`${API_BASE}/campaigns/`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_BASE}/sources/`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        const cData = await cRes.json();
+        const sData = await sRes.json();
+        setCampaigns(cData);
+        setSources(sData);
+      } catch (err) {
+        console.error("Error fetching aux data:", err);
+      }
+    };
+
+    fetchAux();
+
+    if (id === "new") {
         setLoading(false);
         return;
     }
+
     fetch(`${API_BASE}/landings/${id}/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
       .then((d) => {
-        setData(d);
+        // Ensure benefits has at least 3 items for the editor
+        const fullData = { ...d };
+        if (!fullData.benefits || fullData.benefits.length === 0) {
+            fullData.benefits = [
+                { icon: "Check", title: "" },
+                { icon: "Check", title: "" },
+                { icon: "Check", title: "" },
+            ];
+        }
+        setData(fullData);
         setLoading(false);
       })
       .catch(console.error);
@@ -59,13 +97,18 @@ export default function LandingBuilderPage() {
       const url = id === "new" ? `${API_BASE}/landings/` : `${API_BASE}/landings/${id}/`;
       const method = id === "new" ? "POST" : "PATCH";
       
+      const payload = { ...data };
+      // Convert campaign/source to ID if they are objects
+      if (payload.campaign && typeof payload.campaign === 'object') payload.campaign = payload.campaign.id;
+      if (payload.source && typeof payload.source === 'object') payload.source = payload.source.id;
+
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       
       if (!res.ok) {
@@ -80,6 +123,12 @@ export default function LandingBuilderPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateBenefit = (idx: number, field: string, value: string) => {
+    const newBenefits = [...data.benefits];
+    newBenefits[idx] = { ...newBenefits[idx], [field]: value };
+    setData({ ...data, benefits: newBenefits });
   };
 
   if (loading) {
@@ -134,6 +183,20 @@ export default function LandingBuilderPage() {
           <Section title="Estructura Base" icon={LayoutIcon}>
             <Field label="Título de la Página" value={data.title} onChange={v => setData({...data, title: v})} placeholder="ej: Departamento en Santiago" />
             <Field label="Slug de URL" value={data.slug} onChange={v => setData({...data, slug: v})} placeholder="ej: santiago-centro" />
+            
+            <Select 
+                label="Campaña (Proyecto)" 
+                value={typeof data.campaign === 'object' ? data.campaign?.id : data.campaign} 
+                onChange={v => setData({...data, campaign: v})} 
+                options={campaigns.map(c => ({ value: c.id, label: c.name }))}
+            />
+            
+            <Select 
+                label="Fuente de Leads" 
+                value={typeof data.source === 'object' ? data.source?.id : data.source} 
+                onChange={v => setData({...data, source: v})} 
+                options={sources.map(s => ({ value: s.id, label: s.name }))}
+            />
           </Section>
 
           <Section title="Contenido Hero" icon={Eye}>
@@ -143,27 +206,16 @@ export default function LandingBuilderPage() {
           </Section>
 
           <Section title="Beneficios" icon={ZapIcon}>
-            <BenefitField 
-              label="Beneficio 1" 
-              title={data.benefit_1_title} 
-              icon={data.benefit_1_icon} 
-              onTitleChange={v => setData({...data, benefit_1_title: v})}
-              onIconChange={v => setData({...data, benefit_1_icon: v})}
-            />
-            <BenefitField 
-              label="Beneficio 2" 
-              title={data.benefit_2_title} 
-              icon={data.benefit_2_icon} 
-              onTitleChange={v => setData({...data, benefit_2_title: v})}
-              onIconChange={v => setData({...data, benefit_2_icon: v})}
-            />
-            <BenefitField 
-              label="Beneficio 3" 
-              title={data.benefit_3_title} 
-              icon={data.benefit_3_icon} 
-              onTitleChange={v => setData({...data, benefit_3_title: v})}
-              onIconChange={v => setData({...data, benefit_3_icon: v})}
-            />
+            {data.benefits.map((b: any, idx: number) => (
+              <BenefitField 
+                key={idx}
+                label={`Beneficio ${idx + 1}`} 
+                title={b.title} 
+                icon={b.icon} 
+                onTitleChange={(v: string) => updateBenefit(idx, "title", v)}
+                onIconChange={(v: string) => updateBenefit(idx, "icon", v)}
+              />
+            ))}
           </Section>
 
           <Section title="Conversión (Formulario)" icon={Smartphone}>
@@ -233,6 +285,24 @@ function Field({ label, value, onChange, type = "text", placeholder }: any) {
           className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         />
       )}
+    </div>
+  );
+}
+
+function Select({ label, value, onChange, options }: any) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-slate-500">{label}</label>
+      <select
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
+      >
+        <option value="">Seleccionar...</option>
+        {options.map((opt: any) => (
+          <option key={opt.value} value={opt.value} className="bg-[#141721]">{opt.label}</option>
+        ))}
+      </select>
     </div>
   );
 }
