@@ -145,112 +145,102 @@ export default function LandingLayout({
           onIndexChange={setActivePropertyIndex}
         />
         
-        {(data.latitude || (data.properties_details && data.properties_details.length > 0)) && (
-            <div className="w-full h-[400px] md:h-[500px] border-b border-white/10">
-                <MapSection 
-                    latitude={data.latitude} 
-                    longitude={data.longitude} 
-                    properties={data.properties_details} 
-                    primaryColor={primaryColor} 
-                    activePropertyIndex={activePropertyIndex}
-                />
-            </div>
-        )}
+        {/* Combined Map and Info Section */}
+        <div className="w-full grid grid-cols-1 lg:grid-cols-10 border-y border-white/10 bg-[#0f172a] min-h-[400px] lg:min-h-[500px]">
+            {/* Map (40% on desktop) */}
+            {(data.latitude || (data.properties_details && data.properties_details.length > 0)) && (
+                <div className="lg:col-span-4 h-[350px] lg:h-auto relative border-b lg:border-b-0 lg:border-r border-white/5 order-2 lg:order-1">
+                    <MapSection 
+                        latitude={data.latitude} 
+                        longitude={data.longitude} 
+                        properties={data.properties_details} 
+                        primaryColor={primaryColor} 
+                        activePropertyIndex={activePropertyIndex}
+                    />
+                </div>
+            )}
+
+            {/* Property Info Panel (60% on desktop) */}
+            {data.properties_details && data.properties_details.length > 0 && (
+                <div className="lg:col-span-6 h-auto bg-white/[0.02] backdrop-blur-md p-6 md:p-12 flex flex-col justify-between order-1 lg:order-2">
+                    <div className="space-y-6 md:space-y-8">
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-[9px] font-black uppercase tracking-widest text-blue-400 mb-4 border border-blue-500/20">
+                                Información de la Unidad
+                            </div>
+                            <h2 className="text-2xl md:text-4xl font-black text-white mb-4 tracking-tight">
+                                {data.properties_details[activePropertyIndex].name}
+                            </h2>
+                            <p className="text-sm md:text-lg text-slate-400 leading-relaxed max-w-3xl">
+                                {data.properties_details[activePropertyIndex].description || "Una excelente oportunidad de inversión en una ubicación privilegiada con terminaciones de primer nivel."}
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
+                                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                                    <LucideIcons.MapPin className="w-5 h-5 text-blue-400" />
+                                </div>
+                                <div className="min-w-0">
+                                    <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Ubicación</span>
+                                    <span className="text-xs md:text-sm text-white font-bold truncate block">{data.properties_details[activePropertyIndex].address || data.properties_details[activePropertyIndex].location || "Sector Privilegiado"}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                    <LucideIcons.Calendar className="w-5 h-5 text-emerald-400" />
+                                </div>
+                                <div>
+                                    <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Entrega</span>
+                                    <span className="text-xs md:text-sm text-white font-bold block">{data.properties_details[activePropertyIndex].delivery_date || "Inmediata"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                <LucideIcons.Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                                Equipamiento Destacado
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {(() => {
+                                    const amenities = data.properties_details[activePropertyIndex].amenities;
+                                    let amenitiesList = [];
+                                    if (Array.isArray(amenities)) amenitiesList = amenities;
+                                    else if (typeof amenities === 'string' && amenities.trim() !== '') amenitiesList = amenities.split(',');
+                                    else amenitiesList = ['Gym', 'Piscina', 'Quincho', 'Seguridad'];
+
+                                    return amenitiesList.map((amenity: string, idx: number) => (
+                                        <span key={idx} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                            {amenity.trim()}
+                                        </span>
+                                    ));
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 lg:mt-0 pt-8 border-t border-white/10">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Inversión desde</span>
+                                <span className="text-xl md:text-2xl font-black text-white">{data.properties_details[activePropertyIndex].min_investment}</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Rentabilidad</span>
+                                <span className="text-xl md:text-2xl font-black text-emerald-400">{data.properties_details[activePropertyIndex].estimated_return}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
       </div>
 
-      {/* 3. Dynamic Property Details Section */}
-      {data.properties_details && data.properties_details.length > 0 && (
-        <div className="w-full max-w-7xl mx-auto px-6 py-16 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[3rem] p-8 md:p-12 overflow-hidden relative">
-            {/* Background Glow */}
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/5 to-purple-500/5 -z-10" />
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-              {/* Left: Description & Basic Info */}
-              <div className="space-y-8">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-[10px] font-black uppercase tracking-widest text-blue-400 mb-4 border border-blue-500/20">
-                    Sobre esta propiedad
-                  </div>
-                  <h2 className="text-3xl md:text-4xl font-black text-white mb-6 leading-tight">
-                    {data.properties_details[activePropertyIndex].name}
-                  </h2>
-                  <p className="text-lg text-slate-400 leading-relaxed">
-                    {data.properties_details[activePropertyIndex].description || "Una excelente oportunidad de inversión en una ubicación privilegiada, diseñada con los más altos estándares de calidad y confort."}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ubicación Exacta</span>
-                    <div className="flex items-center gap-3 text-white">
-                      <LucideIcons.MapPin className="w-5 h-5 text-blue-400" />
-                      <span className="font-bold">{data.properties_details[activePropertyIndex].address || data.properties_details[activePropertyIndex].location || "Sector Privilegiado"}</span>
-                    </div>
-                  </div>
-                  <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Entrega Estimada</span>
-                    <div className="flex items-center gap-3 text-white">
-                      <LucideIcons.Calendar className="w-5 h-5 text-emerald-400" />
-                      <span className="font-bold">{data.properties_details[activePropertyIndex].delivery_date || "Consultar Fecha"}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: Amenities & Highlights */}
-              <div className="space-y-8">
-                <div className="p-8 rounded-[2rem] bg-black/20 border border-white/5 h-full flex flex-col justify-between">
-                  <div className="space-y-6">
-                    <h3 className="text-xl font-bold text-white flex items-center gap-3">
-                      <LucideIcons.Sparkles className="w-6 h-6 text-yellow-400" />
-                      Equipamiento & Amenidades
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {data.properties_details[activePropertyIndex].amenities ? (
-                        data.properties_details[activePropertyIndex].amenities.split(',').map((amenity: string, idx: number) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
-                            <LucideIcons.Check className="w-4 h-4 text-blue-500" />
-                            {amenity.trim()}
-                          </div>
-                        ))
-                      ) : (
-                        ['Gimnasio Equipado', 'Piscina Panorámica', 'Quinchos', 'Sala Cowork', 'Seguridad 24/7', 'Bicicletero'].map((amenity, idx) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
-                            <LucideIcons.Check className="w-4 h-4 text-blue-500" />
-                            {amenity}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-8 mt-8 border-t border-white/10">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Inversión Desde</span>
-                        <div className="text-2xl font-black text-white">
-                          {data.properties_details[activePropertyIndex].min_investment}
-                        </div>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rentabilidad</span>
-                        <div className="text-2xl font-black text-emerald-400">
-                          {data.properties_details[activePropertyIndex].estimated_return}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Benefits Section (Global) */}
+      {/* 3. Benefits Section (Global) */}
       <div className="w-full max-w-7xl mx-auto px-6 py-20 z-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
             {data.benefits?.map((benefit, idx) => (
               <FeatureCard key={idx} icon={benefit.icon} title={benefit.title} />
             ))}
