@@ -329,6 +329,14 @@ export function getPerformanceAnalytics(token: string) {
   return apiFetch<VendorPerformance[]>("/analytics/performance/", { token });
 }
 
+export function toggleVendorAvailability(token: string, vendorId: number) {
+  return apiFetch<{ vendor_id: number; is_available: boolean }>("/analytics/performance/", {
+    token,
+    method: "POST",
+    body: JSON.stringify({ vendor_id: vendorId }),
+  });
+}
+
 // --- Emails ---
 
 export function getSentEmails(token: string) {

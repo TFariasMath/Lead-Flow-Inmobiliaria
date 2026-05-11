@@ -66,7 +66,20 @@ class WebhookProcessor:
 
     def _extract_email(self) -> Optional[str]:
         body = self.webhook_log.edited_body or self.raw_body
-        for key in ("email", "Email", "EMAIL", "correo", "mail"):
+        
+        # Estrategias de extracción inteligente según la fuente
+        # 1. Caso Calendly (Anidado en payload.invitee)
+        if self.source_type == "calendly":
+            invitee = body.get("payload", {}).get("invitee", {})
+            if "email" in invitee: return invitee["email"].strip().lower()
+
+        # 2. Caso Mailchimp (Anidado en merges)
+        if self.source_type == "mailchimp":
+            merges = body.get("merges", {})
+            if "EMAIL" in merges: return merges["EMAIL"].strip().lower()
+
+        # 3. Búsqueda genérica recursiva o por llaves comunes
+        for key in ("email", "Email", "EMAIL", "correo", "mail", "contact_email"):
             if key in body and body[key]:
                 val = body[key]
                 if isinstance(val, str):
@@ -93,15 +106,32 @@ class WebhookProcessor:
 
     def _extract_lead_data(self) -> dict:
         body = self.webhook_log.edited_body or self.raw_body
-        return {
-            "first_name": self._safe_str(body.get("first_name", body.get("nombre", "")), 150),
-            "last_name": self._safe_str(body.get("last_name", body.get("apellido", "")), 150),
-            "phone": self._safe_str(body.get("phone", body.get("telefono", body.get("tel", ""))), 50),
-            "address": self._safe_str(body.get("address", body.get("direccion", ""))),
-            "company": self._safe_str(body.get("company", body.get("empresa", "")), 200),
-            "investment_goal": self._safe_str(body.get("investment_goal", ""), 100),
-            "investment_capacity": self._safe_str(body.get("investment_capacity", ""), 100),
-        }
+        data = {}
+
+        # Mapeo específico por fuente para máxima robustez
+        if self.source_type == "calendly":
+            invitee = body.get("payload", {}).get("invitee", {})
+            data["first_name"] = invitee.get("first_name", "")
+            data["last_name"] = invitee.get("last_name", "")
+            data["phone"] = invitee.get("text_reminder_number", "")
+        
+        elif self.source_type == "mailchimp":
+            merges = body.get("merges", {})
+            data["first_name"] = merges.get("FNAME", "")
+            data["last_name"] = merges.get("LNAME", "")
+            data["phone"] = merges.get("PHONE", "")
+            data["company"] = merges.get("COMPANY", "")
+
+        # Extracción genérica (respaldada si el mapeo específico falló o para fuentes estándar)
+        data["first_name"] = data.get("first_name") or self._safe_str(body.get("first_name", body.get("nombre", body.get("FNAME", ""))), 150)
+        data["last_name"] = data.get("last_name") or self._safe_str(body.get("last_name", body.get("apellido", body.get("LNAME", ""))), 150)
+        data["phone"] = data.get("phone") or self._safe_str(body.get("phone", body.get("telefono", body.get("tel", body.get("PHONE", "")))), 50)
+        data["address"] = self._safe_str(body.get("address", body.get("direccion", "")))
+        data["company"] = data.get("company") or self._safe_str(body.get("company", body.get("empresa", "")), 200)
+        data["investment_goal"] = self._safe_str(body.get("investment_goal", ""), 100)
+        data["investment_capacity"] = self._safe_str(body.get("investment_capacity", ""), 100)
+        
+        return data
 
     def _upsert_lead(self, email: str, source: Source, data: dict):
         try:

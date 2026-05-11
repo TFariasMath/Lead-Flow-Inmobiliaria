@@ -83,7 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [decodeToken]);
 
   const login = async (username: string, password: string) => {
-    const data: TokenResponse = await apiLogin(username, password);
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+    const data: TokenResponse = await apiLogin(trimmedUsername, trimmedPassword);
     setToken(data.access);
     setUser(decodeToken(data.access));
     localStorage.setItem("leadflow_auth", JSON.stringify(data));

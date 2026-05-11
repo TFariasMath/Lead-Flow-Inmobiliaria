@@ -15,9 +15,15 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         """
         Sobreescribe el login exitoso para registrar una auditoría de seguridad.
-        No bloquea el acceso si la auditoría falla.
         """
+        username = request.data.get("username")
+        password = request.data.get("password")
+        logger.info(f"DEBUG LOGIN: Intentando login para usuario: '{username}' (longitud: {len(username) if username else 0})")
+        
         response = super().post(request, *args, **kwargs)
+        
+        if response.status_code != 200:
+            logger.warning(f"DEBUG LOGIN: Fallo de login para usuario: '{username}'. Status: {response.status_code}")
         
         if response.status_code == 200:
             try:

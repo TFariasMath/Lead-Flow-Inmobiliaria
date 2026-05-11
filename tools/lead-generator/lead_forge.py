@@ -6,6 +6,8 @@ import pandas as pd
 from faker import Faker
 import concurrent.futures
 from datetime import datetime
+import os
+import json
 
 # Configuración de Faker
 fake = Faker(['es_ES', 'es_MX', 'en_US'])
@@ -14,219 +16,330 @@ fake = Faker(['es_ES', 'es_MX', 'en_US'])
 st.set_page_config(
     page_title="Lead Forge Pro | Resilience Console",
     page_icon="🛡️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# Estilos inyectados
-st.markdown("""
-    <style>
-    .main { background-color: #0e1117; }
-    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #1e2130;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
-    }
-    .metric-card {
-        background-color: #1e2130;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #3e445e;
-    }
-    </style>
+# --- THEME & CSS ---
+def inject_super_premium_styles():
+    st.markdown("""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.5);
+            --secondary: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-dark: #020617;
+            --card-bg: rgba(15, 23, 42, 0.6);
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        .main {
+            background: radial-gradient(circle at top right, #1e1b4b, var(--bg-dark));
+            color: #f1f5f9;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 12px;
+            background-color: rgba(2, 6, 23, 0.8);
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            border-radius: 14px;
+            padding: 12px 24px;
+            font-weight: 700;
+        }
+
+        .stTabs [data-baseweb="tab"][aria-selected="true"] {
+            background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
+            color: white !important;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 18px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .metric-val {
+            font-size: 2.4rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-pulse {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .terminal {
+            background: #000;
+            color: #00ff00;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            border: 1px solid #333;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        </style>
     """, unsafe_allow_html=True)
 
-# --- UTILIDADES ---
+inject_super_premium_styles()
 
+# --- PROJECT ALIGNMENT (v2.5.0: Calendly & Mailchimp Integration) ---
+PROJECT_SOURCES = {
+    "Web Form (Slug: web)": "web",
+    "Calendly / Agendamiento (Slug: calendly)": "calendly",
+    "Mailchimp / Email Marketing (Slug: mailchimp)": "mailchimp",
+    "Facebook Ads (Slug: facebook)": "facebook",
+    "Instagram Ads (Slug: instagram)": "instagram",
+    "Google Ads (Slug: google)": "google",
+    "Portal Inmobiliario (Slug: portal_inmo)": "portal_inmo",
+    "Tokko Broker (Slug: tokko)": "tokko",
+    "Direct API (Slug: api)": "api"
+}
+
+# --- UTILS ---
 def send_webhook(url, payload):
     start_time = time.time()
     try:
         response = requests.post(url, json=payload, timeout=10)
         latency = time.time() - start_time
-        return response.status_code, response.text, latency
+        return response.status_code, response.json() if response.status_code == 200 else response.text, latency
     except Exception as e:
         return 0, str(e), time.time() - start_time
 
-def generate_base_lead():
+def generate_domain_lead():
     fn = fake.first_name()
     ln = fake.last_name()
     return {
         "first_name": fn,
         "last_name": ln,
-        "email": f"{fn.lower()}.{ln.lower()}@{fake.free_email_domain()}",
-        "phone": f"+569{random.randint(10000000, 99999999)}",
-        "investment_goal": random.choice(["Vivienda", "Inversión", "Plusvalía"]),
-        "investment_capacity": random.choice(["$50M", "$100M", "$200M"]),
-        "company": fake.company()
+        "email": f"{fn.lower()}.{ln.lower()}{random.randint(1,99)}@{fake.free_email_domain()}",
+        "phone": f"+569{random.randint(11111111, 99999999)}",
+        "company": fake.company(),
+        "investment_goal": random.choice(["plusvalia", "renta", "patrimonio"]),
+        "investment_capacity": random.choice(["$50M", "$100M", "$200M"])
     }
 
-# --- INTERFAZ PRINCIPAL ---
+# --- HEADER ---
+col_l, col_t = st.columns([1, 6])
+with col_l:
+    logo_path = "C:\\Users\\USER\\.gemini\\antigravity\\brain\\6b034929-29ff-4b49-b6f4-25ff0cd47e37\\lead_forge_pro_logo_1778499350441.png"
+    if os.path.exists(logo_path): st.image(logo_path, width=100)
+    else: st.markdown("<h1 style='font-size: 4rem;'>🛡️</h1>", unsafe_allow_html=True)
 
-st.title("🛡️ Lead Forge Pro")
-st.caption("Consola de Auditoría y Resiliencia para Lead Flow")
+with col_t:
+    st.markdown("""
+        <div style='margin-top: 10px;'>
+            <h1 style='margin-bottom: 0; font-size: 3.5rem; letter-spacing: -3px;'>
+                Lead Forge <span style='background: linear-gradient(135deg, #3b82f6, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>PRO</span>
+            </h1>
+            <p style='color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3em; font-size: 0.8rem;'>
+                Calendly & Mailchimp Integration v2.5.0
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
-# Sidebar Global
+# Sidebar
 with st.sidebar:
-    st.header("🔗 Conectividad")
-    target_url = st.text_input("URL Webhook", value="http://localhost:8000/api/v1/webhooks/receive/")
+    st.markdown("### 🌐 NODE CONFIG")
+    target_url = st.text_input("WEBHOOK ENDPOINT", value="http://localhost:8000/api/v1/webhooks/receive/")
     
     st.divider()
-    st.markdown("### 📊 Estado del Sistema")
-    # Simulación de ping al backend
+    st.markdown("### 📡 SYSTEM PULSE")
     try:
         ping = requests.get(target_url.replace("webhooks/receive/", ""), timeout=2)
-        st.success(f"Backend Online (HTTP {ping.status_code})")
+        st.markdown(f"""
+            <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 15px; border-radius: 12px;">
+                <span class="status-pulse" style="background: #10b981;"></span>
+                <span style="color: #10b981; font-weight: 800; font-size: 0.9rem;">BACKEND READY</span>
+            </div>
+        """, unsafe_allow_html=True)
     except:
-        st.error("Backend Offline")
+        st.error("BACKEND DESCONECTADO")
 
-# TABS
-tab1, tab2, tab3 = st.tabs(["🚀 Inyección Estándar", "🧬 Laboratorio de Identidad", "🌊 Stress Hydra"])
+# Navigation
+tab1, tab2, tab3 = st.tabs(["🚀 INYECTOR MULTI-FUENTE", "🧬 LAB DE IDENTIDAD", "🌊 STRESS HYDRA"])
 
-# --- TAB 1: GENERADOR ESTÁNDAR ---
+# --- TAB 1: INYECTOR ---
 with tab1:
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.subheader("Configurar Lote")
-        source = st.selectbox("Fuente", ["facebook", "instagram", "google", "web", "organic"], key="t1_source")
-        format_type = st.radio("Formato", ["standard", "facebook", "dirty"], key="t1_format")
-        count = st.slider("Cantidad", 1, 100, 10)
-        
-        if st.button("Ejecutar Lote", type="primary"):
-            results = []
-            bar = st.progress(0)
-            for i in range(count):
-                lead_data = generate_base_lead()
-                # Ajustar formato
-                if format_type == "facebook":
-                    payload = {"source_type": "facebook", "data": {"nombre": lead_data["first_name"], "email": lead_data["email"], "tel": lead_data["phone"]}}
-                elif format_type == "dirty":
-                    payload = {"first_name": lead_data["first_name"], "emial": lead_data["email"]} # Error typo
-                else:
-                    payload = {"source_type": source, "data": lead_data}
-                
-                sc, text, lat = send_webhook(target_url, payload)
-                results.append({"Status": sc, "Latency": lat, "Lead": lead_data["email"]})
-                bar.progress((i+1)/count)
-            
-            st.table(pd.DataFrame(results).head(10))
-
-    with col2:
-        st.info("💡 Usa la Inyección Estándar para poblar el dashboard rápidamente con datos limpios.")
-        st.image("https://img.icons8.com/fluency/96/database.png", width=60)
-
-# --- TAB 2: LABORATORIO DE IDENTIDAD (DOUBLE ANCHOR) ---
-with tab2:
-    st.subheader("🧬 Test de Resolución de Identidad")
-    st.markdown("""
-    Este módulo pone a prueba el algoritmo **Double Anchor**. 
-    El sistema debe ser capaz de reconocer si un lead es el mismo basándose en Email O Teléfono.
-    """)
-    
-    if 'id_lab_lead' not in st.session_state:
-        st.session_state.id_lab_lead = generate_base_lead()
-
-    c1, c2, c3 = st.columns(3)
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    c1, c2 = st.columns([1, 1.2])
     
     with c1:
-        st.write("**Paso 1: Crear Lead Original**")
-        st.json(st.session_state.id_lab_lead)
-        if st.button("Inyectar Original"):
-            sc, text, lat = send_webhook(target_url, {"source_type": "lab", "data": st.session_state.id_lab_lead})
-            st.toast(f"Enviado! Status: {sc}")
+        st.markdown("### ⚙️ SIMULACIÓN DE CANAL")
+        source_label = st.selectbox("SERVICIO ORIGEN", list(PROJECT_SOURCES.keys()))
+        schema = st.radio("TIPO DE INTEGRACIÓN", ["Direct Webhook", "Calendly Event Payload", "Mailchimp Contact Hook"])
+        count = st.select_slider("VOLUMEN", options=[1, 5, 10, 20, 50], value=5)
+        
+        source_slug = PROJECT_SOURCES[source_label]
+
+        if st.button("🚀 INICIAR CAPTURA", type="primary", use_container_width=True):
+            results = []
+            progress = st.progress(0)
+            for i in range(count):
+                lead = generate_domain_lead()
+                
+                if schema == "Calendly Event Payload":
+                    # Simulación de estructura de Calendly
+                    payload = {
+                        "source_type": "calendly",
+                        "data": {
+                            "payload": {
+                                "invitee": {
+                                    "first_name": lead["first_name"],
+                                    "last_name": lead["last_name"],
+                                    "email": lead["email"],
+                                    "text_reminder_number": lead["phone"]
+                                },
+                                "event": "Reunión Inversión Inmobiliaria"
+                            }
+                        }
+                    }
+                elif schema == "Mailchimp Contact Hook":
+                    # Simulación de estructura de Mailchimp
+                    payload = {
+                        "source_type": "mailchimp",
+                        "data": {
+                            "merges": {
+                                "FNAME": lead["first_name"],
+                                "LNAME": lead["last_name"],
+                                "EMAIL": lead["email"],
+                                "PHONE": lead["phone"]
+                            },
+                            "list_id": "mc_list_99"
+                        }
+                    }
+                else:
+                    payload = {"source_type": source_slug, "data": lead}
+                
+                sc, data, lat = send_webhook(target_url, payload)
+                results.append({"status": sc, "latency": lat, "email": lead["email"], "source": source_slug})
+                progress.progress((i+1)/count)
+            
+            st.session_state.inj_results = results
+            st.success(f"Captura desde {source_label} completada.")
 
     with c2:
-        st.write("**Paso 2: Mismo Email, Nuevo Teléfono**")
-        new_phone_lead = st.session_state.id_lab_lead.copy()
-        new_phone_lead["phone"] = f"+569{random.randint(11111111, 99999999)}"
-        new_phone_lead["last_name"] = "(Updated Phone)"
-        st.json(new_phone_lead)
-        if st.button("Inyectar Cambio Tel"):
-            sc, text, lat = send_webhook(target_url, {"source_type": "lab", "data": new_phone_lead})
-            st.toast(f"Enviado! Status: {sc}")
+        if 'inj_results' in st.session_state:
+            df = pd.DataFrame(st.session_state.inj_results)
+            st.markdown("### 📊 MONITOREO")
+            st.dataframe(df, use_container_width=True)
+            st.line_chart(df['latency'])
+        else:
+            st.info("Selecciona un servicio (Calendly, Mailchimp, etc.) para probar la ingesta.")
 
-    with c3:
-        st.write("**Paso 3: Mismo Teléfono, Nuevo Email**")
-        new_email_lead = st.session_state.id_lab_lead.copy()
-        new_email_lead["email"] = f"new_identity_{random.randint(1,999)}@test.com"
-        new_email_lead["last_name"] = "(Updated Email)"
-        st.json(new_email_lead)
-        if st.button("Inyectar Cambio Email"):
-            sc, text, lat = send_webhook(target_url, {"source_type": "lab", "data": new_email_lead})
-            st.toast(f"Enviado! Status: {sc}")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.divider()
-    st.write("**⚠️ Test de Estrés: Colisión de Identidad**")
-    st.markdown("Envía 2 peticiones **exactamente iguales** al mismo tiempo para ver si el sistema genera duplicados o maneja la carrera correctamente.")
-    if st.button("💥 Probar Colisión (2 envíos simultáneos)"):
-        collision_lead = generate_base_lead()
-        payload = {"source_type": "collision_test", "data": collision_lead}
-        
-        st.write("Enviando duplicados para:", collision_lead["email"])
-        
-        results = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            futures = [executor.submit(send_webhook, target_url, payload) for _ in range(2)]
-            for future in concurrent.futures.as_completed(futures):
-                results.append(future.result())
-        
-        for i, (sc, text, lat) in enumerate(results):
-            st.write(f"Envío {i+1}: Status {sc} | Latencia {lat:.3f}s")
-            
-        st.info("Revisa el Dashboard: Solo debería existir 1 Lead para este correo, pero 2 Interacciones en su ficha.")
-
-    if st.button("🔄 Generar Nueva Identidad de Prueba"):
-        st.session_state.id_lab_lead = generate_base_lead()
-        st.rerun()
-
-# --- TAB 3: STRESS HYDRA (CONCURRENCY) ---
-with tab3:
-    st.subheader("🌊 Stress Hydra: Test de Concurrencia Extrema")
-    col_a, col_b = st.columns([1, 1])
+# --- TAB 2: LAB DE IDENTIDAD ---
+with tab2:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.markdown("### 🧬 RESOLUCIÓN MULTI-CANAL")
+    st.write("Verifica si un lead que llega por Mailchimp y luego agenda en Calendly se unifica correctamente.")
     
-    with col_a:
-        threads = st.number_input("Hilos concurrentes", 1, 50, 10)
-        total_reqs = st.number_input("Total de peticiones", 10, 500, 50)
+    if 'lab_lead_v2' not in st.session_state:
+        st.session_state.lab_lead_v2 = generate_domain_lead()
+
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        st.markdown("<div style='background:rgba(255,255,255,0.03); border:1px solid var(--border); padding:20px; border-radius:20px;'>", unsafe_allow_html=True)
+        st.write("**Evento A: Campaña Email**")
+        st.caption("Captura desde Mailchimp")
+        st.code(f"Email: {st.session_state.lab_lead_v2['email']}")
+        if st.button("1. Enviar desde Mailchimp"):
+            send_webhook(target_url, {"source_type": "mailchimp", "data": st.session_state.lab_lead_v2})
+            st.toast("Enviado a Mailchimp")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with c2:
+        st.markdown("<div style='background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); padding:20px; border-radius:20px;'>", unsafe_allow_html=True)
+        st.write("**Evento B: Agendamiento**")
+        st.caption("Mismo Email desde Calendly")
+        st.code(f"Email: {st.session_state.lab_lead_v2['email']}")
+        if st.button("2. Enviar desde Calendly"):
+            send_webhook(target_url, {"source_type": "calendly", "data": st.session_state.lab_lead_v2})
+            st.toast("Agendado en Calendly")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.warning("El Backend debe reconocer que es la misma persona y añadir la interacción de Calendly al historial del lead de Mailchimp.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# --- TAB 3: STRESS HYDRA ---
+with tab3:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.markdown("### 🌊 MULTI-SOURCE HYDRA STRESS")
+    
+    col_h1, col_h2 = st.columns([1, 2])
+    with col_h1:
+        threads = st.slider("CONCURRENCIA", 1, 100, 40)
+        total = st.select_slider("ATAQUE", options=[100, 500, 1000], value=100)
         
-        if st.button("🔥 SOLTAR LA HYDRA", type="primary"):
-            st.warning(f"Iniciando ataque de {total_reqs} peticiones con {threads} hilos...")
-            
-            all_leads = [generate_base_lead() for _ in range(total_reqs)]
-            payloads = [{"source_type": "stress", "data": l} for l in all_leads]
-            
+        if st.button("🔥 LANZAR ATAQUE MULTI-CANAL", type="primary", use_container_width=True):
             results = []
-            start_test = time.time()
+            start = time.time()
+            bar = st.progress(0)
             
             with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-                future_to_url = {executor.submit(send_webhook, target_url, p): p for p in payloads}
-                for future in concurrent.futures.as_completed(future_to_url):
-                    sc, text, lat = future.result()
+                futures = []
+                for _ in range(total):
+                    lead = generate_domain_lead()
+                    # Rotación de fuentes reales
+                    s = random.choice(["web", "calendly", "mailchimp", "facebook"])
+                    futures.append(executor.submit(send_webhook, target_url, {"source_type": s, "data": lead}))
+                
+                for i, future in enumerate(concurrent.futures.as_completed(futures)):
+                    sc, data, lat = future.result()
                     results.append({"status": sc, "latency": lat})
+                    bar.progress((i+1)/total)
             
-            total_time = time.time() - start_test
-            df_res = pd.DataFrame(results)
-            
-            st.success(f"Test completado en {total_time:.2f} segundos.")
-            
-            # Métricas
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Éxito (200 OK)", len(df_res[df_res['status'] == 200]))
-            m2.metric("Latencia Media", f"{df_res['latency'].mean():.3f}s")
-            m3.metric("Peticiones/Seg", f"{len(df_res)/total_time:.1f}")
-            
-            st.line_chart(df_res['latency'])
+            dur = time.time() - start
+            df_h = pd.DataFrame(results)
+            st.session_state.hydra_res_v2 = (df_h, dur)
 
-    with col_b:
-        st.info("""
-        **¿Qué buscar en este test?**
-        1. **Deadlocks**: Si el backend usa `select_for_update`, este test verificará que las transacciones no se bloqueen entre sí.
-        2. **Race Conditions**: ¿Los leads se asignan correlativamente o hay saltos extraños?
-        3. **Estabilidad**: ¿El servidor empieza a devolver 500 o 504 bajo carga?
-        """)
-        st.warning("⚠️ Monitorea los logs de Django mientras corres este test.")
+    with col_h2:
+        if 'hydra_res_v2' in st.session_state:
+            df_h, dur = st.session_state.hydra_res_v2
+            st.markdown("#### 📉 MÉTRICAS")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("LOAD", f"{len(df_h)/dur:.1f} r/s")
+            c2.metric("P99", f"{df_h['latency'].quantile(0.99):.3f}s")
+            c3.metric("ERRORS", len(df_h[df_h['status']!=200]))
+            st.area_chart(df_h['latency'], color="#3b82f6")
 
-st.divider()
-st.caption(f"Lead Forge Pro v2.0 | {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Footer
+st.markdown("<div style='text-align: center; padding: 40px; color: #475569; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em;'>Lead Forge Pro &bull; Multi-Source Suite v2.5.0 &bull; © 2026 Lead Flow Systems</div>", unsafe_allow_html=True)
+ Broadway

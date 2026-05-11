@@ -72,21 +72,24 @@ class DashboardStatsView(APIView):
             total_webhooks = webhook_stats["total"]
             success_rate = (webhook_stats["success"] / total_webhooks * 100) if total_webhooks > 0 else 0
 
-            # 3. Análisis de origen con conversión (Optimizado con .annotate)
+            # 3. Análisis de origen con conversión y participación (Optimizado con .annotate)
             source_groups = (
                 leads_qs.values("first_source__name")
                 .annotate(
                     total=Count("id"),
                     won=Count("id", filter=Q(status=Lead.Status.CIERRE_GANADO))
                 )
-                .order_by("-won")
+                .order_by("-total") # Ordenamos por volumen de adquisición por defecto
             )
+            
+            total_leads_count = master_stats["total"]
             
             sources_data = [{
                 "name": sg["first_source__name"] or "Desconocido",
                 "count": sg["total"],
                 "won_count": sg["won"],
-                "conversion_rate": round((sg["won"] / sg["total"] * 100), 1) if sg["total"] > 0 else 0
+                "conversion_rate": round((sg["won"] / sg["total"] * 100), 1) if sg["total"] > 0 else 0,
+                "acquisition_share": round((sg["total"] / total_leads_count * 100), 1) if total_leads_count > 0 else 0
             } for sg in source_groups]
 
             # 4. Datos para el Embudo (Reutilizamos los datos de master_stats)
@@ -160,3 +163,23 @@ class PerformanceAnalyticsView(APIView):
         data.sort(key=lambda x: x["conversion_rate"], reverse=True)
 
         return Response(data)
+
+    def post(self, request):
+        """
+        Alterna la disponibilidad de un vendedor para el Round Robin.
+        """
+        vendor_id = request.data.get("vendor_id")
+        if not vendor_id:
+            return Response({"error": "ID de vendedor requerido"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from ..models import VendorProfile
+        try:
+            profile = VendorProfile.objects.get(user_id=vendor_id)
+            profile.is_available_for_leads = not profile.is_available_for_leads
+            profile.save()
+            return Response({
+                "vendor_id": vendor_id,
+                "is_available": profile.is_available_for_leads
+            })
+        except VendorProfile.DoesNotExist:
+            return Response({"error": "Perfil no encontrado"}, status=status.HTTP_404_NOT_FOUND)

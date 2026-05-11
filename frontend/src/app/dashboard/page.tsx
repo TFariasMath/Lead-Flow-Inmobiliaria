@@ -18,6 +18,7 @@ import {
   type VendorPerformance,
   type Lead,
 } from "@/lib/api";
+import { toggleVendorAvailability } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   Users,
@@ -145,6 +146,20 @@ export default function DashboardPage() {
     }, 30000);
     return () => clearInterval(interval);
   }, [token, lastLeadId, router]);
+
+  const handleToggleAvailability = async (vendorId: number) => {
+    if (!token) return;
+    try {
+      const result = await toggleVendorAvailability(token, vendorId);
+      setPerformance((prev) =>
+        prev.map((v) =>
+          v.vendor_id === vendorId ? { ...v, is_available: result.is_available } : v
+        )
+      );
+    } catch (err) {
+      console.error("Error toggling availability:", err);
+    }
+  };
 
   if (loading && !stats) {
     return (
@@ -416,14 +431,14 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-black text-blue-400">
-                      {s.conversion_rate}%
+                      {s.acquisition_share}%
                     </p>
                     <div className="w-20 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700 ease-out"
                         style={{
-                          width: `${Math.min(s.conversion_rate, 100)}%`,
-                          background: `linear-gradient(90deg, ${s.conversion_rate > 50 ? "#10b981" : s.conversion_rate > 20 ? "#f59e0b" : "#ef4444"}, ${s.conversion_rate > 50 ? "#34d399" : s.conversion_rate > 20 ? "#fbbf24" : "#f87171"})`,
+                          width: `${Math.min(s.acquisition_share, 100)}%`,
+                          background: `linear-gradient(90deg, ${s.acquisition_share > 30 ? "#3b82f6" : "#6366f1"}, ${s.acquisition_share > 30 ? "#60a5fa" : "#818cf8"})`,
                         }}
                       />
                     </div>
@@ -508,6 +523,18 @@ export default function DashboardPage() {
                     className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all"
                   >
                     <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleToggleAvailability(v.vendor_id)}
+                        className={cn(
+                          "w-8 h-8 rounded-lg border flex items-center justify-center transition-all",
+                          v.is_available 
+                            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20" 
+                            : "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20"
+                        )}
+                        title={v.is_available ? "Disponible para Leads" : "No disponible"}
+                      >
+                        <Zap className={cn("w-3.5 h-3.5", !v.is_available && "opacity-30")} />
+                      </button>
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 border border-white/5 flex items-center justify-center text-[10px] font-black text-white">
                         {v.vendor_name.charAt(0)}
                       </div>
@@ -516,7 +543,7 @@ export default function DashboardPage() {
                           {v.vendor_name}
                         </p>
                         <p className="text-[9px] text-slate-500 font-bold uppercase">
-                          {v.total_leads || 0} leads
+                          {v.total_assigned || 0} leads
                         </p>
                       </div>
                     </div>
