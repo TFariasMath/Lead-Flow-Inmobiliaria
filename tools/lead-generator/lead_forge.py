@@ -342,4 +342,3 @@ with tab3:
 
 # Footer
 st.markdown("<div style='text-align: center; padding: 40px; color: #475569; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em;'>Lead Forge Pro &bull; Multi-Source Suite v2.5.0 &bull; © 2026 Lead Flow Systems</div>", unsafe_allow_html=True)
- Broadway

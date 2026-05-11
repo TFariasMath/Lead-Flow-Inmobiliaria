@@ -69,18 +69,31 @@ El sistema busca coincidencias en AMBOS campos antes de decidir si crea un nuevo
 - Node.js 18+
 - PostgreSQL 15
 
-### Configuración Rápida (Windows PowerShell)
-```powershell
-# 1. Clonar y configurar base de datos
-.\scripts\setup_local.ps1
+### Configuración Rápida (Enterprise Suite)
 
-# 2. Iniciar servicios (Backend + Frontend)
+#### 🪟 Windows (PowerShell)
+```powershell
+# 1. Instalación Profesional
+.\scripts\setup_enterprise.ps1
+
+# 2. Iniciar Ecosistema
 .\run_crm.bat
 ```
 
-### Comandos de Auditoría
-- **Pruebas de Stress**: `python -m streamlit run tools/lead-generator/lead_forge.py`
-- **Tests de Integridad**: `python backend/manage.py test leads.tests_webhooks`
+#### 🐧 Linux / macOS (Bash)
+```bash
+# 1. Instalación Profesional
+bash scripts/setup_linux.sh
+
+# 2. Iniciar Ecosistema
+bash run_linux.sh
+```
+
+### Gestión y Diagnóstico
+- **Chequeo de DB (Win)**: `.\backend\venv\Scripts\python.exe scripts\check_db.py`
+- **Chequeo de DB (Linux)**: `./backend/venv/bin/python scripts/check_db.py`
+- **Tests (Win)**: `.\backend\venv\Scripts\python.exe backend\manage.py test leads.tests_webhooks`
+- **Tests (Linux)**: `./backend/venv/bin/python backend/manage.py test leads.tests_webhooks`
 
 ---
 

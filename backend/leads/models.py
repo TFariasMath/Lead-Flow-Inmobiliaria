@@ -332,6 +332,7 @@ class Lead(models.Model):
     contact_email = models.EmailField(
         blank=True,
         default="",
+        db_index=True,
         help_text="Email de comunicación que el vendedor puede actualizar.",
     )
     first_name = models.CharField(max_length=150, blank=True, default="")

@@ -279,6 +279,7 @@ export default function DashboardPage() {
           value={totalLeads}
           color="#3b82f6"
           onClick={() => router.push("/dashboard/leads")}
+          description={`${stats?.leads_via_api || 0} vía API • ${stats?.leads_manual || 0} Manuales`}
         />
         <KPICard
           icon={Target}
@@ -299,9 +300,11 @@ export default function DashboardPage() {
         <KPICard
           icon={Zap}
           label="Salud API"
-          value={`${stats.webhook_success_rate || 0}%`}
+          value={`${stats?.webhook_success_rate || 0}%`}
           color="#f59e0b"
           onClick={() => router.push("/dashboard/webhooks")}
+          description={stats?.failed_webhooks > 0 ? `${stats.failed_webhooks} fallos detectados` : "Sin fallos técnicos"}
+          alert={stats?.failed_webhooks > 0}
         />
       </div>
 

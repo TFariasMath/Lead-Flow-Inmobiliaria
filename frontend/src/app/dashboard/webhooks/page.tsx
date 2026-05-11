@@ -130,7 +130,7 @@ export default function WebhooksPage() {
             <button 
               onClick={() => { setStatusFilter(""); setPage(1); }}
               className={cn("px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", !statusFilter ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300")}
-            >Todos</button>
+            >Todos ({data?.count || 0})</button>
             <button 
               onClick={() => { setStatusFilter("failed"); setPage(1); }}
               className={cn("px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", statusFilter === "failed" ? "bg-red-500/20 text-red-500" : "text-slate-500 hover:text-slate-300")}

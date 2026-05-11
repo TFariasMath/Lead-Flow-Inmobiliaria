@@ -34,12 +34,12 @@ class DashboardStatsView(APIView):
                 webhooks_qs = webhooks_qs.filter(created_at__gte=start_date)
 
             # Lógica de Permisos: Admin puede elegir, vendedor está bloqueado a sí mismo
+            # IMPORTANTE: Salud API (webhooks_qs) se mantiene GLOBAL para reflejar fallos técnicos
+            # incluso si no tienen lead asignado.
             if user.is_staff and vendor_id and vendor_id.isdigit():
                 leads_qs = leads_qs.filter(assigned_to_id=vendor_id)
-                webhooks_qs = webhooks_qs.filter(lead__assigned_to_id=vendor_id)
             elif not user.is_staff:
                 leads_qs = leads_qs.filter(assigned_to=user)
-                webhooks_qs = webhooks_qs.filter(lead__assigned_to=user)
 
             # 1. Agregación Maestro: Contamos estados y métricas críticas en UNA sola consulta
             stale_threshold = timezone.now() - timedelta(hours=24)
@@ -105,8 +105,14 @@ class DashboardStatsView(APIView):
                 "value": master_stats.get(f"status_{status_val}", 0)
             } for status_val, label in funnel_stages]
 
+            # 5. Desglose de Origen Técnico (API vs Manual)
+            leads_via_api = leads_qs.filter(webhook_logs__isnull=False).distinct().count()
+            leads_manual = total_leads_count - leads_via_api
+
             data = {
-                "total_leads": master_stats["total"],
+                "total_leads": total_leads_count,
+                "leads_via_api": leads_via_api,
+                "leads_manual": leads_manual,
                 "leads_by_status": leads_by_status,
                 "total_webhooks": total_webhooks,
                 "successful_webhooks": webhook_stats["success"],

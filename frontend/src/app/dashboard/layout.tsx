@@ -44,6 +44,9 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen relative flex p-3 gap-3 overflow-hidden noise-overlay">
+      {/* Spacer to preserve space for the fixed Sidebar */}
+      <div className="w-[68px] shrink-0" />
+      
       <Sidebar />
       <NotificationPortal />
       <main className="flex-1 glass-container rounded-[1.75rem] overflow-hidden relative">

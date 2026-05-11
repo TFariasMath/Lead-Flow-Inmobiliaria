@@ -5,10 +5,28 @@ from django.utils import timezone
 from django_q.tasks import async_task
 from django.db.models import Q
 
+from dataclasses import dataclass, asdict, fields
 from ..models import Lead, Source, Interaction, WebhookLog
 from .distribution import LeadDistributionService
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class ExtractedLeadData:
+    """Estructura de datos formal para el transporte de leads extraídos."""
+    first_name: str = ""
+    last_name: str = ""
+    phone: str = ""
+    address: str = ""
+    company: str = ""
+    investment_goal: str = ""
+    investment_capacity: str = ""
+
+    def to_dict(self, exclude_empty=True):
+        data = asdict(self)
+        if exclude_empty:
+            return {k: v for k, v in data.items() if v}
+        return data
 
 class WebhookProcessor:
     """
@@ -16,10 +34,7 @@ class WebhookProcessor:
     y transformarla en un Lead calificado y asignado.
     """
 
-    SYNC_FIELDS = [
-        "first_name", "last_name", "phone", "address", "company",
-        "investment_goal", "investment_capacity"
-    ]
+    SYNC_FIELDS = [f.name for f in fields(ExtractedLeadData)]
 
     def __init__(self, source_type: str, raw_body: dict):
         self.source_type = source_type
@@ -104,7 +119,7 @@ class WebhookProcessor:
             return val_str[:max_length]
         return val_str
 
-    def _extract_lead_data(self) -> dict:
+    def _extract_lead_data(self) -> ExtractedLeadData:
         body = self.webhook_log.edited_body or self.raw_body
         data = {}
 
@@ -122,18 +137,26 @@ class WebhookProcessor:
             data["phone"] = merges.get("PHONE", "")
             data["company"] = merges.get("COMPANY", "")
 
-        # Extracción genérica (respaldada si el mapeo específico falló o para fuentes estándar)
-        data["first_name"] = data.get("first_name") or self._safe_str(body.get("first_name", body.get("nombre", body.get("FNAME", ""))), 150)
-        data["last_name"] = data.get("last_name") or self._safe_str(body.get("last_name", body.get("apellido", body.get("LNAME", ""))), 150)
-        data["phone"] = data.get("phone") or self._safe_str(body.get("phone", body.get("telefono", body.get("tel", body.get("PHONE", "")))), 50)
-        data["address"] = self._safe_str(body.get("address", body.get("direccion", "")))
-        data["company"] = data.get("company") or self._safe_str(body.get("company", body.get("empresa", "")), 200)
-        data["investment_goal"] = self._safe_str(body.get("investment_goal", ""), 100)
-        data["investment_capacity"] = self._safe_str(body.get("investment_capacity", ""), 100)
+        # Extracción genérica
+        first_name = data.get("first_name") or self._safe_str(body.get("first_name", body.get("nombre", body.get("FNAME", ""))), 150)
+        last_name = data.get("last_name") or self._safe_str(body.get("last_name", body.get("apellido", body.get("LNAME", ""))), 150)
+        phone = data.get("phone") or self._safe_str(body.get("phone", body.get("telefono", body.get("tel", body.get("PHONE", "")))), 50)
+        address = self._safe_str(body.get("address", body.get("direccion", "")))
+        company = data.get("company") or self._safe_str(body.get("company", body.get("empresa", "")), 200)
+        investment_goal = self._safe_str(body.get("investment_goal", ""), 100)
+        investment_capacity = self._safe_str(body.get("investment_capacity", ""), 100)
         
-        return data
+        return ExtractedLeadData(
+            first_name=first_name,
+            last_name=last_name,
+            phone=phone,
+            address=address,
+            company=company,
+            investment_goal=investment_goal,
+            investment_capacity=investment_capacity
+        )
 
-    def _upsert_lead(self, email: str, source: Source, data: dict):
+    def _upsert_lead(self, email: str, source: Source, data: ExtractedLeadData):
         try:
             with transaction.atomic():
                 lead = (
@@ -144,14 +167,15 @@ class WebhookProcessor:
                 )
 
                 if lead:
-                    self._sync_fields(lead, data)
-                    lead.save()
+                    is_dirty = self._sync_fields(lead, data)
+                    if is_dirty:
+                        lead.save()
                 else:
                     lead = Lead.objects.create(
                         original_email=email,
                         contact_email=email,
                         first_source=source,
-                        **{k: v for k, v in data.items() if v},
+                        **data.to_dict(),
                     )
                     LeadDistributionService.assign(lead)
                     if getattr(lead, 'score', 0) >= 70:
@@ -168,11 +192,21 @@ class WebhookProcessor:
             interaction = Interaction.objects.create(lead=lead, source=source, raw_payload=self.raw_body)
             return lead, interaction
 
-    def _sync_fields(self, lead: Lead, data: dict):
+    def _sync_fields(self, lead: Lead, data: ExtractedLeadData) -> bool:
+        """
+        Sincroniza solo los campos que han cambiado.
+        Retorna True si el lead fue modificado (dirty).
+        """
+        is_dirty = False
+        new_data = data.to_dict()
         for field in self.SYNC_FIELDS:
-            new_value = data.get(field, "")
-            if new_value:
+            new_value = new_data.get(field, "")
+            current_value = getattr(lead, field, "")
+            
+            if new_value and new_value != current_value:
                 setattr(lead, field, new_value)
+                is_dirty = True
+        return is_dirty
 
 class ReprocessWebhook:
     """

@@ -31,11 +31,14 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1")
 # Permitir que el dashboard incruste el preview del PDF en un iframe
 X_FRAME_OPTIONS = 'ALLOWALL'
 
-# ALLOWED_HOSTS: Lista de dominios que pueden servir esta app (ej: 'crm.tuempresa.com').
-ALLOWED_HOSTS = ["*"]
+# ALLOWED_HOSTS: Lista de dominios que pueden servir esta app.
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # CORS: Permite que el frontend (Next.js) acceda a la API
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    "DJANGO_CORS_ORIGINS", 
+    "http://localhost:3000,http://127.0.0.1:3000"
+).split(",")
 CORS_ALLOW_CREDENTIALS = True
 
 
@@ -109,7 +112,7 @@ DATABASES = {
         "NAME": os.environ.get("DB_NAME", "leadflow"),
         "USER": os.environ.get("DB_USER", "leadflow_user"),
         "PASSWORD": os.environ.get("DB_PASSWORD", "leadflow_secret_2024"),
-        "HOST": os.environ.get("DB_HOST", "localhost"), # 'db' si se usa Docker Compose
+        "HOST": os.environ.get("DB_HOST", "localhost"),
         "PORT": os.environ.get("DB_PORT", "5432"),
     }
 }
