@@ -1,25 +1,10 @@
-export interface Benefit {
-  icon: string;
-  title: string;
-}
+import { Benefit, LandingData as BaseLandingData } from "@/types/api";
 
-export interface LandingData {
-  title: string;
-  subtitle: string;
-  description: string;
-  benefits: Benefit[];
-  form_config?: any;
-  cta_text: string;
-  success_message: string;
-  primary_color: string;
-  image_url: string;
-  campaign_name?: string;
-  visits_count?: number;
-  conversion_rate?: number;
-  latitude?: number;
-  longitude?: number;
-  campaign?: number;
-  properties_details?: any[];
+export type { Benefit };
+
+// Extendemos o usamos el alias para mantener compatibilidad
+export interface LandingData extends BaseLandingData {
+  campaign_name?: string; // Propiedad adicional usada en algunos componentes
 }
 
 export const COUNTRY_CODES = [

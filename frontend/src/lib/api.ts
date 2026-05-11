@@ -4,6 +4,34 @@
  * Cliente HTTP centralizado para comunicación con el backend Django.
  */
 
+import { 
+  Lead, 
+  Interaction, 
+  HistoryEntry, 
+  WebhookLog, 
+  Source, 
+  MediaAsset, 
+  Campaign, 
+  Property, 
+  User, 
+  DashboardStats,
+  SentEmail
+} from "@/types/api";
+
+export type { 
+  Lead, 
+  Interaction, 
+  HistoryEntry, 
+  WebhookLog, 
+  Source, 
+  MediaAsset, 
+  Campaign, 
+  Property, 
+  User, 
+  DashboardStats,
+  SentEmail
+};
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 interface FetchOptions extends RequestInit {
@@ -41,7 +69,7 @@ async function apiFetch<T = unknown>(
   return res.json();
 }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// --- Auth ---
 
 export interface TokenResponse {
   access: string;
@@ -62,60 +90,7 @@ export function refreshToken(refresh: string) {
   });
 }
 
-// ─── Leads ────────────────────────────────────────────────────────────────────
-
-export interface Lead {
-  id: string;
-  original_email: string;
-  contact_email: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  address: string;
-  company: string;
-  status: string;
-  assigned_to: number | null;
-  assigned_to_name: string | null;
-  first_source: number | null;
-  first_source_name: string;
-  campaign: number | null;
-  campaign_name: string;
-  utm_source: string;
-  utm_medium: string;
-  utm_campaign: string;
-  utm_term: string;
-  utm_content: string;
-  interested_properties: number[];
-  interaction_count?: number;
-  score: number;
-  interactions?: Interaction[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Interaction {
-  id: string;
-  lead: string;
-  type: string;
-  source: number | null;
-  source_name: string;
-  raw_payload: Record<string, unknown>;
-  notes: string;
-  created_at: string;
-}
-
-export interface SentEmail {
-  id: string;
-  lead: string | null;
-  to_email: string;
-  from_email: string;
-  subject: string;
-  body_text: string;
-  body_html: string;
-  status: string;
-  error_message: string | null;
-  created_at: string;
-}
+// --- Utils ---
 
 export interface PaginatedResponse<T> {
   count: number;
@@ -123,6 +98,8 @@ export interface PaginatedResponse<T> {
   previous: string | null;
   results: T[];
 }
+
+// --- Leads ---
 
 export function getLeads(token: string, params?: string) {
   const query = params ? `?${params}` : "";
@@ -153,30 +130,7 @@ export function getLeadHistory(token: string, id: string) {
   return apiFetch<HistoryEntry[]>(`/leads/${id}/history/`, { token });
 }
 
-export interface HistoryEntry {
-  history_id: number;
-  history_date: string;
-  history_type: string;
-  history_user: string | null;
-  changes: Record<string, { old: string; new: string }>;
-}
-
-// ─── Webhook Logs ─────────────────────────────────────────────────────────────
-
-export interface WebhookLog {
-  id: string;
-  source_type: string;
-  raw_body: Record<string, unknown>;
-  status: string;
-  error_message: string;
-  lead: string | null;
-  lead_name: string;
-  edited_body: Record<string, unknown> | null;
-  edited_by: number | null;
-  edited_by_name: string | null;
-  processed_at: string | null;
-  created_at: string;
-}
+// --- Webhook Logs ---
 
 export function getWebhookLogs(token: string, params?: string) {
   const query = params ? `?${params}` : "";
@@ -197,25 +151,10 @@ export function reprocessWebhook(
   });
 }
 
-// ─── Sources ──────────────────────────────────────────────────────────────────
+// --- Sources ---
 
-export interface Source {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  is_active: boolean;
-}
 export function getSources(token: string) {
   return apiFetch<PaginatedResponse<Source>>("/sources/", { token });
-}
-
-export interface MediaAsset {
-  id: number;
-  title: string;
-  file: string;
-  alt_text: string;
-  created_at: string;
 }
 
 export function getMediaAssets(token: string) {
@@ -227,7 +166,7 @@ export async function uploadMediaAsset(token: string, file: File, title: string)
   formData.append("file", file);
   formData.append("title", title);
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/media-assets/`, {
+  const res = await fetch(`${API_BASE}/media-assets/`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${token}`,
@@ -243,43 +182,7 @@ export async function uploadMediaAsset(token: string, file: File, title: string)
   return res.json() as Promise<MediaAsset>;
 }
 
-// ─── Campaigns ────────────────────────────────────────────────────────────────
-
-export interface Campaign {
-  id: number;
-  name: string;
-  slug: string;
-  budget: string;
-  is_active: boolean;
-  start_date: string | null;
-  end_date: string | null;
-  brochure_title: string;
-  brochure_description: string;
-  brochure_features: string[];
-  properties: number[];
-  properties_details?: Property[];
-}
-
-export interface Property {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  location: string;
-  address?: string;
-  latitude?: number;
-  longitude?: number;
-  min_investment: string;
-  estimated_return: string;
-  delivery_date: string;
-  amenities: string[];
-  main_image: number | null;
-  main_image_url?: string | null;
-  campaign_name?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// --- Campaigns ---
 
 export function getCampaigns(token: string) {
   return apiFetch<PaginatedResponse<Campaign>>("/campaigns/", { token });
@@ -339,22 +242,13 @@ export function deleteProperty(token: string, id: string) {
   });
 }
 
-// ─── Users ────────────────────────────────────────────────────────────────────
-
-export interface User {
-  id: number;
-  username: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  is_staff: boolean;
-}
+// --- Users ---
 
 export function getUsers(token: string) {
   return apiFetch<User[]>("/users/", { token });
 }
 
-// ─── Groups & Permissions ─────────────────────────────────────────────────────
+// --- Groups & Permissions ---
 
 export interface Permission {
   id: number;
@@ -406,17 +300,7 @@ export function getPermissions(token: string) {
   return apiFetch<Permission[]>("/permissions/", { token });
 }
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
-
-export interface DashboardStats {
-  total_leads: number;
-  leads_by_status: Record<string, number>;
-  total_webhooks: number;
-  successful_webhooks: number;
-  failed_webhooks: number;
-  webhook_success_rate: number;
-  leads_by_source: Array<{ first_source__name: string; count: number }>;
-}
+// --- Dashboard ---
 
 export function getDashboardStats(token: string, days?: string) {
   const query = days ? `?days=${days}` : "";
@@ -436,7 +320,7 @@ export function getPerformanceAnalytics(token: string) {
   return apiFetch<VendorPerformance[]>("/analytics/performance/", { token });
 }
 
-// --- Emails -------------------------------------------------------------------
+// --- Emails ---
 
 export function getSentEmails(token: string) {
   return apiFetch<PaginatedResponse<SentEmail>>("/sent-emails/", { token });
