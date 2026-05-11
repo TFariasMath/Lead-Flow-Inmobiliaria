@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import LandingLayout, { type LandingData } from "@/components/LandingLayout";
 import BenefitEditor from "@/components/BenefitEditor";
 import { ChevronLeft, Save, Loader2, Monitor, Smartphone, Layout as LayoutIcon, Eye, Zap as ZapIcon, Target, Building2, MapPin, ChevronDown } from "lucide-react";
+import CustomSelect from "@/components/CustomSelect";
 import { cn } from "@/lib/utils";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -156,16 +157,15 @@ export default function NewLandingPage() {
             <div className="space-y-4 pt-2">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Campaña de Origen</label>
-                <select 
-                  value={data.campaign || ""} 
-                  onChange={(e) => handleCampaignChange(e.target.value)}
-                  className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="">Independiente (Sin Campaña)</option>
-                  {campaigns.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={data.campaign?.toString() || ""}
+                  onChange={handleCampaignChange}
+                  options={[
+                    { value: "", label: "Independiente (Sin Campaña)" },
+                    ...campaigns.map(c => ({ value: c.id.toString(), label: c.name }))
+                  ]}
+                  className="w-full"
+                />
               </div>
 
               <div className="space-y-1.5">

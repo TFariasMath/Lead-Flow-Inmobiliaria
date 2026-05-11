@@ -9,6 +9,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useCallback, useRef, Suspense, memo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/hooks/useData";
 import { 
@@ -26,12 +27,10 @@ import dynamic from "next/dynamic";
 import CustomSelect from "@/components/CustomSelect";
 import { 
   Search, 
-  Filter, 
   ChevronLeft, 
   ChevronRight, 
   Eye, 
   MoreHorizontal, 
-  Download, 
   Plus, 
   Activity, 
   Target, 
@@ -39,12 +38,21 @@ import {
   MousePointer2,
   AlertTriangle,
   ArrowUpRight,
+  Download,
+  Trash2,
+  Table as TableIcon,
+  LayoutGrid,
   LayoutList,
   Columns3 as Kanban,
+  Filter,
+  CheckCircle,
   CheckSquare,
   Square,
-  UserPlus,
-  Trash2,
+  Clock,
+  ExternalLink,
+  MessageCircle,
+  Settings,
+  StickyNote,
   X
 } from "lucide-react";
 import KanbanView from "@/components/leads/KanbanView";
@@ -107,7 +115,16 @@ function LeadsListContent() {
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set([
+    "name", "status", "phone", "company", "source", "notes", "created_at"
+  ]));
+  const [showColumnSettings, setShowColumnSettings] = useState(false);
   const { addVisit } = useHistory();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // SWR Query Keys
   const leadsQuery = new URLSearchParams();
@@ -137,6 +154,24 @@ function LeadsListContent() {
   const sources = sourcesData?.results || [];
   const campaigns = campaignsData?.results || [];
 
+  const toggleColumn = (col: string) => {
+    setVisibleColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(col)) next.delete(col);
+      else next.add(col);
+      return next;
+    });
+  };
+
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 
+      'bg-pink-500', 'bg-emerald-500', 'bg-amber-500', 'bg-cyan-500'
+    ];
+    const charCode = (name || "?").charCodeAt(0);
+    return colors[charCode % colors.length];
+  };
+
   const handleStatusUpdate = useCallback(async (leadId: string, newStatus: string) => {
     if (!token) return;
     try {
@@ -147,10 +182,43 @@ function LeadsListContent() {
     }
   }, [token, mutateLeads]);
 
-  const handleInlineUpdate = useCallback(async (leadId: string, field: string, value: string) => {
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScrollSync = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setScrollProgress(val);
+    if (tableContainerRef.current) {
+      const maxScroll = tableContainerRef.current.scrollWidth - tableContainerRef.current.clientWidth;
+      tableContainerRef.current.style.scrollBehavior = 'auto';
+      tableContainerRef.current.scrollLeft = (val / 100) * maxScroll;
+    }
+  };
+
+  const onTableScroll = () => {
+    if (tableContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tableContainerRef.current;
+      const maxScroll = scrollWidth - clientWidth;
+      if (maxScroll > 0) {
+        setScrollProgress((scrollLeft / maxScroll) * 100);
+      }
+      if (topScrollRef.current) {
+        topScrollRef.current.scrollLeft = scrollLeft;
+      }
+    }
+  };
+
+  const onTopScroll = () => {
+    if (topScrollRef.current && tableContainerRef.current) {
+      tableContainerRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleInlineUpdate = useCallback(async (id: string, field: string, value: any) => {
     if (!token) return;
     try {
-      await updateLead(token, leadId, { [field]: value });
+      await updateLead(token, id, { [field]: value });
       mutateLeads();
       setEditingCell(null);
     } catch (err) {
@@ -299,9 +367,52 @@ function LeadsListContent() {
               {view === 'kanban' && <span className="text-[10px] font-black uppercase tracking-tighter pr-1">Pipeline</span>}
             </button>
           </div>
-          <button onClick={handleExportCSV} className="btn-ghost flex items-center gap-2 text-xs">
-            <Download className="w-3.5 h-3.5" /> Exportar
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                onClick={() => setShowColumnSettings(!showColumnSettings)}
+                className="btn-ghost flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="text-xs">Columnas</span>
+              </button>
+              
+              {showColumnSettings && (
+                <div className="absolute top-full right-0 mt-2 z-50 glass-container p-4 min-w-[200px] shadow-2xl animate-fadeIn">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 pb-2 border-b border-white/5">Visualización</p>
+                  <div className="space-y-2">
+                    {[
+                      { id: "name", label: "Nombre" },
+                      { id: "status", label: "Estado" },
+                      { id: "phone", label: "Teléfono" },
+                      { id: "company", label: "Empresa" },
+                      { id: "source", label: "Fuente" },
+                      { id: "notes", label: "Notas" },
+                      { id: "created_at", label: "Fecha" },
+                    ].map(col => (
+                      <label key={col.id} className="flex items-center gap-3 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={visibleColumns.has(col.id)}
+                          onChange={() => toggleColumn(col.id)}
+                          className="w-4 h-4 rounded border-white/10 bg-white/5 text-blue-500 focus:ring-0 focus:ring-offset-0"
+                        />
+                        <span className="text-[11px] font-bold text-slate-300 group-hover:text-white transition-colors">{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleExportCSV}
+              className="btn-ghost flex items-center gap-2 group"
+            >
+              <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              <span className="text-xs">Exportar CSV</span>
+            </button>
+          </div>
           <button onClick={() => router.push("/dashboard/leads/new")} className="btn-primary flex items-center gap-2 text-xs">
             <Plus className="w-4 h-4" /> Nuevo Lead
           </button>
@@ -363,58 +474,109 @@ function LeadsListContent() {
         </div>
       </div>
 
+      {/* ── Scroll Slider (User Request) ── */}
+      {view === 'table' && (
+        <div className="px-8 mb-4 flex items-center gap-6 bg-slate-900/40 backdrop-blur-xl rounded-3xl py-3 border border-white/5 mx-6 shadow-2xl">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-blue-600/20 flex items-center justify-center border border-blue-500/20">
+              <LayoutList className="w-4 h-4 text-blue-400" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-white uppercase tracking-widest">Vista de Columnas</span>
+              <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Navegación Lateral</span>
+            </div>
+          </div>
+          <div className="flex-1 px-4">
+            <input 
+              type="range" 
+              min="0" 
+              max="100" 
+              step="0.01"
+              value={scrollProgress}
+              onChange={handleScrollSync}
+              className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-blue-500 hover:accent-blue-400 transition-all"
+              style={{
+                background: `linear-gradient(to right, #3b82f6 ${scrollProgress}%, rgba(255,255,255,0.05) ${scrollProgress}%)`
+              }}
+            />
+          </div>
+          <div className="flex items-center gap-3 shrink-0 text-[9px] font-black text-slate-500 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-lg border border-white/5">
+            <span>{Math.round(scrollProgress)}%</span>
+          </div>
+        </div>
+      )}
+
       {/* ── View Content ── */}
       {view === 'table' ? (
-        <div className="glass-container rounded-[1.5rem] overflow-hidden flex flex-col h-[600px]">
-          {/* Header Grid */}
-          <div className="grid grid-cols-[40px_2fr_1fr_1fr_0.8fr_1.5fr_1.2fr_1.2fr_0.8fr] items-center px-6 py-4 bg-[#080e1e]/90 backdrop-blur-md border-b border-white/[0.04] z-20">
-            <div className="flex items-center justify-center">
-              <button onClick={toggleSelectAll} className="text-slate-500 hover:text-blue-400 transition-colors">
-                {selectedIds.size === leads.length && leads.length > 0 ? <CheckSquare className="w-4 h-4 text-blue-500" /> : <Square className="w-4 h-4" />}
-              </button>
-            </div>
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lead / Nombre</div>
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Teléfono</div>
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Empresa</div>
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Score</div>
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Email</div>
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado</div>
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Vendedor</div>
-            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Acciones</div>
+        <div className="flex flex-col mx-6 gap-2">
+          {/* Top Sync Scrollbar */}
+          <div 
+            ref={topScrollRef}
+            onScroll={onTopScroll}
+            className="overflow-x-auto overflow-y-hidden h-2 custom-scrollbar opacity-40 hover:opacity-100 transition-opacity"
+          >
+            <div style={{ width: '1300px', height: '1px' }} />
           </div>
 
-          <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar relative">
-            <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }}>
-              {loading && leads.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-32 gap-4">
-                  <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando...</p>
-                </div>
-              ) : leads.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-32">
-                  <p className="text-sm font-bold text-slate-500">No se encontraron leads</p>
-                </div>
-              ) : (
-                rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const lead = leads[virtualRow.index];
-                  if (!lead) return null;
-                  return (
-                    <MemoizedLeadRow
-                      key={lead.id}
-                      lead={lead}
-                      virtualRow={virtualRow}
-                      isSelected={selectedIds.has(lead.id)}
-                      editingCell={editingCell}
-                      setEditingCell={setEditingCell}
-                      onInlineUpdate={handleInlineUpdate}
-                      onToggleSelect={() => toggleSelectLead(lead.id)}
-                      onSelect={() => handleSelectLead(lead)}
-                      onStatusUpdate={handleStatusUpdate}
-                      onAction={() => router.push(`/dashboard/leads/${lead.id}`)}
-                    />
-                  );
-                })
-              )}
+          <div className="glass-container rounded-[1.5rem] overflow-hidden flex flex-col h-[600px]">
+            <div 
+              ref={tableContainerRef}
+              onScroll={onTableScroll}
+              className="flex-1 flex flex-col min-h-0 min-w-0 overflow-x-auto custom-scrollbar"
+            >
+            {/* ── Table Header ── */}
+            <div className="flex items-center border-b border-white/5 py-4 bg-slate-900/50 sticky top-0 z-40 backdrop-blur-md min-w-full w-max">
+              <div className="w-12 h-full flex items-center justify-center shrink-0 sticky left-0 z-50 bg-[#080e1e] border-r border-white/5 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.5)]">
+                <button 
+                  onClick={() => {
+                    if (selectedIds.size === leads.length) setSelectedIds(new Set());
+                    else setSelectedIds(new Set(leads.map(l => l.id)));
+                  }}
+                  className="text-slate-700 hover:text-slate-500 transition-colors"
+                >
+                  {selectedIds.size === leads.length && leads.length > 0 ? <CheckSquare className="w-4 h-4 text-blue-500" /> : <Square className="w-4 h-4" />}
+                </button>
+              </div>
+              {visibleColumns.has("name") && <div className="w-[250px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest sticky left-12 z-50 bg-[#080e1e] border-r border-white/10 shadow-[8px_0_15px_-5px_rgba(0,0,0,0.6)]">Lead / Nombre</div>}
+              {visibleColumns.has("status") && <div className="w-[160px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Estado</div>}
+              {visibleColumns.has("phone") && <div className="w-[180px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Teléfono</div>}
+              {visibleColumns.has("company") && <div className="w-[180px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Empresa</div>}
+              {visibleColumns.has("source") && <div className="w-[150px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fuente</div>}
+              {visibleColumns.has("notes") && <div className="w-[300px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Notas Internas</div>}
+              {visibleColumns.has("created_at") && <div className="w-[120px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Ingreso</div>}
+              <div className="w-[80px] shrink-0 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Acciones</div>
+            </div>
+
+            <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar relative min-w-full w-max">
+              <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                {leads.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-32">
+                    <p className="text-sm font-bold text-slate-500">No se encontraron leads</p>
+                  </div>
+                ) : (
+                  rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const lead = leads[virtualRow.index];
+                    if (!lead) return null;
+                    return (
+                      <MemoizedLeadRow
+                        key={lead.id}
+                        lead={lead}
+                        virtualRow={virtualRow}
+                        isSelected={selectedIds.has(lead.id)}
+                        onToggleSelect={() => toggleSelect(lead.id)}
+                        editingCell={editingCell}
+                        setEditingCell={setEditingCell}
+                        onInlineUpdate={handleInlineUpdate}
+                        onSelect={() => handleSelectLead(lead)}
+                        onStatusUpdate={handleStatusUpdate}
+                        onAction={() => router.push(`/dashboard/leads/${lead.id}`)}
+                        visibleColumns={visibleColumns}
+                        getAvatarColor={getAvatarColor}
+                      />
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
 
@@ -450,8 +612,8 @@ function LeadsListContent() {
       )}
 
       {/* ── Bulk Actions Floating Bar ── */}
-      {selectedIds.size > 0 && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-slideUp">
+      {isMounted && selectedIds.size > 0 && createPortal(
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[999] animate-slideUp">
           <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-6 ring-1 ring-white/5">
             <div className="flex items-center gap-3 pr-6 border-r border-white/10">
               <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-xs font-black text-white">
@@ -495,14 +657,15 @@ function LeadsListContent() {
               </div>
 
               <button 
-                onClick={handleExportCSV} // Podríamos optimizar para exportar solo seleccionados después
+                onClick={handleExportCSV} 
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-white uppercase hover:bg-white/10 transition-all"
               >
                 <Download className="w-3.5 h-3.5" /> Exportar
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -548,7 +711,20 @@ const MemoizedMiniCard = memo(({ icon: Icon, label, value, color, trend, alert, 
 ));
 MemoizedMiniCard.displayName = "MemoizedMiniCard";
 
-const MemoizedLeadRow = memo(({ lead, virtualRow, isSelected, onToggleSelect, editingCell, setEditingCell, onInlineUpdate, onSelect, onStatusUpdate, onAction }: any) => {
+const MemoizedLeadRow = memo(({ 
+  lead, 
+  virtualRow, 
+  isSelected, 
+  onToggleSelect, 
+  editingCell, 
+  setEditingCell, 
+  onInlineUpdate, 
+  onSelect, 
+  onStatusUpdate, 
+  onAction,
+  visibleColumns,
+  getAvatarColor
+}: any) => {
   const isEditing = (field: string) => editingCell?.id === lead.id && editingCell?.field === field;
 
   const handleDoubleClick = (field: string, value: string) => {
@@ -568,6 +744,7 @@ const MemoizedLeadRow = memo(({ lead, virtualRow, isSelected, onToggleSelect, ed
       return (
         <input
           autoFocus
+          onClick={(e) => e.stopPropagation()}
           className="bg-blue-500/10 border border-blue-500/50 text-white text-xs px-2 py-1 rounded w-full outline-none focus:ring-1 focus:ring-blue-500"
           defaultValue={value}
           onBlur={(e) => onInlineUpdate(lead.id, field, e.target.value)}
@@ -586,93 +763,141 @@ const MemoizedLeadRow = memo(({ lead, virtualRow, isSelected, onToggleSelect, ed
   };
 
   return (
-    <div
+    <div 
+      onClick={() => onSelect(lead)}
       className={cn(
-        "grid grid-cols-[40px_2fr_1fr_1fr_0.8fr_1.5fr_1.2fr_1.2fr_0.8fr] items-center px-6 absolute top-0 left-0 w-full hover:bg-white/[0.02] transition-colors border-b border-white/[0.02] group",
-        isSelected && "bg-blue-500/10 border-blue-500/20"
+        "absolute top-0 left-0 w-full flex items-center border-b border-white/[0.02] hover:bg-white/[0.02] transition-all group cursor-pointer",
+        isSelected && "bg-blue-500/5 border-blue-500/10"
       )}
-      style={{ height: `${virtualRow.size}px`, transform: `translateY(${virtualRow.start}px)` }}
+      style={{
+        height: `${virtualRow.size}px`,
+        top: `${virtualRow.start}px`,
+        position: 'absolute',
+      }}
     >
-      <div className="flex items-center justify-center">
+      <div className="w-12 h-full flex items-center justify-center shrink-0 sticky left-0 z-10 bg-[#0a0f1e] border-r border-white/5 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.5)] group-hover:bg-[#161e31] transition-colors" onClick={(e) => e.stopPropagation()}>
         <button 
-          onClick={(e) => { e.stopPropagation(); onToggleSelect(); }} 
-          className={cn("transition-colors", isSelected ? "text-blue-500" : "text-slate-700 group-hover:text-slate-500")}
+          onClick={() => onToggleSelect(lead.id)}
+          className={cn("w-4 h-4 rounded border border-white/10 flex items-center justify-center transition-all", isSelected ? "bg-blue-600 border-blue-500" : "bg-white/5 group-hover:border-white/20")}
         >
-          {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+          {isSelected && <CheckSquare className="w-4 h-4 text-white" />}
         </button>
       </div>
 
-      {/* Lead / Nombre */}
-      <div className="flex items-center gap-3 pr-4 overflow-hidden" onClick={onSelect}>
-        <div className="w-9 h-9 rounded-xl bg-slate-800 border border-white/5 flex items-center justify-center text-xs font-black text-blue-400 shrink-0">{(lead.first_name || lead.original_email).charAt(0).toUpperCase()}</div>
-        <div className="truncate flex-1">
-          {isEditing("name") ? (
-            <input
-              autoFocus
-              className="bg-blue-500/10 border border-blue-500/50 text-white text-sm font-bold px-2 py-1 rounded w-full outline-none"
-              defaultValue={`${lead.first_name} ${lead.last_name}`}
-              onBlur={(e) => {
-                const parts = e.target.value.split(" ");
-                onInlineUpdate(lead.id, "first_name", parts[0] || "");
-                onInlineUpdate(lead.id, "last_name", parts.slice(1).join(" "));
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  const parts = (e.target as HTMLInputElement).value.split(" ");
-                  onInlineUpdate(lead.id, "first_name", parts[0] || "");
-                  onInlineUpdate(lead.id, "last_name", parts.slice(1).join(" "));
-                } else if (e.key === "Escape") setEditingCell(null);
-              }}
-            />
-          ) : (
-            <p 
-              onDoubleClick={() => handleDoubleClick("name", `${lead.first_name} ${lead.last_name}`)}
-              className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors uppercase truncate cursor-text"
+      {visibleColumns.has("name") && (
+        <div className="w-[250px] shrink-0 flex items-center gap-3 px-4 sticky left-12 z-20 bg-[#0a0f1e] border-r border-white/10 shadow-[8px_0_15px_-5px_rgba(0,0,0,0.6)] group-hover:bg-[#161e31] transition-colors">
+          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0", getAvatarColor(lead.first_name))}>
+            {(lead.first_name || "?").charAt(0)}
+          </div>
+          <div 
+            className="flex-1 cursor-pointer" 
+            onDoubleClick={() => handleDoubleClick("name", `${lead.first_name} ${lead.last_name}`)}
+          >
+            {isEditing("name") ? (
+              <input
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+                className="bg-blue-500/10 border border-blue-500/50 text-white text-xs px-2 py-1 rounded w-full outline-none"
+                defaultValue={`${lead.first_name} ${lead.last_name}`}
+                onBlur={(e) => {
+                  const [first, ...last] = e.target.value.split(" ");
+                  onInlineUpdate(lead.id, "first_name", first || "");
+                  onInlineUpdate(lead.id, "last_name", last.join(" ") || "");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const [first, ...last] = (e.target as HTMLInputElement).value.split(" ");
+                    onInlineUpdate(lead.id, "first_name", first || "");
+                    onInlineUpdate(lead.id, "last_name", last.join(" ") || "");
+                    setEditingCell(null);
+                  } else if (e.key === "Escape") setEditingCell(null);
+                }}
+              />
+            ) : (
+              <p className="text-xs font-bold text-white truncate hover:text-blue-400 transition-colors uppercase tracking-tight">
+                {lead.first_name} {lead.last_name}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {visibleColumns.has("status") && (
+        <div className="w-[160px] shrink-0 px-4" onClick={(e) => e.stopPropagation()}>
+          <CustomSelect
+            value={lead.status}
+            onChange={(val) => onStatusUpdate(lead.id, val)}
+            options={STATUS_OPTIONS.map((opt) => ({
+              value: opt,
+              label: STATUS_LABELS[opt] || opt,
+              badgeClass: STATUS_BADGE_MAP[opt],
+            }))}
+            variant="badge"
+            className="w-full"
+          />
+        </div>
+      )}
+
+      {visibleColumns.has("phone") && (
+        <div className="w-[180px] shrink-0 px-4 group/phone flex items-center justify-between gap-2">
+          <div className="flex-1 overflow-hidden" onDoubleClick={() => handleDoubleClick("phone", lead.phone)}>
+            {renderEditable("phone", lead.phone, "Sin teléfono")}
+          </div>
+          {lead.phone && (
+            <a 
+              href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`} 
+              target="_blank" 
+              onClick={(e) => e.stopPropagation()}
+              className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 opacity-0 group-hover/phone:opacity-100 hover:bg-emerald-500/20 transition-all"
+              title="WhatsApp Directo"
             >
-              {lead.first_name} {lead.last_name}
-            </p>
+              <MessageCircle className="w-3.5 h-3.5" />
+            </a>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Teléfono */}
-      <div className="pr-4">{renderEditable("phone", lead.phone, "Sin teléfono")}</div>
-
-      {/* Empresa */}
-      <div className="pr-4">{renderEditable("company", lead.company, "Sin empresa")}</div>
-
-      {/* Score */}
-      <div className="text-center">
-        <span className="text-[10px] font-black text-white px-2 py-1 bg-white/5 rounded-lg border border-white/5">{lead.score}</span>
-      </div>
-
-      {/* Email */}
-      <div className="text-[11px] text-slate-400 font-mono truncate pr-4">{lead.original_email}</div>
-
-      {/* Estado */}
-      <div className="pr-4">
-        <CustomSelect
-          variant="badge"
-          value={lead.status}
-          onChange={(newVal) => onStatusUpdate(lead.id, newVal)}
-          options={STATUS_OPTIONS.map(opt => ({
-            value: opt,
-            label: STATUS_LABELS[opt] || opt,
-            badgeClass: STATUS_BADGE_MAP[opt]
-          }))}
-          className="w-full"
-        />
-      </div>
-
-      {/* Vendedor */}
-      <div className="text-[11px] font-bold text-slate-500 truncate pr-4">{lead.assigned_to_name || "Sin asignar"}</div>
-
-      {/* Acciones */}
-      <div className="flex items-center justify-center gap-2">
-        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-          <button onClick={e => { e.stopPropagation(); onSelect(); }} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all hover:bg-blue-500/20"><Eye className="w-3.5 h-3.5" /></button>
-          <button onClick={e => { e.stopPropagation(); onAction(); }} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all hover:bg-blue-500/20"><MoreHorizontal className="w-3.5 h-3.5" /></button>
+      {visibleColumns.has("company") && (
+        <div className="w-[180px] shrink-0 px-4" onDoubleClick={() => handleDoubleClick("company", lead.company)}>
+          {renderEditable("company", lead.company, "Sin empresa")}
         </div>
+      )}
+
+      {visibleColumns.has("source") && (
+        <div className="w-[150px] shrink-0 px-4">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest truncate">
+              {lead.first_source_name || "Directo"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {visibleColumns.has("notes") && (
+        <div className="w-[300px] shrink-0 px-4 group/notes flex items-center justify-between gap-2">
+          <div className="flex-1 overflow-hidden italic" onDoubleClick={() => handleDoubleClick("internal_notes", lead.internal_notes)}>
+            {renderEditable("internal_notes", lead.internal_notes, "Añadir nota...")}
+          </div>
+          <StickyNote className={cn("w-3.5 h-3.5 text-slate-700 transition-colors", lead.internal_notes && "text-blue-500/40")} />
+        </div>
+      )}
+
+      {visibleColumns.has("created_at") && (
+        <div className="w-[120px] shrink-0 px-4 text-right">
+          <p className="text-[10px] font-black text-slate-600 uppercase tracking-tighter">
+            {new Date(lead.created_at).toLocaleDateString()}
+          </p>
+        </div>
+      )}
+
+      <div className="w-[80px] shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+        <button 
+          onClick={() => onAction(lead)}
+          className="p-2 rounded-xl bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 text-slate-500 transition-all"
+        >
+          <ArrowUpRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

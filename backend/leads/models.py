@@ -339,6 +339,11 @@ class Lead(models.Model):
     phone = models.CharField(max_length=50, blank=True, default="")
     address = models.TextField(blank=True, default="")
     company = models.CharField(max_length=200, blank=True, default="")
+    internal_notes = models.TextField(
+        blank=True, 
+        default="", 
+        help_text="Notas internas del vendedor para seguimiento rápido."
+    )
 
     # ── Perfil de Inversión (Calificación) ──
     investment_goal = models.CharField(

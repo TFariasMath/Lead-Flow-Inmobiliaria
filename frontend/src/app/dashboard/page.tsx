@@ -46,6 +46,7 @@ import {
 } from "recharts";
 
 import FunnelChart from "@/components/FunnelChart";
+import CustomSelect from "@/components/CustomSelect";
 
 const STATUS_COLORS: Record<string, string> = {
   Nuevo: "#3b82f6",
@@ -217,16 +218,18 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           {user?.isStaff && (
-            <select
+            <CustomSelect
               value={selectedVendorId}
-              onChange={(e) => setSelectedVendorId(e.target.value)}
-              className="bg-slate-900/50 px-4 py-1.5 rounded-xl border border-white/5 text-[10px] font-black uppercase text-slate-300 outline-none focus:border-blue-500/50 transition-all cursor-pointer"
-            >
-              <option value="">Vista Global (Todos)</option>
-              {performance.map((v: any, idx: number) => (
-                <option key={v.vendor_id || idx} value={v.vendor_id || ""}>{v.vendor_name}</option>
-              ))}
-            </select>
+              onChange={setSelectedVendorId}
+              options={[
+                { value: "", label: "Vista Global (Todos)" },
+                ...performance.map((v: any) => ({
+                  value: (v.vendor_id || "").toString(),
+                  label: v.vendor_name
+                }))
+              ]}
+              className="min-w-[180px]"
+            />
           )}
           <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/5">
             {["7", "30", "all"].map((t) => (

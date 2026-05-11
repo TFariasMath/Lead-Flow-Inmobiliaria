@@ -8,6 +8,7 @@
 "use client";
 
 import { useState, useRef, useEffect, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,13 @@ export default function CustomSelect({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find((opt) => opt.value === value);
+  const [isMounted, setIsMounted] = useState(false);
+
+  const selectedOption = options.find((opt) => String(opt.value) === String(value));
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Cerrar al hacer click fuera
   useEffect(() => {
@@ -53,8 +60,22 @@ export default function CustomSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+  const [openUpwards, setOpenUpwards] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setMenuRect(rect);
+      
+      // Si el espacio hacia abajo es menor a 250px (altura aprox del menú), abrir hacia arriba
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUpwards(spaceBelow < 250);
+    }
+  }, [isOpen]);
+
   return (
-    <div className={cn("relative min-w-[140px]", isOpen && "z-[60]", className)} ref={containerRef}>
+    <div className={cn("relative min-w-[140px]", className)} ref={containerRef}>
       {/* Trigger */}
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -85,9 +106,21 @@ export default function CustomSelect({
         )} />
       </div>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-[500] glass-container rounded-xl overflow-hidden animate-fadeIn py-1 min-w-[200px] origin-top">
+      {/* Dropdown Menu Portal */}
+      {isMounted && isOpen && menuRect && createPortal(
+        <div 
+          className={cn(
+            "fixed z-[9999] glass-container rounded-xl overflow-hidden animate-fadeIn py-1 origin-top shadow-[0_20px_50px_rgba(0,0,0,0.5)]",
+            openUpwards ? "animate-slideUp origin-bottom" : "animate-fadeIn origin-top"
+          )}
+          style={{
+            top: openUpwards ? "auto" : `${menuRect.bottom + 8}px`,
+            bottom: openUpwards ? `${window.innerHeight - menuRect.top + 8}px` : "auto",
+            left: `${menuRect.left}px`,
+            width: `${menuRect.width}px`,
+            minWidth: "200px"
+          }}
+        >
           <div className="max-h-[240px] overflow-auto custom-scrollbar">
             {options.map((option) => (
               <div
@@ -97,31 +130,43 @@ export default function CustomSelect({
                   setIsOpen(false);
                 }}
                 className={cn(
-                  "px-4 py-3 flex items-center justify-between cursor-pointer transition-all hover:bg-white/[0.05] group",
-                  option.value === value && "bg-blue-500/10"
+                  "px-4 py-3 flex items-center justify-between cursor-pointer transition-all relative overflow-hidden group",
+                  String(option.value) === String(value) 
+                    ? "bg-blue-600/20 text-white" 
+                    : "text-slate-300 hover:bg-white/[0.05] hover:text-white"
                 )}
               >
-                <div className="flex items-center gap-3">
+                {/* Selection indicator gradient */}
+                {String(option.value) === String(value) && (
+                  <div className="absolute inset-y-0 left-0 w-1 bg-blue-500 shadow-[2px_0_10px_rgba(59,130,246,0.5)]" />
+                )}
+                
+                <div className="flex items-center gap-3 relative z-10">
                   {option.color && (
                     <div 
-                      className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(var(--rgb),0.5)]" 
-                      style={{ backgroundColor: option.color } as any}
+                      className="w-2.5 h-2.5 rounded-full ring-2 ring-white/5" 
+                      style={{ backgroundColor: option.color, boxShadow: `0 0 10px ${option.color}44` }}
                     />
                   )}
                   <span className={cn(
-                    "text-xs font-bold transition-colors uppercase tracking-wider",
-                    option.value === value ? "text-blue-400" : "text-slate-300 group-hover:text-white",
-                    option.badgeClass && "px-2 py-0.5 rounded-full text-[10px]",
+                    "text-[11px] font-black uppercase tracking-widest transition-all duration-300",
+                    String(option.value) === String(value) ? "translate-x-1" : "group-hover:translate-x-0.5",
+                    option.badgeClass && "px-3 py-1 rounded-full text-[9px] border border-white/5",
                     option.badgeClass
                   )}>
                     {option.label}
                   </span>
                 </div>
-                {option.value === value && <Check className="w-3.5 h-3.5 text-blue-400" />}
+                {String(option.value) === String(value) && (
+                  <div className="w-5 h-5 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-500/30 animate-scaleIn">
+                    <Check className="w-3 h-3 text-blue-400" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

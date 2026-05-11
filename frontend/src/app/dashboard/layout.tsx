@@ -46,7 +46,6 @@ export default function DashboardLayout({
     <div className="min-h-screen relative flex p-3 gap-3 overflow-hidden noise-overlay">
       <Sidebar />
       <NotificationPortal />
-      <HistoryDock />
       <main className="flex-1 glass-container rounded-[1.75rem] overflow-hidden relative">
         {/* Top gradient accent line */}
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent z-10" />
@@ -54,6 +53,7 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
+      <HistoryDock />
     </div>
   );
 }

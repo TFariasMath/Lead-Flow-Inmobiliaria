@@ -26,8 +26,11 @@ class LeadViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     # Campos por los que se puede filtrar exactamente via URL (?status=...)
     filterset_fields = ["status", "assigned_to", "campaign", "first_source"]
-    # Campos en los que se puede buscar texto
-    search_fields = ["original_email", "contact_email", "first_name", "last_name", "phone"]
+    # Campos en los que se puede buscar texto (Búsqueda Global)
+    search_fields = [
+        "original_email", "contact_email", "first_name", "last_name", 
+        "phone", "company", "internal_notes"
+    ]
     # Campos por los que se puede ordenar
     ordering_fields = ["created_at", "updated_at", "status"]
 

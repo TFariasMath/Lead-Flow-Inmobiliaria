@@ -30,7 +30,8 @@ import {
   ChevronRight, 
   MoreVertical,
   Activity,
-  Calendar
+  Calendar,
+  MessageCircle
 } from "lucide-react";
 import { Lead } from "@/lib/api";
 import { STATUS_OPTIONS, STATUS_LABELS, STATUS_COLORS } from "./constants";
@@ -243,14 +244,22 @@ function KanbanCard({ lead, isOverlay, onSelect }: CardProps) {
 
       <div className="flex flex-col gap-4 relative z-10">
         <div className="flex justify-between items-start">
-          <div className="max-w-[70%]">
-            <h4 className="text-sm font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight truncate">
-              {lead.first_name} {lead.last_name}
-            </h4>
-            <p className="text-[10px] text-slate-500 font-bold tracking-tight truncate flex items-center gap-1.5 mt-0.5">
-              <Mail className="w-3 h-3 opacity-30" />
-              {lead.original_email}
-            </p>
+          <div className="max-w-[70%] flex items-center gap-3">
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0 shadow-lg",
+              getAvatarColor(lead.first_name)
+            )}>
+              {(lead.first_name || "?").charAt(0)}
+            </div>
+            <div className="overflow-hidden">
+              <h4 className="text-sm font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight truncate">
+                {lead.first_name} {lead.last_name}
+              </h4>
+              <p className="text-[10px] text-slate-500 font-bold tracking-tight truncate flex items-center gap-1.5 mt-0.5">
+                <Mail className="w-3 h-3 opacity-30" />
+                {lead.original_email}
+              </p>
+            </div>
           </div>
           
           <div className={cn(
@@ -275,6 +284,17 @@ function KanbanCard({ lead, isOverlay, onSelect }: CardProps) {
             <Calendar className="w-2.5 h-2.5 text-slate-500" />
             {format(new Date(lead.created_at), "dd MMM", { locale: es })}
           </div>
+          {lead.phone && (
+            <a 
+              href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`}
+              target="_blank"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 px-2.5 py-1.25 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-tighter hover:bg-emerald-500/20 transition-all"
+            >
+              <MessageCircle className="w-2.5 h-2.5" />
+              WhatsApp
+            </a>
+          )}
         </div>
 
         {/* Footer info with Source and detail trigger */}
@@ -302,3 +322,12 @@ function KanbanCard({ lead, isOverlay, onSelect }: CardProps) {
     </div>
   );
 }
+
+const getAvatarColor = (name: string) => {
+  const colors = [
+    'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 
+    'bg-pink-500', 'bg-emerald-500', 'bg-amber-500', 'bg-cyan-500'
+  ];
+  const charCode = (name || "?").charCodeAt(0);
+  return colors[charCode % colors.length];
+};

@@ -105,6 +105,7 @@ class LeadListSerializer(serializers.ModelSerializer):
             "interested_properties",
             "interaction_count", "score",
             "investment_goal", "investment_capacity",
+            "internal_notes",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "original_email", "score", "created_at", "updated_at"]

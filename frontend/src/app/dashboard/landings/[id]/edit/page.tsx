@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import LandingLayout, { type LandingData } from "@/components/LandingLayout";
 import { ChevronLeft, Save, Loader2, Eye, Layout as LayoutIcon, Smartphone, Monitor, Zap as ZapIcon } from "lucide-react";
+import CustomSelect from "@/components/CustomSelect";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
 
@@ -184,19 +185,29 @@ export default function LandingBuilderPage() {
             <Field label="Título de la Página" value={data.title} onChange={v => setData({...data, title: v})} placeholder="ej: Departamento en Santiago" />
             <Field label="Slug de URL" value={data.slug} onChange={v => setData({...data, slug: v})} placeholder="ej: santiago-centro" />
             
-            <Select 
-                label="Campaña (Proyecto)" 
-                value={typeof data.campaign === 'object' ? data.campaign?.id : data.campaign} 
-                onChange={v => setData({...data, campaign: v})} 
-                options={campaigns.map(c => ({ value: c.id, label: c.name }))}
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-500">Campaña (Proyecto)</label>
+              <CustomSelect 
+                  value={String(typeof data.campaign === 'object' ? data.campaign?.id : data.campaign || "")} 
+                  onChange={v => setData({...data, campaign: v})} 
+                  options={[
+                    { value: "", label: "Seleccionar..." },
+                    ...campaigns.map(c => ({ value: String(c.id), label: c.name }))
+                  ]}
+              />
+            </div>
             
-            <Select 
-                label="Fuente de Leads" 
-                value={typeof data.source === 'object' ? data.source?.id : data.source} 
-                onChange={v => setData({...data, source: v})} 
-                options={sources.map(s => ({ value: s.id, label: s.name }))}
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-500">Fuente de Leads</label>
+              <CustomSelect 
+                  value={String(typeof data.source === 'object' ? data.source?.id : data.source || "")} 
+                  onChange={v => setData({...data, source: v})} 
+                  options={[
+                    { value: "", label: "Seleccionar..." },
+                    ...sources.map(s => ({ value: String(s.id), label: s.name }))
+                  ]}
+              />
+            </div>
           </Section>
 
           <Section title="Contenido Hero" icon={Eye}>
@@ -285,24 +296,6 @@ function Field({ label, value, onChange, type = "text", placeholder }: any) {
           className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         />
       )}
-    </div>
-  );
-}
-
-function Select({ label, value, onChange, options }: any) {
-  return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-medium text-slate-500">{label}</label>
-      <select
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
-      >
-        <option value="">Seleccionar...</option>
-        {options.map((opt: any) => (
-          <option key={opt.value} value={opt.value} className="bg-[#141721]">{opt.label}</option>
-        ))}
-      </select>
     </div>
   );
 }
