@@ -113,7 +113,50 @@ class DashboardStatsView(APIView):
                 "value": master_stats.get(f"status_{status_val}", 0)
             } for status_val, label in funnel_stages]
 
-            # 5. Desglose de Origen Técnico (API vs Manual)
+            # 6. Datos temporales para Gráficos de Líneas (Tráfico y Leads)
+            from django.db.models.functions import TruncDay
+            
+            # Determinamos el periodo real para el gráfico
+            chart_days = int(days) if days and days.isdigit() else 30
+            chart_start = timezone.now() - timedelta(days=chart_days)
+
+            # Visitas diarias
+            daily_visits = (
+                LandingPageVisit.objects.filter(created_at__gte=chart_start)
+                .annotate(day=TruncDay('created_at'))
+                .values('day')
+                .annotate(count=Count('id'))
+                .order_by('day')
+            )
+
+            # Leads diarios
+            daily_leads = (
+                leads_qs.filter(created_at__gte=chart_start)
+                .annotate(day=TruncDay('created_at'))
+                .values('day')
+                .annotate(count=Count('id'))
+                .order_by('day')
+            )
+
+            # Formatear para el frontend
+            history_map = {}
+            for i in range(chart_days + 1):
+                d = (chart_start + timedelta(days=i)).date().isoformat()
+                history_map[d] = {"date": d, "visits": 0, "leads": 0}
+
+            for dv in daily_visits:
+                d_str = dv['day'].date().isoformat()
+                if d_str in history_map:
+                    history_map[d_str]["visits"] = dv['count']
+
+            for dl in daily_leads:
+                d_str = dl['day'].date().isoformat()
+                if d_str in history_map:
+                    history_map[d_str]["leads"] = dl['count']
+
+            visits_over_time = sorted(history_map.values(), key=lambda x: x['date'])
+
+            # 7. Desglose de Origen Técnico (API vs Manual)
             leads_via_api = leads_qs.filter(webhook_logs__isnull=False).distinct().count()
             leads_manual = total_leads_count - leads_via_api
 
@@ -130,6 +173,7 @@ class DashboardStatsView(APIView):
                 "leads_by_source": sources_data,
                 "stale_leads_count": master_stats["stale_count"],
                 "funnel_data": funnel_data,
+                "visits_over_time": visits_over_time,
                 "status": "healthy"
             }
             return Response(data)

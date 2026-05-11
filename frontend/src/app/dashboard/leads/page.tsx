@@ -22,7 +22,8 @@ import {
   LayoutList,
   Columns3 as Kanban,
   CheckSquare,
-  Square
+  Square,
+  ShieldCheck
 } from "lucide-react";
 
 import KanbanView from "@/components/leads/KanbanView";
@@ -64,9 +65,10 @@ function LeadsListContent() {
   const {
     token, router, page, setPage, search, setSearch,
     statusFilter, setStatusFilter, staleFilter, setStaleFilter,
+    sourceFilter, setSourceFilter, userFilter, setUserFilter,
     todayFilter, setTodayFilter, editingCell, setEditingCell,
     view, setView, selectedIds, setSelectedIds, isMounted,
-    leads, totalCount, loading, mutateLeads, usersData,
+    leads, totalCount, loading, mutateLeads, usersData, sourcesData,
     handleStatusUpdate, handleInlineUpdate, handleSelectLead,
     handleBulkUpdate, toggleSelectAll, toggleSelect, handleExportCSV,
     leadsData, selectedLeadId, setSelectedLeadId
@@ -179,41 +181,29 @@ function LeadsListContent() {
               <span className="text-xs">Exportar CSV</span>
             </button>
           </div>
-          <button onClick={() => router.push("/dashboard/leads/new")} className="btn-primary flex items-center gap-2 text-xs">
-            <Plus className="w-4 h-4" /> Nuevo Lead
+          <button onClick={() => router.push("/dashboard/leads/new")} className="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center hover:bg-orange-500 transition-all shadow-[0_0_20px_rgba(234,88,12,0.3)]">
+            <Plus className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* ── Filters ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <div className="input-icon-wrapper group">
-            <Search className="w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
-            <input
-              type="text"
-              placeholder="Buscar por email, nombre o teléfono..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="input-premium input-premium-icon h-11"
-            />
-          </div>
+      {/* ── Filter Bar ── */}
+      <div className="space-y-3">
+        {/* Search Row */}
+        <div className="input-icon-wrapper group">
+          <Search className="w-4 h-4 text-slate-500 group-focus-within:text-orange-500 transition-colors" />
+          <input
+            type="text"
+            placeholder="Buscar por email, nombre o teléfono..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="input-premium input-premium-icon h-12"
+          />
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => { setStaleFilter(!staleFilter); setPage(1); }}
-            className={cn(
-              "h-11 px-4 rounded-xl border flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
-              staleFilter 
-                ? "bg-red-500/20 border-red-500/40 text-red-500 shadow-lg shadow-red-500/10" 
-                : "bg-slate-900/50 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10"
-            )}
-            title="Filtrar por leads estancados (>24h)"
-          >
-            <AlertTriangle className={cn("w-3.5 h-3.5", staleFilter ? "animate-pulse" : "opacity-40")} />
-            <span className="hidden sm:inline">Estancados</span>
-          </button>
-          
+
+        {/* Action Selectors Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Status Filter */}
           <CustomSelect
             value={statusFilter}
             onChange={(val) => { setStatusFilter(val); setPage(1); }}
@@ -225,8 +215,44 @@ function LeadsListContent() {
                 badgeClass: STATUS_BADGE_MAP[opt]
               }))
             ]}
-            className="flex-1"
+            icon={<Activity className="w-4 h-4" />}
           />
+
+          {/* Source Filter */}
+          <CustomSelect
+            value={sourceFilter}
+            onChange={(val) => { setSourceFilter(val); setPage(1); }}
+            options={[
+              { value: "", label: "Todas las Fuentes" },
+              ...(sourcesData?.results || []).map(s => ({ value: s.id.toString(), label: s.name }))
+            ]}
+            icon={<Zap className="w-4 h-4 text-orange-500" />}
+          />
+
+          {/* User/Vendor Filter */}
+          <CustomSelect
+            value={userFilter}
+            onChange={(val) => { setUserFilter(val); setPage(1); }}
+            options={[
+              { value: "", label: "Todos los Vendedores" },
+              ...(usersData || []).map(u => ({ value: u.id.toString(), label: `${u.first_name || u.username}` }))
+            ]}
+            icon={<ShieldCheck className="w-4 h-4 text-emerald-500" />}
+          />
+
+          {/* Stale Filter Button */}
+          <button
+            onClick={() => { setStaleFilter(!staleFilter); setPage(1); }}
+            className={cn(
+              "h-12 px-4 rounded-xl border flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
+              staleFilter 
+                ? "bg-red-500/20 border-red-500/40 text-red-500 shadow-lg shadow-red-500/10" 
+                : "bg-slate-900/50 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10"
+            )}
+          >
+            <AlertTriangle className={cn("w-3.5 h-3.5", staleFilter ? "animate-pulse" : "opacity-40")} />
+            Leads Estancados
+          </button>
         </div>
       </div>
 

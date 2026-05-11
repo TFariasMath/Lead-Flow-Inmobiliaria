@@ -22,6 +22,7 @@ export function useLeadsLogic() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [userFilter, setUserFilter] = useState("");
   const [campaignFilter, setCampaignFilter] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [staleFilter, setStaleFilter] = useState(searchParams.get("filter") === "stale");
@@ -42,6 +43,7 @@ export function useLeadsLogic() {
   if (search) leadsQuery.set("search", search);
   if (statusFilter) leadsQuery.set("status", statusFilter);
   if (sourceFilter) leadsQuery.set("first_source", sourceFilter);
+  if (userFilter) leadsQuery.set("assigned_to", userFilter);
   if (campaignFilter) leadsQuery.set("campaign", campaignFilter);
   if (staleFilter) leadsQuery.set("filter", "stale");
   if (todayFilter) leadsQuery.set("filter", "today");
@@ -157,6 +159,7 @@ export function useLeadsLogic() {
     search, setSearch,
     statusFilter, setStatusFilter,
     sourceFilter, setSourceFilter,
+    userFilter, setUserFilter,
     campaignFilter, setCampaignFilter,
     selectedLeadId, setSelectedLeadId,
     staleFilter, setStaleFilter,
