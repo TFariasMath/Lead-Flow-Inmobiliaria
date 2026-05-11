@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CustomSelect from "@/components/CustomSelect";
+import { FormikPersist } from "@/components/FormikPersist";
+import { FormField } from "@/components/leads/FormField";
 
 const COUNTRY_CODES = [
   { code: "+56", country: "Chile", flag: "🇨🇱" },
@@ -142,6 +144,7 @@ export default function NewLeadPage() {
               if (!payload.assigned_to) delete payload.assigned_to;
 
               await createLead(token, payload);
+              localStorage.removeItem("new-lead-form");
               router.push("/dashboard/leads");
             } catch (err: unknown) {
               const message = err instanceof Error ? err.message : "Error crítico al guardar el lead";
@@ -153,6 +156,7 @@ export default function NewLeadPage() {
         >
           {({ isSubmitting, values, setFieldValue }) => (
             <Form className="space-y-12">
+              <FormikPersist name="new-lead-form" />
               
               {/* ── SECCIÓN 1: IDENTIDAD ── */}
               <section className="space-y-6">
@@ -162,23 +166,18 @@ export default function NewLeadPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre</label>
-                    <div className="input-icon-wrapper">
-                      <UserIcon className="w-4 h-4 text-slate-500" />
-                      <Field name="first_name" placeholder="Ej: Juan" className="input-premium input-premium-icon" />
-                    </div>
-                    <ErrorMessage name="first_name" component="p" className="text-[10px] font-bold text-red-500 ml-1" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Apellido</label>
-                    <div className="input-icon-wrapper">
-                      <UserIcon className="w-4 h-4 text-slate-500" />
-                      <Field name="last_name" placeholder="Ej: Pérez" className="input-premium input-premium-icon" />
-                    </div>
-                    <ErrorMessage name="last_name" component="p" className="text-[10px] font-bold text-red-500 ml-1" />
-                  </div>
+                  <FormField 
+                    name="first_name" 
+                    label="Nombre" 
+                    placeholder="Ej: Juan" 
+                    icon={UserIcon} 
+                  />
+                  <FormField 
+                    name="last_name" 
+                    label="Apellido" 
+                    placeholder="Ej: Pérez" 
+                    icon={UserIcon} 
+                  />
                 </div>
               </section>
 
@@ -190,15 +189,14 @@ export default function NewLeadPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                      Email Principal <div className="w-1 h-1 rounded-full bg-blue-500 animate-pulse" />
-                    </label>
-                    <div className="input-icon-wrapper">
-                      <Mail className="w-4 h-4 text-slate-500" />
-                      <Field type="email" name="original_email" placeholder="cliente@empresa.com" className="input-premium input-premium-icon" />
-                    </div>
-                    <ErrorMessage name="original_email" component="p" className="text-[10px] font-bold text-red-500 ml-1" />
+                  <div className="md:col-span-2">
+                    <FormField 
+                      name="original_email" 
+                      label="Email Principal" 
+                      type="email" 
+                      placeholder="cliente@empresa.com" 
+                      icon={Mail} 
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -215,27 +213,37 @@ export default function NewLeadPage() {
                           className="h-full"
                         />
                       </div>
-                      <div className="input-icon-wrapper flex-1">
-                        <Phone className="w-4 h-4 text-slate-500" />
+                      <div className="input-icon-wrapper flex-1 group">
+                        <Phone className="w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
                         <Field name="phone_number" placeholder="9 1234 5678" className="input-premium input-premium-icon" />
                       </div>
                     </div>
+                    <ErrorMessage name="phone_number">
+                      {(msg) => (
+                        <p className="text-[10px] font-bold text-red-500 ml-1 animate-slideDown">
+                          {msg}
+                        </p>
+                      )}
+                    </ErrorMessage>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Empresa / Organización</label>
-                    <div className="input-icon-wrapper">
-                      <Building2 className="w-4 h-4 text-slate-500" />
-                      <Field name="company" placeholder="Nombre de la empresa" className="input-premium input-premium-icon" />
-                    </div>
+                    <FormField 
+                      name="company" 
+                      label="" 
+                      placeholder="Nombre de la empresa" 
+                      icon={Building2} 
+                    />
                   </div>
 
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Dirección Física</label>
-                    <div className="input-icon-wrapper">
-                      <MapPin className="w-4 h-4 text-slate-500" />
-                      <Field name="address" placeholder="Calle, Ciudad, País" className="input-premium input-premium-icon" />
-                    </div>
+                  <div className="md:col-span-2">
+                    <FormField 
+                      name="address" 
+                      label="Dirección Física" 
+                      placeholder="Calle, Ciudad, País" 
+                      icon={MapPin} 
+                    />
                   </div>
                 </div>
               </section>

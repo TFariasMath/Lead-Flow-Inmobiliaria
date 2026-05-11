@@ -1,3 +1,10 @@
+import os
+import django
+
+# Setup Django environment
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+django.setup()
+
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from leads.models import Lead, Campaign, LandingPage, MediaAsset, Interaction

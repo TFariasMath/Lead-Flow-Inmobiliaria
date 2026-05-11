@@ -17,9 +17,15 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Guardar usuario y manejar password si viene en el request
-        # (Idealmente se debería usar un serializer específico para creación con password)
         user = serializer.save()
-        if 'password' in self.request.data:
+        if 'password' in self.request.data and self.request.data['password']:
+            user.set_password(self.request.data['password'])
+            user.save()
+
+    def perform_update(self, serializer):
+        # Detectar si se está enviando una nueva contraseña en la actualización
+        user = serializer.save()
+        if 'password' in self.request.data and self.request.data['password']:
             user.set_password(self.request.data['password'])
             user.save()
 

@@ -9,7 +9,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.env
+# .env (Habilitado para subir originales por petición del usuario)
 
 # Django
 local_settings.py

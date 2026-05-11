@@ -35,48 +35,47 @@ El proyecto está dividido en un backend sólido con **Django** y **PostgreSQL**
 
 ---
 
-## Guía de Instalación Rápida
+## Guía de Instalación Rápida (Nativa - Sin Docker)
 
-Asegúrate de tener instalado **Docker**, **Node.js (v18+)** y **Python (v3.10+)**.
+Esta guía te permite configurar el sistema completo en pocos minutos sin necesidad de contenedores. Asegúrate de tener instalado **PostgreSQL**, **Node.js (v18+)** y **Python (v3.10+)**.
 
-### 1. Iniciar Base de Datos
-Levanta PostgreSQL utilizando el archivo docker-compose incluido:
-```bash
-docker compose up -d
+### 1. Configuración Automática
+Ejecuta el script de configuración desde una terminal de **PowerShell** (en Windows):
+```powershell
+.\scripts\setup_local.ps1
 ```
+Este script creará el entorno virtual, instalará todas las dependencias de Python y Node, y preparará la base de datos local por ti.
 
-### 2. Configurar Backend (Django)
-Abre una terminal y dirígete a la carpeta `backend`:
+### 2. Iniciar el Sistema
+Para arrancar el Backend y el Frontend simultáneamente, simplemente ejecuta:
 ```bash
-cd backend
-python -m venv venv
-# Activar entorno virtual:
-# Windows: .\venv\Scripts\activate
-# Linux/Mac: source venv/bin/activate
-
-pip install -r requirements.txt
-
-# Aplicar migraciones
-python manage.py migrate
-
-# Poblar la base de datos con admin, vendedores y fuentes
-python manage.py shell < leads/seed.py
-
-# Iniciar servidor de desarrollo
-python manage.py runserver 8000
+.\run_crm.bat
 ```
+Esto abrirá dos ventanas:
+- **Backend**: `http://localhost:8000`
+- **Frontend**: `http://localhost:3000`
+
 > **Credenciales por defecto:**
-> - Admin: `admin` / `admin123`
-> - Vendedores: `vendedor1`, `vendedor2`, `vendedor3` / password: `vendedor123`
+> - Usuario: `admin`
+> - Contraseña: `admin123`
 
-### 3. Configurar Frontend (Next.js)
-Abre otra terminal y dirígete a la carpeta `frontend`:
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Visita [http://localhost:3000](http://localhost:3000) en tu navegador.
+---
+
+## Instalación Manual (Paso a Paso)
+
+Si prefieres configurar cada parte por separado:
+
+### 1. Backend (Django)
+1. Entra en `backend/`, crea un `venv` e instala `requirements.txt`.
+2. Asegúrate de tener una base de datos PostgreSQL llamada `leadflow`.
+3. Configura tu `.env` (puedes usar `DB_NAME=leadflow`, `DB_USER=...`, etc).
+4. Ejecuta `python manage.py migrate`.
+5. Inicia con `python manage.py runserver`.
+
+### 2. Frontend (Next.js)
+1. Entra en `frontend/` y ejecuta `npm install`.
+2. Crea un `.env.local` con `NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1`.
+3. Inicia con `npm run dev`.
 
 ---
 
