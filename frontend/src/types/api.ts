@@ -180,10 +180,16 @@ export interface LandingData {
 
 export interface DashboardStats {
   total_leads: number;
-  leads_today: number;
-  conversion_rate: number;
-  active_campaigns: number;
-  leads_by_status: Record<LeadStatus, number>;
-  leads_by_source: Record<string, number>;
-  timeline_data: { date: string; count: number }[];
+  leads_via_api: number;
+  leads_manual: number;
+  leads_by_status: Record<string, number>;
+  total_webhooks: number;
+  total_landing_visits: number;
+  successful_webhooks: number;
+  failed_webhooks: number;
+  webhook_success_rate: number;
+  leads_by_source: any[];
+  stale_leads_count: number;
+  funnel_data: any[];
+  status: string;
 }

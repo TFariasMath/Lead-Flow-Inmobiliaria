@@ -21,17 +21,15 @@ import {
 import { toggleVendorAvailability } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
-  Users,
-  CheckCircle2,
-  AlertTriangle,
-  TrendingUp,
-  Webhook,
   ArrowUpRight,
   Clock,
   Zap,
   Target,
   BarChart3,
   Activity,
+  Globe,
+  Users,
+  AlertTriangle
 } from "lucide-react";
 import {
   BarChart,
@@ -45,6 +43,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+import { MetricCard } from "@/components/leads/MetricCard";
 
 import FunnelChart from "@/components/FunnelChart";
 import CustomSelect from "@/components/CustomSelect";
@@ -272,7 +271,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Hero KPI Strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <KPICard
           icon={Users}
           label="Total Leads"
@@ -280,6 +279,14 @@ export default function DashboardPage() {
           color="#3b82f6"
           onClick={() => router.push("/dashboard/leads")}
           description={`${stats?.leads_via_api || 0} vía API • ${stats?.leads_manual || 0} Manuales`}
+        />
+        <KPICard
+          icon={Globe}
+          label="Tráfico Web"
+          value={stats?.total_landing_visits || 0}
+          color="#8b5cf6"
+          onClick={() => router.push("/dashboard/landings")}
+          description="Vistas totales en Landings"
         />
         <KPICard
           icon={Target}
@@ -589,6 +596,7 @@ function KPICard({
   onClick,
   accent,
   alert,
+  description,
 }: {
   icon: any;
   label: string;
@@ -597,6 +605,7 @@ function KPICard({
   onClick?: () => void;
   accent?: boolean;
   alert?: boolean;
+  description?: string;
 }) {
   return (
     <div
@@ -606,9 +615,9 @@ function KPICard({
           ? "cursor-pointer hover:border-white/10 hover:-translate-y-0.5"
           : "cursor-default",
         accent
-          ? "bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20"
+          ? "bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20 shadow-[0_0_20px_-5px_rgba(16,185,129,0.1)]"
           : alert
-          ? "bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20"
+          ? "bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20 shadow-[0_0_20px_-5px_rgba(239,68,68,0.1)]"
           : "glass-card border-white/5"
       )}
       onClick={onClick}
@@ -625,6 +634,9 @@ function KPICard({
             {label}
           </p>
           <p className="text-2xl font-black text-white">{value}</p>
+          {description && (
+            <p className="text-[8px] font-bold text-slate-600 uppercase tracking-wider mt-1">{description}</p>
+          )}
         </div>
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110"

@@ -94,7 +94,7 @@ export default function NewLeadPage() {
 
       {/* ── Header Section ── */}
       <div className="flex items-center gap-6 mb-10">
-        <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl shadow-blue-500/20 relative group overflow-hidden">
+        <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-2xl shadow-orange-500/20 relative group overflow-hidden">
           <UserPlus className="w-10 h-10 text-white relative z-10 group-hover:scale-110 transition-transform duration-500" />
           <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         </div>
@@ -107,9 +107,12 @@ export default function NewLeadPage() {
       </div>
 
       {/* ── Form Container ── */}
-      <div className="glass-container rounded-[2.5rem] p-10 relative">
+      <div className="glass-container rounded-[2.5rem] p-10 relative overflow-hidden">
+        {/* Top Accent Line */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
+        
         {/* Decorative corner accent */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-3xl rounded-full pointer-events-none" />
 
         <Formik
           initialValues={{
@@ -161,7 +164,7 @@ export default function NewLeadPage() {
               {/* ── SECCIÓN 1: IDENTIDAD ── */}
               <section className="space-y-6">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                  <UserIcon className="w-4 h-4 text-blue-500" />
+                  <UserIcon className="w-4 h-4 text-orange-500" />
                   <h2 className="section-label text-white">Información de Identidad</h2>
                 </div>
                 
@@ -184,7 +187,7 @@ export default function NewLeadPage() {
               {/* ── SECCIÓN 2: CONTACTO & EMPRESA ── */}
               <section className="space-y-6">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                  <Zap className="w-4 h-4 text-cyan-500" />
+                  <Zap className="w-4 h-4 text-amber-500" />
                   <h2 className="section-label text-white">Canales de Contacto</h2>
                 </div>
 
@@ -251,7 +254,7 @@ export default function NewLeadPage() {
               {/* ── SECCIÓN 3: CLASIFICACIÓN ── */}
               <section className="space-y-6">
                 <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                  <Target className="w-4 h-4 text-emerald-500" />
+                  <Target className="w-4 h-4 text-orange-400" />
                   <h2 className="section-label text-white">Asignación Operativa</h2>
                 </div>
 
@@ -303,7 +306,7 @@ export default function NewLeadPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="btn-primary w-full h-14 flex items-center justify-center gap-3 group/submit"
+                  className="w-full h-14 flex items-center justify-center gap-3 group/submit bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-[0_10px_30px_rgba(234,88,12,0.3)] hover:shadow-[0_15px_40px_rgba(234,88,12,0.5)] transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   <span className="text-sm">
@@ -320,11 +323,11 @@ export default function NewLeadPage() {
       {/* ── Footer Info ── */}
       <div className="mt-8 flex justify-center gap-10">
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
           <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Resolución de Identidad</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+          <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
           <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Validación de Datos</span>
         </div>
       </div>

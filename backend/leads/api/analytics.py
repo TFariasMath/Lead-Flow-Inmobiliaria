@@ -8,7 +8,7 @@ from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import Lead, WebhookLog
+from ..models import Lead, WebhookLog, LandingPage, LandingPageVisit
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,15 @@ class DashboardStatsView(APIView):
                 "acquisition_share": round((sg["total"] / total_leads_count * 100), 1) if total_leads_count > 0 else 0
             } for sg in source_groups]
 
-            # 4. Datos para el Embudo (Reutilizamos los datos de master_stats)
+            # 4. Métricas de Marketing (Landing Pages)
+            visits_qs = LandingPageVisit.objects.all()
+            if days and days.isdigit():
+                visits_count = visits_qs.filter(created_at__gte=start_date).count()
+            else:
+                from django.db.models import Sum
+                visits_count = LandingPage.objects.aggregate(total=Sum('visits_count'))['total'] or 0
+
+            # 5. Datos para el Embudo (Reutilizamos los datos de master_stats)
             funnel_stages = [
                 (Lead.Status.NUEVO, "Nuevo"),
                 (Lead.Status.CONTACTADO, "Contactado"),
@@ -115,6 +123,7 @@ class DashboardStatsView(APIView):
                 "leads_manual": leads_manual,
                 "leads_by_status": leads_by_status,
                 "total_webhooks": total_webhooks,
+                "total_landing_visits": visits_count,
                 "successful_webhooks": webhook_stats["success"],
                 "failed_webhooks": webhook_stats["failed"],
                 "webhook_success_rate": round(success_rate, 1),
