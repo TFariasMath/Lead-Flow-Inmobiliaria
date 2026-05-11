@@ -85,6 +85,38 @@ class LeadViewSet(viewsets.ModelViewSet):
         else:
             serializer.save()
 
+    @action(detail=False, methods=["post"])
+    def bulk_update(self, request):
+        """
+        Actualiza múltiples leads en una sola operación.
+        Payload: { "ids": [...], "fields": { "status": "...", "assigned_to": ... } }
+        """
+        ids = request.data.get("ids", [])
+        fields = request.data.get("fields", {})
+
+        if not ids or not fields:
+            return Response({"error": "IDs y campos requeridos"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Filtro de seguridad (reutiliza get_queryset para respetar RLS)
+        leads_qs = self.get_queryset().filter(id__in=ids)
+        
+        # Para mantener el historial (django-simple-history), debemos guardar cada instancia
+        # Si son muchos, esto puede ser lento, pero garantiza la integridad del log.
+        updated_count = 0
+        for lead in leads_qs:
+            for key, value in fields.items():
+                if key == 'assigned_to':
+                    lead.assigned_to_id = value
+                else:
+                    setattr(lead, key, value)
+            lead.save()
+            updated_count += 1
+
+        return Response({
+            "message": f"Se actualizaron {updated_count} leads",
+            "updated_count": updated_count
+        })
+
     @action(detail=True, methods=["get"])
     def history(self, request, pk=None):
         """

@@ -34,7 +34,7 @@ class DashboardStatsView(APIView):
                 webhooks_qs = webhooks_qs.filter(created_at__gte=start_date)
 
             # Lógica de Permisos: Admin puede elegir, vendedor está bloqueado a sí mismo
-            if user.is_staff and vendor_id:
+            if user.is_staff and vendor_id and vendor_id.isdigit():
                 leads_qs = leads_qs.filter(assigned_to_id=vendor_id)
                 webhooks_qs = webhooks_qs.filter(lead__assigned_to_id=vendor_id)
             elif not user.is_staff:
@@ -147,6 +147,7 @@ class PerformanceAnalyticsView(APIView):
             conversion_rate = (won / total * 100) if total > 0 else 0
             
             data.append({
+                "vendor_id": vendor.id,
                 "vendor_name": f"{vendor.first_name} {vendor.last_name}".strip() or vendor.username,
                 "total_assigned": total,
                 "won": won,

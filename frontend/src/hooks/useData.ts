@@ -22,8 +22,8 @@ const createFetcher = (token: string | null) => async (url: string) => {
     return api.getCampaigns(token);
   }
   if (url.startsWith("/dashboard/stats")) {
-    const days = new URLSearchParams(url.split("?")[1]).get("days") || undefined;
-    return api.getDashboardStats(token, days);
+    const params = url.split("?")[1] || "";
+    return api.getDashboardStats(token, params);
   }
   if (url.startsWith("/properties")) {
     return api.getProperties(token);

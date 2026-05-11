@@ -82,30 +82,43 @@ export default function DashboardPage() {
   const [timeframe, setTimeframe] = useState("7");
   const [loading, setLoading] = useState(true);
   const [lastLeadId, setLastLeadId] = useState<string | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
 
+  // 1. Carga inicial de datos estáticos (Vendedores y Leads Recientes)
   useEffect(() => {
     if (!token) return;
-    setLoading(true);
-
     const promises = [
-      getDashboardStats(token, timeframe === "all" ? undefined : timeframe),
       user?.isStaff ? getPerformanceAnalytics(token) : Promise.resolve([]),
       getLeads(token, "ordering=-created_at&page_size=5"),
     ];
 
     Promise.all(promises)
-      .then(([statsData, perfData, leadsData]) => {
-        setStats(statsData);
+      .then(([perfData, leadsData]) => {
         setPerformance(perfData as VendorPerformance[]);
         const leads = (leadsData as any).results;
         setRecentLeads(leads);
-        if (leads.length > 0) {
-          setLastLeadId(leads[0].id);
-        }
+        if (leads.length > 0) setLastLeadId(leads[0].id);
+      })
+      .catch(console.error);
+  }, [token, user?.isStaff]);
+
+  // 2. Carga reactiva de estadísticas (Depende de filtros)
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    const statsQuery = new URLSearchParams();
+    if (timeframe !== "all") statsQuery.set("days", timeframe);
+    if (selectedVendorId) statsQuery.set("vendor_id", selectedVendorId);
+    statsQuery.set("_t", Date.now().toString()); // Cache buster
+
+    getDashboardStats(token, statsQuery.toString())
+      .then((statsData) => {
+        setStats(statsData);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [token, timeframe, user?.isStaff]);
+  }, [token, timeframe, selectedVendorId]);
 
   // Polling for new leads
   useEffect(() => {
@@ -203,6 +216,18 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {user?.isStaff && (
+            <select
+              value={selectedVendorId}
+              onChange={(e) => setSelectedVendorId(e.target.value)}
+              className="bg-slate-900/50 px-4 py-1.5 rounded-xl border border-white/5 text-[10px] font-black uppercase text-slate-300 outline-none focus:border-blue-500/50 transition-all cursor-pointer"
+            >
+              <option value="">Vista Global (Todos)</option>
+              {performance.map((v: any, idx: number) => (
+                <option key={v.vendor_id || idx} value={v.vendor_id || ""}>{v.vendor_name}</option>
+              ))}
+            </select>
+          )}
           <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/5">
             {["7", "30", "all"].map((t) => (
               <button

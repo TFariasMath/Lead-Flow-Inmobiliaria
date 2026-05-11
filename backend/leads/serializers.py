@@ -98,7 +98,7 @@ class LeadListSerializer(serializers.ModelSerializer):
         model = Lead
         fields = [
             "id", "original_email", "contact_email",
-            "first_name", "last_name", "phone",
+            "first_name", "last_name", "phone", "company",
             "status", "assigned_to", "assigned_to_name",
             "first_source", "first_source_name",
             "campaign", "campaign_name", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",

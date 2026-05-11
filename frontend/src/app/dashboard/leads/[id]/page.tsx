@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useHistory } from "@/hooks/useHistory";
 
 const COUNTRY_CODES = [
   { code: "+56", country: "Chile", flag: "🇨🇱" },
@@ -102,6 +103,7 @@ export default function LeadDetailPage() {
   const [activeTab, setActiveTab] = useState<"timeline" | "history">(
     "timeline"
   );
+  const { addVisit } = useHistory();
 
   const fetchData = useCallback(async () => {
     if (!token || !id) return;
@@ -124,6 +126,12 @@ export default function LeadDetailPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (lead) {
+      addVisit(lead);
+    }
+  }, [lead, addVisit]);
 
   const handleSave = async (values: any) => {
     const payload: Partial<Lead> = {

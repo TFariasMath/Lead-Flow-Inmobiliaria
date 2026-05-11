@@ -24,9 +24,11 @@ import {
   Zap,
   Target,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import CustomSelect from "@/components/CustomSelect";
 
 const COUNTRY_CODES = [
   { code: "+56", country: "Chile", flag: "🇨🇱" },
@@ -149,7 +151,7 @@ export default function NewLeadPage() {
             }
           }}
         >
-          {({ isSubmitting, values }) => (
+          {({ isSubmitting, values, setFieldValue }) => (
             <Form className="space-y-12">
               
               {/* ── SECCIÓN 1: IDENTIDAD ── */}
@@ -202,14 +204,16 @@ export default function NewLeadPage() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Teléfono Móvil</label>
                     <div className="flex gap-2">
-                      <div className="w-[120px] shrink-0">
-                        <Field as="select" name="phone_code" className="input-premium appearance-none cursor-pointer h-full py-0 px-3 text-sm">
-                          {COUNTRY_CODES.map((c) => (
-                            <option key={c.code} value={c.code} className="bg-slate-900">
-                              {c.flag} {c.code}
-                            </option>
-                          ))}
-                        </Field>
+                      <div className="w-[120px] shrink-0 relative">
+                        <CustomSelect
+                          value={values.phone_code}
+                          onChange={(val) => setFieldValue("phone_code", val)}
+                          options={COUNTRY_CODES.map(c => ({
+                            value: c.code,
+                            label: `${c.flag} ${c.code}`
+                          }))}
+                          className="h-full"
+                        />
                       </div>
                       <div className="input-icon-wrapper flex-1">
                         <Phone className="w-4 h-4 text-slate-500" />
@@ -246,38 +250,35 @@ export default function NewLeadPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fuente de Origen</label>
-                    <div className="input-icon-wrapper">
-                      <Zap className="w-4 h-4 text-slate-500" />
-                      <Field as="select" name="first_source" className="input-premium input-premium-icon appearance-none cursor-pointer">
-                        <option value="" className="bg-slate-900">Seleccionar fuente...</option>
-                        {sources.map((s) => (
-                          <option key={s.id} value={s.id} className="bg-slate-900">
-                            {s.name}
-                          </option>
-                        ))}
-                      </Field>
-                    </div>
+                    <CustomSelect
+                      value={values.first_source}
+                      onChange={(val) => setFieldValue("first_source", val)}
+                      options={[
+                        { value: "", label: "Seleccionar fuente..." },
+                        ...sources.map(s => ({ value: s.id.toString(), label: s.name }))
+                      ]}
+                      icon={<Zap className="w-4 h-4" />}
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Vendedor Asignado</label>
-                    <div className="input-icon-wrapper">
-                      <ShieldCheck className="w-4 h-4 text-slate-500" />
-                      {user?.isStaff ? (
-                        <Field as="select" name="assigned_to" className="input-premium input-premium-icon appearance-none cursor-pointer">
-                          <option value="" className="bg-slate-900">Sin asignar (Libre)</option>
-                          {users.map((u) => (
-                            <option key={u.id} value={u.id} className="bg-slate-900">
-                              {u.first_name} {u.last_name} ({u.username})
-                            </option>
-                          ))}
-                        </Field>
-                      ) : (
-                        <div className="input-premium input-premium-icon opacity-50 cursor-not-allowed flex items-center">
-                          <span className="text-xs font-bold">Auto-asignado a ti</span>
-                        </div>
-                      )}
-                    </div>
+                    {user?.isStaff ? (
+                      <CustomSelect
+                        value={values.assigned_to}
+                        onChange={(val) => setFieldValue("assigned_to", val)}
+                        options={[
+                          { value: "", label: "Sin asignar (Libre)" },
+                          ...users.map(u => ({ value: u.id.toString(), label: `${u.first_name} ${u.last_name} (${u.username})` }))
+                        ]}
+                        icon={<ShieldCheck className="w-4 h-4" />}
+                      />
+                    ) : (
+                      <div className="input-premium pl-12 opacity-50 cursor-not-allowed flex items-center relative">
+                        <ShieldCheck className="w-4 h-4 text-slate-500 absolute left-4 top-1/2 -translate-y-1/2" />
+                        <span className="text-xs font-bold">Auto-asignado a ti</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>

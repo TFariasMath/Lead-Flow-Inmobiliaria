@@ -55,6 +55,7 @@ async function apiFetch<T = unknown>(
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
     headers,
+    cache: "no-store",
     ...rest,
   });
 
@@ -123,6 +124,14 @@ export function updateLead(token: string, id: string, data: Partial<Lead>) {
     token,
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+export function bulkUpdateLeads(token: string, ids: string[], fields: Partial<Lead>) {
+  return apiFetch<{ message: string; updated_count: number }>("/leads/bulk_update/", {
+    token,
+    method: "POST",
+    body: JSON.stringify({ ids, fields }),
   });
 }
 
@@ -302,8 +311,8 @@ export function getPermissions(token: string) {
 
 // --- Dashboard ---
 
-export function getDashboardStats(token: string, days?: string) {
-  const query = days ? `?days=${days}` : "";
+export function getDashboardStats(token: string, params?: string) {
+  const query = params ? `?${params}` : "";
   return apiFetch<DashboardStats>(`/dashboard/stats/${query}`, { token });
 }
 

@@ -33,50 +33,50 @@ export const StatusPipeline: React.FC<StatusPipelineProps> = ({
         )}
       </div>
       
-      <div className="flex items-center w-full h-12 gap-0.5 overflow-hidden">
+      <div className="relative w-full h-10 flex items-center gap-1 px-1 bg-slate-900/40 rounded-xl border border-white/5 overflow-hidden">
         {STATUS_OPTIONS.map((opt, idx) => {
           const isCompleted = STATUS_OPTIONS.indexOf(lead.status) > idx;
           const isActive = lead.status === opt;
           const themeColor = THEME_COLORS[opt];
           
-          let clipPath = "polygon(0% 0%, 95% 0%, 100% 50%, 95% 100%, 0% 100%, 5% 50%)";
-          if (idx === 0) clipPath = "polygon(0% 0%, 95% 0%, 100% 50%, 95% 100%, 0% 100%)";
-          if (idx === STATUS_OPTIONS.length - 1) clipPath = "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 5% 50%)";
-
           return (
             <button
               key={opt}
               onClick={() => onStatusChange(opt)}
               disabled={updatingStatus}
-              style={{ clipPath }}
               className={cn(
-                "flex-1 h-full flex items-center justify-center transition-all duration-500 relative group",
-                isCompleted ? `${themeColor} opacity-40 hover:opacity-100 text-white` :
-                isActive ? `${themeColor} text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] z-20` :
-                "bg-white/[0.03] text-slate-500 hover:bg-white/[0.08]"
+                "relative flex-1 h-full flex items-center justify-center transition-all duration-500 group overflow-hidden",
+                isCompleted ? "opacity-40" : isActive ? "z-20" : "opacity-20 hover:opacity-40"
               )}
             >
+              {/* Active State Background & Glow */}
+              {isActive && (
+                <>
+                  <div className={cn("absolute inset-0 opacity-20 blur-md", themeColor)} />
+                  <div className={cn("absolute inset-0 border-t border-b border-white/20", themeColor)} />
+                  <div className="absolute inset-y-0 left-0 w-[2px] bg-white/40 shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
+                </>
+              )}
+
               <span className={cn(
-                "text-[6px] md:text-[8px] font-black uppercase tracking-tighter text-center leading-tight px-1 transition-transform",
-                isActive && "scale-110"
+                "text-[7px] md:text-[9px] font-black uppercase tracking-widest text-center leading-tight px-1 transition-all duration-500 relative z-10",
+                isActive ? "text-white scale-110" : "text-slate-400 group-hover:text-white"
               )}>
-                {opt === "cierre_ganado" ? "GANADO" : 
-                 opt === "cierre_perdido" ? "PERDIDO" : 
-                 opt === "en_calificacion" ? "CALIFIC." :
-                 opt === "propuesta_enviada" ? "PROPUESTA" :
-                 STATUS_LABELS[opt].split(' ')[0]}
+                {STATUS_LABELS[opt].split(' ')[0]}
               </span>
-              
-              {isActive && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-              )}
-              
-              {isActive && (
-                 <div className="absolute bottom-1 w-1 h-1 rounded-full bg-white animate-pulse" />
-              )}
+
+              {/* Connecting Dot/Line */}
+              <div className={cn(
+                "absolute bottom-1 w-1 h-1 rounded-full transition-all duration-700",
+                isActive ? "bg-white shadow-[0_0_8px_white] scale-125" : 
+                isCompleted ? "bg-white/20" : "bg-white/5"
+              )} />
             </button>
           );
         })}
+        
+        {/* Animated Scanning Beam (Surgical Effect) */}
+        <div className="absolute inset-y-0 w-32 bg-gradient-to-r from-transparent via-blue-500/10 to-transparent -translate-x-full animate-scan pointer-events-none" />
       </div>
 
       <div className="flex justify-between mt-3 px-1">

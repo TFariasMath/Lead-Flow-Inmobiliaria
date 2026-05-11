@@ -256,3 +256,77 @@ class SecurityAndAuditTests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(len(response.json()) >= 1)
+
+
+class BulkActionsTests(APITestCase):
+    """Pruebas para operaciones masivas sobre múltiples leads."""
+    
+    def setUp(self):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+        from .models import Lead
+        
+        self.admin = User.objects.create_superuser("admin_bulk", "admin@test.com", "pw")
+        self.vendedor = User.objects.create_user("vendedor_bulk", "v@test.com", "pw")
+        
+        # Dar todos los permisos al vendedor para operar con leads
+        content_type = ContentType.objects.get_for_model(Lead)
+        for codename in ['add_lead', 'change_lead', 'view_lead', 'delete_lead']:
+            permission = Permission.objects.get(codename=codename, content_type=content_type)
+            self.vendedor.user_permissions.add(permission)
+        
+        # Recargar el usuario para que reconozca los permisos en el objeto en memoria
+        from django.contrib.auth import get_user_model
+        self.vendedor = get_user_model().objects.get(pk=self.vendedor.pk)
+        
+        # Crear varios leads
+        self.leads = [
+            Lead.objects.create(original_email=f"bulk{i}@test.com", status=Lead.Status.NUEVO)
+            for i in range(5)
+        ]
+        self.lead_ids = [str(l.id) for l in self.leads]
+        self.url = reverse('lead-bulk-update')
+
+    def test_bulk_update_status_admin(self):
+        """Un admin puede cambiar el estado de múltiples leads a la vez."""
+        self.client.force_authenticate(user=self.admin)
+        payload = {
+            "ids": self.lead_ids,
+            "fields": {"status": Lead.Status.CONTACTADO}
+        }
+        response = self.client.post(self.url, payload, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Lead.objects.filter(status=Lead.Status.CONTACTADO).count(), 5)
+        # Verificar que se guardó historial (creación + bulk update)
+        self.assertEqual(self.leads[0].history.count(), 2)
+
+    def test_bulk_assign_vendor(self):
+        """Un admin puede re-asignar múltiples leads a un vendedor."""
+        self.client.force_authenticate(user=self.admin)
+        payload = {
+            "ids": self.lead_ids,
+            "fields": {"assigned_to": self.vendedor.id}
+        }
+        response = self.client.post(self.url, payload, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Lead.objects.filter(assigned_to=self.vendedor).count(), 5)
+
+    def test_bulk_update_permissions_vendedor(self):
+        """Un vendedor solo puede actualizar masivamente los leads que le pertenecen."""
+        # Asignamos 2 leads al vendedor y dejamos 3 sin asignar
+        for l in self.leads[:2]:
+            l.assigned_to = self.vendedor
+            l.save()
+            
+        self.client.force_authenticate(user=self.vendedor)
+        payload = {
+            "ids": self.lead_ids, # Enviamos todos los IDs
+            "fields": {"status": Lead.Status.CIERRE_GANADO}
+        }
+        response = self.client.post(self.url, payload, format='json')
+        
+        # Solo debe haber actualizado 2 leads (los que tiene asignados)
+        self.assertEqual(response.data["updated_count"], 2)
+        self.assertEqual(Lead.objects.filter(status=Lead.Status.CIERRE_GANADO).count(), 2)
