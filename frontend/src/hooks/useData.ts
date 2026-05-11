@@ -21,6 +21,12 @@ const createFetcher = (token: string | null) => async (url: string) => {
   if (url.startsWith("/campaigns")) {
     return api.getCampaigns(token);
   }
+  if (url.startsWith("/sources")) {
+    return api.getSources(token);
+  }
+  if (url.startsWith("/users")) {
+    return api.getUsers(token);
+  }
   if (url.startsWith("/dashboard/stats")) {
     const params = url.split("?")[1] || "";
     return api.getDashboardStats(token, params);

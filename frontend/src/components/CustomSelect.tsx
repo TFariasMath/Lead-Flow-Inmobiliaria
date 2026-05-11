@@ -40,6 +40,7 @@ export default function CustomSelect({
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
 
   const [isMounted, setIsMounted] = useState(false);
 
@@ -52,7 +53,10 @@ export default function CustomSelect({
   // Cerrar al hacer click fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const isOutsideContainer = containerRef.current && !containerRef.current.contains(event.target as Node);
+      const isOutsidePortal = portalRef.current && !portalRef.current.contains(event.target as Node);
+      
+      if (isOutsideContainer && (!portalRef.current || isOutsidePortal)) {
         setIsOpen(false);
       }
     };
@@ -109,6 +113,7 @@ export default function CustomSelect({
       {/* Dropdown Menu Portal */}
       {isMounted && isOpen && menuRect && createPortal(
         <div 
+          ref={portalRef}
           className={cn(
             "fixed z-[9999] glass-container rounded-xl overflow-hidden animate-fadeIn py-1 origin-top shadow-[0_20px_50px_rgba(0,0,0,0.5)]",
             openUpwards ? "animate-slideUp origin-bottom" : "animate-fadeIn origin-top"
