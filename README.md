@@ -1,5 +1,7 @@
 # Lead Flow
 
+![Lead Flow - Demo Operacional](./imagenes/0512.mp4)
+
 **Lead Flow** es una plataforma diseñada para la gestión de inversiones inmobiliarias a gran escala. Es una suite completa de ingeniería de datos que centraliza la captura, resolución de identidad y distribución de prospectos comerciales desde múltiples canales digitales.
 
 ---
