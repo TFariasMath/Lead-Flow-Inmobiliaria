@@ -158,26 +158,29 @@ El sistema permite la captura manual de prospectos a través de una interfaz opt
  
 ---
  
-### 🩺 Modo Quirófano: Ingesta Resiliente y Recuperación de Datos
+### 📊 Auditoría de Tráfico (Webhook Logs)
  
-La arquitectura de **Lead Flow** está diseñada bajo el principio de "Pérdida Cero". El **Modo Quirófano** es el centro de control técnico donde se gestiona la salud de la entrada de datos.
+Para mantener un control total sobre el flujo de datos, **Lead Flow** implementa una consola de auditoría técnica que registra cada interacción desde fuentes externas.
  
 ![Webhook Logs](./frontend/public/docs/webhook_log.png)
+ 
+#### Funcionamiento de la Consola:
+*   **Monitoreo en Tiempo Real:** Lista cronológica de todas las peticiones entrantes (Facebook, Google Ads, Landing Pages).
+*   **Filtrado por Estado:** Permite identificar rápidamente peticiones `PENDING`, `SUCCESS` o `FAILED` para detectar anomalías en la comunicación.
+*   **Trazabilidad de Errores:** En caso de fallo, la consola expone el error técnico exacto reportado por el servidor, facilitando el diagnóstico sin necesidad de revisar logs de servidor pesados.
+ 
+---
+ 
+### 🩺 Recuperación Crítica (Modo Quirófano)
+ 
+El **Modo Quirófano** es la herramienta de última instancia para garantizar que ningún lead se pierda por problemas de formato o cambios inesperados en las APIs externas.
+ 
 ![Modo Quirófano](./frontend/public/docs/modo_quirofano.png)
  
-#### Arquitectura de Robustez:
-1.  **Captura en Dos Etapas (Staging Ingestion):**
-    *   **Nivel 1 (Ingesta):** El webhook llega al endpoint y se guarda inmediatamente como un `WebhookLog` en estado `PENDING`. El sistema responde con un `200 OK` al servicio externo en menos de 50ms.
-    *   **Nivel 2 (Procesamiento):** Un worker asíncrono (**Django Q**) toma el log, valida la identidad (Double Anchor) y ejecuta la lógica de negocio.
-2.  **Tolerancia a Fallos Estructurales:**
-    *   Si el JSON recibido es inválido o el servicio externo cambió su esquema, el log cambia a estado `FAILED` y se captura el *stacktrace* completo del error.
-3.  **Intervención en "Quirófano":**
-    *   **Auditoría Técnica:** Los administradores pueden inspeccionar el payload crudo y el error asociado.
-    *   **Corrección en Caliente:** El sistema permite **editar el JSON directamente** desde la interfaz para corregir inconsistencias técnicas.
-    *   **Reprocesamiento Atómico:** Con un solo clic, el lead es re-inyectado en el motor de distribución sin perder su contexto original ni generar duplicados.
- 
-#### Por qué es Robusto:
-Esta arquitectura soluciona el problema de los "leads perdidos" por errores de red o cambios de API. Al desacoplar la **recepción** del **procesamiento**, garantizamos que el sistema sea inmune a picos de tráfico y errores de validación, permitiendo recuperaciones quirúrgicas de datos sin intervención en el código.
+#### La Solución a Problemas Técnicos:
+1.  **Intervención Directa:** Cuando un lead falla por datos mal formados, el administrador puede abrir el registro y acceder al JSON crudo.
+2.  **Edición Quirúrgica:** Permite modificar el contenido del mensaje recibido directamente en la interfaz para corregir campos faltantes o errores de sintaxis.
+3.  **Reprocesamiento Forzado:** Al guardar los cambios, el sistema permite re-ejecutar la lógica de creación de leads sobre el dato corregido, recuperando la oportunidad comercial de forma instantánea.
 
 
 ---
