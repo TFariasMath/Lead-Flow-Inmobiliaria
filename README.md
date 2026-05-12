@@ -90,12 +90,12 @@ El dashboard principal ha sido diseñado bajo una filosofía de **Control Situac
 ![Dashboard Overview](./frontend/public/docs/dashboard1.png)
 
 #### 🎴 Navegación Inmersiva y Paneles de Control
-El sistema utiliza una arquitectura de paneles deslizables (*Drawers*) que permiten profundizar en la información sin abandonar la vista principal:
+El sistema utiliza una arquitectura de paneles deslizables (*Drawers*) diseñados para mantener el enfoque operativo mientras se accede a capas profundas de datos:
 
-*   **Sidebar (Navegación Primaria):** Ubicado a la izquierda, gestiona el acceso a los módulos principales (Leads, Campañas, Propiedades). Es el eje central de movimiento del sistema.
-*   **Right Sidebar (Panel de Contexto):** Despliega información operativa en tiempo real, como el rendimiento del equipo y el estado de disponibilidad del Round Robin.
-*   **Top Drawer (Métricas de Tráfico):** Un panel que desliza desde la parte superior para mostrar análisis de tráfico y rendimiento de landing pages sin obstruir la vista de trabajo.
-*   **Dashboard Dock (Historial Rápido):** Ubicado en la esquina inferior derecha, permite el acceso inmediato a los últimos prospectos consultados, facilitando la multitarea.
+*   **Sidebar (Navegación Primaria - Eje Central):** Ubicado de forma persistente a la izquierda, actúa como la columna vertebral del sistema. Desde aquí se orquesta el movimiento entre los módulos core (Gestión de Leads, Configuración de Campañas y Catálogo de Propiedades). Implementa una navegación inteligente con estados activos que mantienen al usuario ubicado en todo momento.
+*   **Right Sidebar (Panel de Contexto Operativo):** Desliza desde la derecha para ofrecer una visión en tiempo real del "ahora" del negocio. Alberga el **Performance Node**, donde se gestiona la disponibilidad del equipo y el estado del Round Robin, junto con un **Feed de Actividad** que registra cada interacción crítica a medida que ocurre.
+*   **Top Drawer (Métricas de Tráfico - Análisis Elevado):** Invocado desde la parte superior, este panel despliega el análisis técnico del pulso digital. Permite auditar el rendimiento de cada landing page y visualizar picos de tráfico sin necesidad de abandonar la lista de trabajo actual, ideal para supervisiones rápidas.
+*   **Dashboard Dock (Historial Rápido - Memoria de Trabajo):** Situado en la esquina inferior derecha, funciona como una "memoria de acceso rápido". Registra automáticamente los últimos leads visitados, permitiendo saltar de vuelta a una negociación previa con un solo clic, eliminando la necesidad de re-busquedas constantes.
 
 ![Dashboard Detalle](./frontend/public/docs/dashboard2.png)
 
