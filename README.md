@@ -75,19 +75,25 @@ El acceso al sistema está blindado mediante una interfaz de **"Terminal de Nodo
 
 ---
 
-### 🖥️ Dashboard Estratégico (Modo Quirófano)
+### 🖥️ Dashboard Estratégico: El Poder de la Vista Única
 
-El dashboard principal ha sido diseñado bajo la filosofía de **"Modo Quirófano"**: una interfaz de alta fidelidad, libre de distracciones y con latencia cero, donde cada métrica es accionable.
+El dashboard principal ha sido diseñado bajo una filosofía de **Control Situacional**, eliminando la fricción de la navegación tradicional para convertir los datos en decisiones instantáneas.
 
 ![Dashboard Overview](./frontend/public/docs/dashboard1.png)
 
-#### Características del Diseño:
-*   **Layout "Zero Scroll":** Toda la información crítica (tráfico, pipeline, rendimiento de equipo) está visible en una sola pantalla, optimizada para monitores de alta resolución.
-*   **Visualización de Datos Dinámica:**
-    *   **Estatus del Pipeline (Bar Chart):** Distribución en tiempo real de la carga de trabajo por estado de lead.
-    *   **Flujo de Conversión (Funnel Chart):** Análisis acumulativo de la tasa de progresión de los prospectos a través del embudo de ventas.
-    *   **Monitoreo de Tráfico:** Gráficos de series temporales para detectar picos de interés en las landing pages.
-*   **Aesthetic & UX:** Uso extensivo de *Glassmorphism*, paletas de colores armonizadas (Cian/Violeta) y micro-interacciones que brindan una experiencia de usuario premium y fluida.
+#### 🚀 Filosofía "Zero Scroll" (Control Total de un Vistazo)
+A diferencia de los CRM convencionales donde la información está enterrada bajo pestañas o scroll infinito, en **Lead Flow** la información no se busca, se presenta.
+
+*   **El Concepto:** El dashboard actúa como la **cabina de un mando** o una consola de monitoreo de misión. El objetivo es mantener la "Conciencia Situacional" (*Situational Awareness*) en todo momento: si un gerente debe hacer scroll para ver si su equipo está rindiendo, ya perdiste el pulso de la operación.
+*   **El Objetivo:** Reducir la carga cognitiva. El cerebro procesa patrones y métricas mucho más rápido cuando el layout es estático, predecible y está contenido dentro del campo visual del usuario.
+
+#### 🎴 Arquitectura de Capas Dinámicas (Slides)
+Para mantener esta limpieza visual sin sacrificar profundidad, la información se organiza en **capas de información intercambiables** que el usuario puede invocar desde la consola de navegación:
+
+1.  **Capa de Tráfico (Traffic Node):** Despliega un análisis exhaustivo del pulso digital del negocio. Permite visualizar picos de interés, rendimiento por landing page y volumen de visitas en series temporales de alta fidelidad.
+2.  **Capa de Pipeline (Conversion Node):** Transforma el inventario de leads en un flujo visual. Aquí se monitorea el **Flujo de Conversión** y el estatus de maduración de los prospectos, permitiendo identificar cuellos de botella en tiempo real.
+3.  **Capa de Equipo (Performance Node):** Es el centro de mando del capital humano. Permite ver el rendimiento individual, gestionar el estado del **Round Robin** y alternar la disponibilidad de los agentes con un solo clic.
+4.  **Capa de Historial (Audit Node):** El "Diario de Vuelo" del sistema. Registra cronológicamente cada interacción, cambio de estado y resolución de identidad, garantizando una trazabilidad total "quirúrgica".
 
 ![Dashboard Detalle](./frontend/public/docs/dashboard2.png)
 
