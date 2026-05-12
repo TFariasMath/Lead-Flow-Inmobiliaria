@@ -72,7 +72,6 @@ El acceso al sistema está blindado mediante una interfaz de **"Terminal de Nodo
 
 *   **Autenticación JWT:** Implementa un sistema de tokens asíncronos (JSON Web Tokens) para una comunicación *stateless* y segura.
 *   **Control de Acceso Basado en Roles (RBAC):** El sistema identifica automáticamente si el usuario es un **Administrador de Nodo** o un **Agente de Ventas**, redirigiendo dinámicamente al dashboard correspondiente.
-*   **Estética Cyber-Industrial:** Panel de acceso con efectos de Glassmorphism, tipografía técnica y micro-animaciones de alta fidelidad.
 
 ---
 
