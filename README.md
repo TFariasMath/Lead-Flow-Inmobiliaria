@@ -267,27 +267,27 @@ streamlit run lead_forge.py
 
 ---
 
-### 🚀 En Desarrollo: Catálogo de Activos Inmobiliarios
+### 🚀 Módulos Avanzados (En Desarrollo y Auditoría)
 
-Este módulo es el núcleo del inventario de la plataforma. Permite transformar proyectos de construcción en activos digitales listos para ser comercializados mediante brochures dinámicos y landing pages.
+#### 📧 Motor de Correos y Automatización
+El sistema cuenta con un motor de mensajería asíncrono diseñado para el "Nurturing" de prospectos y alertas operativas:
+*   **Servidor de Correo Interno (`DatabaseEmailBackend`):** Para garantizar la trazabilidad y seguridad, el CRM intercepta todos los envíos y los persiste en la base de datos. Esto permite auditar qué recibió cada cliente y ofrece un entorno de "Sandbox" seguro.
+*   **Automatización Asíncrona (Django Q):** El envío de correos no bloquea la interfaz. Tareas en segundo plano gestionan:
+    *   **Welcome Emails:** Envío inmediato al prospecto con enlaces a su información personalizada.
+    *   **Vendor Alerts:** Notificaciones críticas a los vendedores cuando reciben un nuevo lead.
+*   **Timeline Inteligente:** Cada correo enviado genera automáticamente una **Interacción** en la línea de tiempo del lead, permitiendo un seguimiento 360°.
 
-![Catálogo de Propiedades](./imagenes/propiedades.png)
+#### 📄 Generador de Brochures PDF (Dynamic Engine)
+Capacidad de generar folletos inmobiliarios personalizados al vuelo basándose en el perfil del lead y la campaña:
+*   **Tematización Dinámica:** El PDF adopta automáticamente la paleta de colores de la Landing Page original del lead para mantener la coherencia visual.
+*   **Integración con Mapbox:** Inyecta mapas estáticos de ubicación con pines georreferenciados para cada propiedad incluida en el folleto.
+*   **Ficha Técnica Automatizada:** Extrae fotos, precios y características (amenities) directamente del catálogo de activos.
 
-#### Visualización Estratégica:
-![Ficha de Propiedad](./imagenes/propiedad.png)
-![Distribución Geográfica](./imagenes/mapa.png)
-![Detalle de Ubicación](./imagenes/mapa0.png)
-
-#### Características Técnicas y Arquitectura:
-*   **Geolocalización Inteligente (Mapbox Inside):** El formulario integra la API de **Mapbox Geocoding**. A medida que se escribe la dirección, el sistema sugiere ubicaciones reales e inyecta automáticamente las coordenadas de latitud y longitud.
-*   **Motor de Métricas Financieras:** Gestión de retornos de inversión (ROI) proyectados y montos mínimos de inversión que se inyectan dinámicamente en los PDFs de venta.
-*   **Gestión de Atributos (Amenities):** Sistema de etiquetado dinámico (Tags) almacenado como JSON, permitiendo flexibilidad total en las características del proyecto.
-*   **Media Asset Library:** Integración con una biblioteca centralizada de medios para garantizar la calidad visual en todos los brochures generados.
-
-#### Stack Tecnológico:
-*   **Frontend:** Next.js + Tailwind CSS con estados de alta precisión.
-*   **Mapas:** Mapbox GL JS / Places API para normalización de direcciones.
-*   **Backend:** Modelos de Django con soporte para campos JSON y geocoordenadas.
+#### 🏠 Catálogo de Activos Inmobiliarios (Inventory Hub)
+Este módulo permite transformar proyectos de construcción en activos digitales comercializables:
+*   **Geolocalización con Mapbox:** Autocompletado de direcciones y captura automática de coordenadas para el motor de mapas.
+*   **Gestión de Atributos:** Sistema de etiquetas dinámicas (JSON) para amenities y características financieras (ROI, inversión mínima).
+*   **Media Asset Library:** Biblioteca centralizada para garantizar la calidad visual en landing pages y brochures.
 
 ---
 
