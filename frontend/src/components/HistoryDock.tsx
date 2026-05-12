@@ -14,31 +14,33 @@ export default function HistoryDock() {
   if (history.length === 0) return null;
 
   return (
-    <div 
-      className="fixed bottom-6 right-6 z-[999] group"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Trigger Area (Invisible corner trigger) */}
-      <div className={cn(
-        "absolute bottom-0 right-0 w-20 h-20 bg-orange-500/5 rounded-full blur-2xl transition-all duration-500 group-hover:scale-150 group-hover:bg-orange-500/10 cursor-pointer",
-        isHovered && "opacity-0"
-      )} />
-      
-      {/* Visual Indicator (Small floating pill) */}
+    <div className="fixed bottom-6 right-6 z-[999]">
+      {/* Trigger Area (Small and precise) */}
       {!isHovered && (
-        <div className="absolute bottom-2 right-2 w-3 h-3 rounded-full bg-orange-500/20 border border-orange-500/40 animate-pulse flex items-center justify-center">
-          <Clock className="w-1.5 h-1.5 text-orange-400" />
+        <div 
+          className="absolute bottom-0 right-0 w-8 h-8 flex items-center justify-center cursor-pointer group"
+          onMouseEnter={() => setIsHovered(true)}
+        >
+          {/* Background glow for the trigger */}
+          <div className="absolute inset-0 bg-orange-500/10 rounded-full blur-xl group-hover:bg-orange-500/20 transition-all duration-500" />
+          
+          {/* Visual Indicator (Small floating pill) */}
+          <div className="w-4 h-4 rounded-full bg-orange-500/20 border border-orange-500/40 animate-pulse flex items-center justify-center relative z-10">
+            <Clock className="w-2 h-2 text-orange-400" />
+          </div>
         </div>
       )}
 
       {/* The Dock */}
-      <div className={cn(
-        "transition-all duration-700 ease-out transform origin-bottom-right",
-        isHovered 
-          ? "opacity-100 translate-y-0 translate-x-0 scale-100" 
-          : "opacity-0 translate-y-10 translate-x-10 scale-50 pointer-events-none"
-      )}>
+      <div 
+        className={cn(
+          "transition-all duration-700 ease-out transform origin-bottom-right",
+          isHovered 
+            ? "opacity-100 translate-y-0 translate-x-0 scale-100" 
+            : "opacity-0 translate-y-10 translate-x-10 scale-50 pointer-events-none"
+        )}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <div className="bg-slate-900/90 backdrop-blur-3xl border border-white/10 rounded-[2rem] p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-2 ring-1 ring-white/5">
           <div className="pl-4 pr-3 py-2 border-r border-white/5 flex flex-col items-start gap-0.5">
             <div className="flex items-center gap-2">

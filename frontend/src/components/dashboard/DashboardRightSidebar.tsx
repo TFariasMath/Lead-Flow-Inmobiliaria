@@ -25,71 +25,51 @@ interface NavIconProps {
   onClick: (view: DashboardView) => void;
 }
 
+import { DashboardDock } from "@/components/ui/DashboardDock";
+
 export function DashboardRightSidebar({ activeView, onViewChange }: DashboardRightSidebarProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
-
   return (
-    <>
-      {/* ── RIGHT TRIGGER AREA (The "Handle") ── */}
-      <div 
-        className="fixed right-0 top-0 bottom-0 w-4 z-[60] cursor-pointer group/trigger"
-        onMouseEnter={() => setIsOpen(true)}
-      >
-        <div className="absolute top-1/2 -translate-y-1/2 right-2 w-2.5 h-20 bg-orange-500/30 rounded-full border border-orange-500/50 shadow-[0_0_20px_rgba(249,115,22,0.4)] group-hover/trigger:h-32 group-hover/trigger:bg-orange-500/50 group-hover/trigger:shadow-[0_0_30px_rgba(249,115,22,0.6)] transition-all duration-500 animate-pulse" />
+    <DashboardDock position="right" className="py-7 flex flex-col items-center">
+      {/* Navigation Icons - Compacted at top like the left one */}
+      <nav className="flex flex-col gap-6 w-full items-center mt-14">
+        <NavIcon 
+          view="PIPELINE" 
+          activeView={activeView} 
+          icon={Target} 
+          label="Pipeline" 
+          onClick={(v) => { onViewChange(v); }} 
+        />
+        <NavIcon 
+          view="OVERVIEW" 
+          activeView={activeView} 
+          icon={LayoutDashboard} 
+          label="Insights" 
+          onClick={(v) => { onViewChange(v); }} 
+        />
+        <NavIcon 
+          view="TRAFFIC" 
+          activeView={activeView} 
+          icon={Globe} 
+          label="Tráfico" 
+          onClick={(v) => { onViewChange(v); }} 
+        />
+        <NavIcon 
+          view="TEAM" 
+          activeView={activeView} 
+          icon={Users} 
+          label="Equipo" 
+          onClick={(v) => { onViewChange(v); }} 
+        />
+      </nav>
+
+      {/* Footer Branding - Fixed at bottom */}
+      <div className="mt-auto flex flex-col items-center gap-6 w-full px-2 pb-2">
+         <div className="w-6 h-px bg-white/10" />
+         <div className="w-10 h-10 rounded-[14px] bg-orange-500/5 border border-orange-500/10 flex items-center justify-center opacity-30">
+            <Zap className="w-5 h-5 text-orange-500" />
+         </div>
       </div>
-
-      {/* ── THE RIGHT SIDEBAR DOCK ── */}
-      <aside 
-        className={cn(
-          "fixed top-3 bottom-3 w-[72px] flex flex-col items-center py-7 bg-[rgba(2,6,23,0.98)] backdrop-blur-3xl border border-white/[0.08] rounded-[2.5rem] z-[70] shadow-[-20px_0_50px_rgba(0,0,0,0.5)] transition-all duration-700 ease-out",
-          isOpen ? "right-3 opacity-100 translate-x-0" : "-right-20 opacity-0 translate-x-full pointer-events-none"
-        )}
-        onMouseLeave={() => setIsOpen(false)}
-      >
-        {/* Decorative top glow - Matching the left one */}
-        <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
-
-        {/* Navigation Icons - Compacted at top like the left one */}
-        <nav className="flex flex-col gap-6 w-full items-center mt-14">
-          <NavIcon 
-            view="OVERVIEW" 
-            activeView={activeView} 
-            icon={LayoutDashboard} 
-            label="Insights" 
-            onClick={(v) => { onViewChange(v); setIsOpen(false); }} 
-          />
-          <NavIcon 
-            view="TRAFFIC" 
-            activeView={activeView} 
-            icon={Globe} 
-            label="Tráfico" 
-            onClick={(v) => { onViewChange(v); setIsOpen(false); }} 
-          />
-          <NavIcon 
-            view="PIPELINE" 
-            activeView={activeView} 
-            icon={Target} 
-            label="Pipeline" 
-            onClick={(v) => { onViewChange(v); setIsOpen(false); }} 
-          />
-          <NavIcon 
-            view="TEAM" 
-            activeView={activeView} 
-            icon={Users} 
-            label="Equipo" 
-            onClick={(v) => { onViewChange(v); setIsOpen(false); }} 
-          />
-        </nav>
-
-        {/* Footer Branding - Fixed at bottom */}
-        <div className="mt-auto flex flex-col items-center gap-6 w-full px-2 pb-2">
-           <div className="w-6 h-px bg-white/10" />
-           <div className="w-10 h-10 rounded-[14px] bg-orange-500/5 border border-orange-500/10 flex items-center justify-center opacity-30">
-              <Zap className="w-5 h-5 text-orange-500" />
-           </div>
-        </div>
-      </aside>
-    </>
+    </DashboardDock>
   );
 }
 

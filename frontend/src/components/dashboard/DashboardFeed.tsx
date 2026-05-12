@@ -26,8 +26,8 @@ export function DashboardFeed({ stats, recentLeads }: DashboardFeedProps) {
           </div>
           <BarChart3 className="w-4 h-4 text-slate-600" />
         </div>
-        <div className="space-y-3">
-          {stats.leads_by_source?.slice(0, 5).map((s: any, i: number) => {
+        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
+          {stats.leads_by_source?.map((s: any, i: number) => {
             const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null;
             return (
               <div
@@ -44,13 +44,13 @@ export function DashboardFeed({ stats, recentLeads }: DashboardFeedProps) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-black text-blue-400">{s.acquisition_share}%</p>
+                  <p className="text-sm font-black text-orange-400">{s.acquisition_share}%</p>
                   <div className="w-20 h-1.5 bg-slate-800 rounded-full mt-1 overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-700 ease-out"
+                      className="h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(234,88,12,0.3)]"
                       style={{
                         width: `${Math.min(s.acquisition_share, 100)}%`,
-                        background: `linear-gradient(90deg, ${s.acquisition_share > 30 ? "#3b82f6" : "#6366f1"}, ${s.acquisition_share > 30 ? "#60a5fa" : "#818cf8"})`,
+                        background: `linear-gradient(90deg, #ea580c, #f59e0b)`,
                       }}
                     />
                   </div>
@@ -74,7 +74,7 @@ export function DashboardFeed({ stats, recentLeads }: DashboardFeedProps) {
           </div>
           <button
             onClick={() => router.push("/dashboard/leads")}
-            className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:underline"
+            className="text-[10px] font-black text-orange-500 uppercase tracking-widest hover:underline"
           >
             Ver Todo
           </button>
@@ -88,7 +88,7 @@ export function DashboardFeed({ stats, recentLeads }: DashboardFeedProps) {
                 onClick={() => router.push(`/dashboard/leads?selected=${lead.id}`)}
                 style={{ animationDelay: `${idx * 80}ms` }}
               >
-                <div className="w-9 h-9 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center text-[10px] font-bold text-white group-hover:bg-blue-600 group-hover:border-blue-500/30 transition-all">
+                <div className="w-9 h-9 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center text-[10px] font-bold text-white group-hover:bg-orange-600 group-hover:border-orange-500/30 transition-all">
                   {lead.first_name.charAt(0)}
                 </div>
                 <div className="flex-1 overflow-hidden">
@@ -103,7 +103,7 @@ export function DashboardFeed({ stats, recentLeads }: DashboardFeedProps) {
                     })}
                   </p>
                 </div>
-                <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-blue-500 transition-colors" />
+                <ArrowUpRight className="w-3 h-3 text-slate-700 group-hover:text-orange-500 transition-colors" />
               </div>
             ))}
           </div>

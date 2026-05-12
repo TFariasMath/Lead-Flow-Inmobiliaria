@@ -8,7 +8,7 @@ from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import Lead, WebhookLog, LandingPage, LandingPageVisit
+from ..models import Lead, WebhookLog, LandingPage, LandingPageVisit, RoundRobinState
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ class DashboardStatsView(APIView):
             webhooks_qs = WebhookLog.objects.all()
 
             vendor_id = request.query_params.get('vendor_id')
+            landing_id = request.query_params.get('landing_id')
 
             if days and days.isdigit():
                 start_date = timezone.now() - timedelta(days=int(days))
@@ -40,6 +41,9 @@ class DashboardStatsView(APIView):
                 leads_qs = leads_qs.filter(assigned_to_id=vendor_id)
             elif not user.is_staff:
                 leads_qs = leads_qs.filter(assigned_to=user)
+
+            if landing_id and landing_id.isdigit():
+                leads_qs = leads_qs.filter(campaign_id=landing_id)
 
             # 1. Agregación Maestro: Contamos estados y métricas críticas en UNA sola consulta
             stale_threshold = timezone.now() - timedelta(hours=24)
@@ -94,11 +98,17 @@ class DashboardStatsView(APIView):
 
             # 4. Métricas de Marketing (Landing Pages)
             visits_qs = LandingPageVisit.objects.all()
+            if landing_id and landing_id.isdigit():
+                visits_qs = visits_qs.filter(landing_page__campaign_id=landing_id)
+
             if days and days.isdigit():
                 visits_count = visits_qs.filter(created_at__gte=start_date).count()
             else:
                 from django.db.models import Sum
-                visits_count = LandingPage.objects.aggregate(total=Sum('visits_count'))['total'] or 0
+                if landing_id and landing_id.isdigit():
+                    visits_count = LandingPage.objects.filter(campaign_id=landing_id).aggregate(total=Sum('visits_count'))['total'] or 0
+                else:
+                    visits_count = LandingPage.objects.aggregate(total=Sum('visits_count'))['total'] or 0
 
             # 5. Datos para el Embudo (Reutilizamos los datos de master_stats)
             funnel_stages = [
@@ -121,8 +131,12 @@ class DashboardStatsView(APIView):
             chart_start = timezone.now() - timedelta(days=chart_days)
 
             # Visitas diarias
+            visits_chart_qs = LandingPageVisit.objects.filter(created_at__gte=chart_start)
+            if landing_id and landing_id.isdigit():
+                visits_chart_qs = visits_chart_qs.filter(landing_page__campaign_id=landing_id)
+            
             daily_visits = (
-                LandingPageVisit.objects.filter(created_at__gte=chart_start)
+                visits_chart_qs
                 .annotate(day=TruncDay('created_at'))
                 .values('day')
                 .annotate(count=Count('id'))
@@ -215,8 +229,32 @@ class PerformanceAnalyticsView(APIView):
                 "won": won,
                 "lost": vendor.lost_count,
                 "conversion_rate": round(conversion_rate, 2),
-                "is_available": getattr(vendor, "vendor_profile", None) and vendor.vendor_profile.is_available_for_leads
+                "is_available": getattr(vendor, "vendor_profile", None) and vendor.vendor_profile.is_available_for_leads,
+                "is_next_in_line": False # Calculado abajo
             })
+            
+        # 8. Identificar quién sigue en el Round Robin
+        active_vendors_ids = [
+            v.id for v in User.objects.filter(
+                is_active=True, 
+                is_staff=False,
+                vendor_profile__is_available_for_leads=True
+            ).order_by('id')
+        ]
+        
+        if active_vendors_ids:
+            state = RoundRobinState.get_state()
+            next_vendor_id = active_vendors_ids[0]
+            
+            if state.last_assigned_user_id in active_vendors_ids:
+                last_index = active_vendors_ids.index(state.last_assigned_user_id)
+                next_index = (last_index + 1) % len(active_vendors_ids)
+                next_vendor_id = active_vendors_ids[next_index]
+            
+            for v_data in data:
+                if v_data["vendor_id"] == next_vendor_id:
+                    v_data["is_next_in_line"] = True
+                    break
             
         # Ordenar el ranking: mejores vendedores primero
         data.sort(key=lambda x: x["conversion_rate"], reverse=True)

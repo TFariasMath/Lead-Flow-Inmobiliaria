@@ -10,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from "recharts";
 import { Activity } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -84,31 +85,77 @@ export function AnalyticsCharts({ stats }: AnalyticsChartsProps) {
             <span className="text-[10px] text-emerald-400 font-black uppercase">Live</span>
           </div>
         </div>
-        <div className="h-[260px] w-full">
+        <div className="h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={statusData} barSize={36}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+            <BarChart data={statusData} barSize={20} margin={{ top: 30, right: 0, left: 0, bottom: 0 }}>
+              <defs>
+                {statusData.map((entry, i) => (
+                  <linearGradient key={`grad-${i}`} id={`barGrad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={entry.fill} stopOpacity={1} />
+                    <stop offset="60%" stopColor={entry.fill} stopOpacity={0.4} />
+                    <stop offset="100%" stopColor={entry.fill} stopOpacity={0.1} />
+                  </linearGradient>
+                ))}
+              </defs>
+              
               <XAxis
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 9, fontWeight: 800 }}
+                tick={{ fill: "#94a3b8", fontSize: 9, fontWeight: 800 }}
+                dy={15}
               />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: "#475569", fontSize: 10 }} />
+              
               <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.02)" }}
-                contentStyle={{
-                  backgroundColor: "#0f172a",
-                  borderRadius: "12px",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  boxShadow: "0 25px 50px rgba(0,0,0,0.5)",
+                cursor={{ fill: "rgba(255,255,255,0.03)", radius: 10 }}
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-[#0f172a]/95 backdrop-blur-2xl border border-white/10 p-3 rounded-xl shadow-2xl ring-1 ring-white/5">
+                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">{data.name}</p>
+                        <p className="text-base font-black text-white">{data.value} <span className="text-[9px] text-slate-500 font-bold ml-1">Leads</span></p>
+                      </div>
+                    );
+                  }
+                  return null;
                 }}
-                itemStyle={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase" }}
               />
-              <Bar dataKey="value" radius={[8, 8, 0, 0]} onClick={handleBarClick} className="cursor-pointer">
+              
+              <Bar 
+                dataKey="value" 
+                radius={[10, 10, 10, 10]} 
+                onClick={handleBarClick} 
+                className="cursor-pointer"
+              >
                 {statusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-80 transition-opacity" />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={`url(#barGrad-${index})`}
+                    stroke={entry.fill}
+                    strokeWidth={1}
+                    strokeOpacity={0.3}
+                    className="hover:brightness-125 transition-all duration-500" 
+                  />
                 ))}
+                {/* Etiqueta de valor elegante sobre la barra */}
+                <LabelList 
+                  dataKey="value" 
+                  position="top" 
+                  content={({ x, y, width, value }: any) => (
+                    <text 
+                      x={x + width / 2} 
+                      y={y - 12} 
+                      fill="white" 
+                      textAnchor="middle" 
+                      fontSize="11" 
+                      fontWeight="900"
+                      className="tracking-tighter"
+                    >
+                      {value}
+                    </text>
+                  )}
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>

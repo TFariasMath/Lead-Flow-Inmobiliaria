@@ -21,6 +21,7 @@ export function useDashboardData(token: string | null, user: any) {
   const [loading, setLoading] = useState(true);
   const [lastLeadId, setLastLeadId] = useState<string | null>(null);
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
+  const [selectedLandingId, setSelectedLandingId] = useState<string>("");
 
   // 1. Initial Load: Performance and Recent Leads
   useEffect(() => {
@@ -47,6 +48,7 @@ export function useDashboardData(token: string | null, user: any) {
     const statsQuery = new URLSearchParams();
     if (timeframe !== "all") statsQuery.set("days", timeframe);
     if (selectedVendorId) statsQuery.set("vendor_id", selectedVendorId);
+    if (selectedLandingId) statsQuery.set("landing_id", selectedLandingId);
     statsQuery.set("_t", Date.now().toString());
 
     getDashboardStats(token, statsQuery.toString())
@@ -55,7 +57,7 @@ export function useDashboardData(token: string | null, user: any) {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [token, timeframe, selectedVendorId]);
+  }, [token, timeframe, selectedVendorId, selectedLandingId]);
 
   // 3. Polling for real-time notifications
   useEffect(() => {
@@ -105,6 +107,8 @@ export function useDashboardData(token: string | null, user: any) {
     loading,
     selectedVendorId,
     setSelectedVendorId,
+    selectedLandingId,
+    setSelectedLandingId,
     handleToggleAvailability,
   };
 }
