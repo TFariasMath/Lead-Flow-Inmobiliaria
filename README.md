@@ -83,9 +83,9 @@ Para fines de evaluación y pruebas en el entorno local, se han pre-configurado 
 
 ---
 
-### 🖥️ Dashboard Estratégico: El Poder de la Vista Única
+### 🖥️ Dashboard
 
-El dashboard principal ha sido diseñado bajo una filosofía de **Control Situacional**, eliminando la fricción de la navegación tradicional para convertir los datos en decisiones instantáneas.
+El dashboard principal ha sido diseñado para ser minimalista.
 
 ![Dashboard Overview](./frontend/public/docs/dashboard1.png)
 
