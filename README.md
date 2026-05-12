@@ -184,10 +184,14 @@ Cuando un bit toca el servidor, se activa un protocolo de tres capas:
 #### 2. Resolución de Identidad (Double Anchor System)
 El motor de búsqueda utiliza un sistema de **Doble Ancla** para resolver el problema de la mutación de datos de contacto, garantizando que un prospecto sea reconocido incluso años después de su primer contacto.
  
-*   **Ancla Inmutable (`original_email`):** Se captura en la primera interacción y es de solo lectura. Funciona como la "huella genética" del lead y es la clave primaria lógica para la unificación.
-*   **Ancla Fluida (`contact_email`):** Es el correo que el vendedor edita para la gestión comercial activa.
+*   **Ancla Inmutable (`original_email`):** Se captura en la primera interacción y es de solo lectura. Funciona como la "huella genética" del lead y es la clave primaria lógica para la unificación (**Búsqueda hacia el pasado**).
+*   **Ancla Fluida (`contact_email`):** Es el correo que el vendedor edita para la gestión comercial activa. Permite que el sistema reconozca al lead si este re-ingresa usando una identidad que el vendedor ya "mapeó" manualmente (**Búsqueda en el presente**).
  
-**Escenario de Robustez:** Si un lead entra con su correo personal, el vendedor lo cambia a uno corporativo y meses después el lead vuelve a entrar por una campaña usando su correo personal, el sistema ejecutará una búsqueda con lógica de unión (`Q OR`). Al encontrar coincidencia en el ancla inmutable (`original_email`), el sistema **unifica la información** en la ficha existente en lugar de crear un duplicado, preservando todo el historial de interacciones y scoring acumulado.
+**Sinergia de la lógica `Q(OR)`:**
+1.  **Reconocimiento por Origen:** Si el lead vuelve a usar su correo de hace 3 años (aunque el vendedor lo haya cambiado en la ficha), el sistema lo encuentra por su "huella genética" (`original_email`).
+2.  **Reconocimiento por Evolución:** Si el lead entra con un nuevo correo corporativo que el vendedor registró ayer en la ficha de contacto, el sistema lo identifica inmediatamente por su "identidad evolucionada" (`contact_email`).
+ 
+En ambos escenarios, el sistema evita el duplicado y anexa la nueva interacción al historial existente, manteniendo la integridad del **Customer Journey** completo.
  
 #### 3. Motor Round Robin Determinista
 La asignación no es aleatoria. El sistema consulta el `RoundRobinState` bloqueando el registro de estado para garantizar que el puntero de asignación sea único y equitativo, incluso si entran 100 leads simultáneamente.
