@@ -241,40 +241,25 @@ El **Modo Quirófano** es la herramienta de última instancia para garantizar qu
 
 ---
 
-### 🛡️ Lead Forge Pro: Nodo de Resiliencia y Auditoría
+### 🛡️ Lead Forge: Probador de Webhooks
 
-**Lead Forge Pro** no es solo un generador de datos; es una consola de ingeniería diseñada para certificar la robustez del sistema bajo condiciones extremas. Actúa como un agente externo que simula el tráfico real de internet para poner a prueba la lógica de negocio y la infraestructura del CRM.
+Esta herramienta sirve para verificar que el sistema recibe y procesa correctamente los leads que llegan desde servicios externos.
 
-#### 🏗️ Propósito y Filosofía
-En un entorno de producción, los leads llegan desde múltiples APIs externas (Meta, Google, Calendly) con formatos impredecibles y en ráfagas de alta concurrencia. **Lead Forge Pro** permite anticipar fallos mediante:
-*   **Simulación de Tráfico Sintético:** Generación de perfiles realistas mediante la librería `Faker` (localización multilingüe).
-*   **Certificación de Lógica:** Pruebas de "fuego" para el sistema de **Doble Ancla**, asegurando que la de-duplicación funcione incluso si los datos llegan desordenados.
-*   **Stress Testing (Chaos Mode):** Capacidad de inundar el backend con hasta 100 hilos concurrentes para medir el punto de ruptura del servidor.
+#### ¿Qué hace esta herramienta?
+Simula el envío de datos reales desde plataformas como Calendly o Mailchimp hacia el CRM. Es útil para:
+*   **Probar la recepción:** Confirmar que los datos entran correctamente al sistema y se guardan en la base de datos.
+*   **Validar la identidad:** Verificar que el sistema no duplique a una persona si llega desde distintas fuentes (ej. primero por Mailchimp y luego por Calendly).
+*   **Pruebas de carga:** Ver cómo reacciona el servidor y la base de datos si entran muchos leads al mismo tiempo.
 
-#### 🧬 Módulos de Auditoría
+#### ⚙️ ¿Cómo funciona la recepción (`api/v1/webhooks/receive/`)?
+Cuando un servicio externo envía datos a esta dirección del servidor, el CRM realiza los siguientes pasos:
+1.  **Identificación:** Revisa el origen del dato para saber qué formato tiene (Mailchimp, Calendly, etc.).
+2.  **Traducción:** Convierte los datos externos al formato que entiende el CRM.
+3.  **Búsqueda (Doble Ancla):** Busca en la base de datos si el lead ya existe comparando tanto el correo original como el de contacto actual.
+4.  **Acción:** Si el lead es nuevo, lo crea y lo asigna a un vendedor por Round Robin. Si ya existe, actualiza su ficha y registra la nueva actividad.
+5.  **Log de Auditoría:** Guarda el mensaje original (JSON) en un historial de webhooks. Si algo falla, un administrador puede editarlo y volver a procesarlo.
 
-1.  **Inyector Multi-Fuente (Emulación de Canales):**
-    Este módulo no envía datos planos; emula los **objetos JSON reales** de proveedores específicos:
-    *   **Calendly:** Simula eventos de agendamiento con estructuras anidadas complejas.
-    *   **Mailchimp:** Emula webhooks de marketing con campos "merges" dinámicos.
-    *   **Direct API:** Prueba la ingesta cruda del CRM.
-    *   *Métrica:* Permite visualizar la **latencia de respuesta** del backend por cada fuente.
-
-2.  **Laboratorio de Identidad (Doble Ancla):**
-    Diseñado para certificar la unificación de leads. Permite realizar un "Ataque de Identidad" donde se envía el mismo lead desde dos fuentes distintas (ej. primero Mailchimp, luego Calendly). El administrador puede verificar en tiempo real si el CRM fue capaz de reconocer al individuo y anexar la actividad a una sola ficha, evitando la contaminación de la base de datos con duplicados.
-
-3.  **Stress Hydra (Pruebas de Carga Masiva):**
-    Utiliza un motor de ejecución paralela (`concurrent.futures`) para lanzar ataques de volumen (100 a 1000 leads). 
-    *   **RPS (Requests per Second):** Mide el rendimiento de ingesta bruta.
-    *   **P99 Latency:** Identifica el tiempo de respuesta del 1% de las peticiones más lentas, crucial para detectar cuellos de botella en PostgreSQL o en los workers de Django Q.
-
-#### 🔌 Conectividad y Flujo de Datos
-La herramienta opera de forma independiente al CRM, conectándose exclusivamente a través del **Webhook Gateway** (`/api/v1/webhooks/receive/`). 
-*   **Handshake de Seguridad:** La consola realiza un monitoreo constante (*System Pulse*) mediante peticiones GET al backend para asegurar que la conexión está "Healthy" antes de iniciar cualquier prueba de carga.
-*   **Arquitectura Desacoplada:** Al ser una aplicación en **Streamlit**, puede ejecutarse desde una máquina externa para simular latencia de red real, ofreciendo una visión objetiva del rendimiento del servidor de producción.
-
-#### 🛠️ Cómo Ejecutar
-Para iniciar la consola de resiliencia:
+#### Cómo usarlo:
 ```bash
 cd tools/lead-generator
 streamlit run lead_forge.py
