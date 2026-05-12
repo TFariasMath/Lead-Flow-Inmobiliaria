@@ -272,6 +272,11 @@ Este módulo es el núcleo del inventario de la plataforma. Permite transformar 
  
 ![Catálogo de Propiedades](./frontend/public/docs/propiedades.png)
  
+#### Visualización Estratégica:
+![Ficha de Propiedad](./frontend/public/docs/propiedad.png)
+![Distribución Geográfica](./frontend/public/docs/mapa.png)
+![Detalle de Ubicación](./frontend/public/docs/mapa0.png)
+ 
 #### Características Técnicas y Arquitectura:
 *   **Geolocalización Inteligente (Mapbox Inside):** El formulario integra la API de **Mapbox Geocoding**. A medida que se escribe la dirección, el sistema sugiere ubicaciones reales e inyecta automáticamente las coordenadas de latitud y longitud.
 *   **Motor de Métricas Financieras:** Gestión de retornos de inversión (ROI) proyectados y montos mínimos de inversión que se inyectan dinámicamente en los PDFs de venta.
