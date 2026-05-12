@@ -218,6 +218,33 @@ El **Modo Quirófano** es la herramienta de última instancia para garantizar qu
 1.  **Intervención Directa:** Cuando un lead falla por datos mal formados, el administrador puede abrir el registro y acceder al JSON crudo.
 2.  **Edición Quirúrgica:** Permite modificar el contenido del mensaje recibido directamente en la interfaz para corregir campos faltantes o errores de sintaxis.
 3.  **Reprocesamiento Forzado:** Al guardar los cambios, el sistema permite re-ejecutar la lógica de creación de leads sobre el dato corregido, recuperando la oportunidad comercial de forma instantánea.
+ 
+---
+ 
+### 🚀 En Desarrollo: Catálogo de Activos Inmobiliarios
+ 
+Este módulo es el núcleo del inventario de la plataforma. Permite transformar proyectos de construcción en activos digitales listos para ser comercializados mediante brochures dinámicos y landing pages.
+ 
+![Catálogo de Propiedades](./frontend/public/docs/propiedades.png)
+ 
+#### Visualización Estratégica:
+![Ficha de Propiedad](./frontend/public/docs/propiedad.png)
+![Distribución Geográfica](./frontend/public/docs/mapa.png)
+![Detalle de Ubicación](./frontend/public/docs/mapa0.png)
+ 
+#### Características Técnicas y Arquitectura:
+*   **Geolocalización Inteligente (Mapbox Inside):** El formulario integra la API de **Mapbox Geocoding**. A medida que se escribe la dirección, el sistema sugiere ubicaciones reales e inyecta automáticamente las coordenadas de latitud y longitud.
+*   **Motor de Métricas Financieras:** Gestión de retornos de inversión (ROI) proyectados y montos mínimos de inversión que se inyectan dinámicamente en los PDFs de venta.
+*   **Gestión de Atributos (Amenities):** Sistema de etiquetado dinámico (Tags) almacenado como JSON, permitiendo flexibilidad total en las características del proyecto.
+*   **Media Asset Library:** Integración con una biblioteca centralizada de medios para garantizar la calidad visual en todos los brochures generados.
+ 
+#### Stack Tecnológico:
+*   **Frontend:** Next.js + Tailwind CSS con estados de alta precisión.
+*   **Mapas:** Mapbox GL JS / Places API para normalización de direcciones.
+*   **Backend:** Modelos de Django con soporte para campos JSON y geocoordenadas.
+ 
+---
+
 
 
 ---
@@ -264,30 +291,5 @@ bash run_linux.sh
 - `/tools`: Lead Forge Pro (Streamlit).
 - `/scripts`: Automatización de base de datos y scripts de stress test.
 
----
- 
-### 🚀 En Desarrollo: Catálogo de Activos Inmobiliarios
- 
-Este módulo es el núcleo del inventario de la plataforma. Permite transformar proyectos de construcción en activos digitales listos para ser comercializados mediante brochures dinámicos y landing pages.
- 
-![Catálogo de Propiedades](./frontend/public/docs/propiedades.png)
- 
-#### Visualización Estratégica:
-![Ficha de Propiedad](./frontend/public/docs/propiedad.png)
-![Distribución Geográfica](./frontend/public/docs/mapa.png)
-![Detalle de Ubicación](./frontend/public/docs/mapa0.png)
- 
-#### Características Técnicas y Arquitectura:
-*   **Geolocalización Inteligente (Mapbox Inside):** El formulario integra la API de **Mapbox Geocoding**. A medida que se escribe la dirección, el sistema sugiere ubicaciones reales e inyecta automáticamente las coordenadas de latitud y longitud.
-*   **Motor de Métricas Financieras:** Gestión de retornos de inversión (ROI) proyectados y montos mínimos de inversión que se inyectan dinámicamente en los PDFs de venta.
-*   **Gestión de Atributos (Amenities):** Sistema de etiquetado dinámico (Tags) almacenado como JSON, permitiendo flexibilidad total en las características del proyecto.
-*   **Media Asset Library:** Integración con una biblioteca centralizada de medios para garantizar la calidad visual en todos los brochures generados.
- 
-#### Stack Tecnológico:
-*   **Frontend:** Next.js + Tailwind CSS con estados de alta precisión.
-*   **Mapas:** Mapbox GL JS / Places API para normalización de direcciones.
-*   **Backend:** Modelos de Django con soporte para campos JSON y geocoordenadas.
- 
- 
 ---
 **Lead Flow Engineering** &copy; 2026 - *The Future of Real Estate Data Management*
