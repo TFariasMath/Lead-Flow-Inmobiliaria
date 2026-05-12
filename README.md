@@ -110,6 +110,28 @@ El sistema de distribución de leads es el corazón operativo de **Lead Flow**. 
 ![Round Robin Management](./frontend/public/docs/round_robin.png)
 
 #### Mecanismo de Funcionamiento:
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    
+    state "NODO DE DISTRIBUCIÓN (COLA CIRCULAR)" as RR {
+        [*] --> Maria
+        Maria --> Carlos : Siguiente Turno
+        Carlos --> Ana : Siguiente Turno
+        Ana --> Maria : Cierre de Ciclo (Reset)
+    }
+
+    state "LÓGICA DE ASIGNACIÓN" as Logic {
+        direction TB
+        Lead_Entrante --> Validar_Puntero
+        Validar_Puntero --> Evaluar_Disponibilidad
+        Evaluar_Disponibilidad --> Asignar_Vendedor
+    }
+
+    note right of Carlos : Un vendedor en modo 'OUT' es omitido automáticamente por el sistema
+```
+
 1.  **Algoritmo de Rotación:** El sistema mantiene un puntero global (`RoundRobinState`) que apunta al último vendedor que recibió un lead. El siguiente prospecto se asigna automáticamente al siguiente vendedor en la lista circular.
 2.  **Gestión de Disponibilidad en Tiempo Real:** 
     *   Los administradores pueden activar o desactivar vendedores del flujo de reparto con un solo clic (botón de "Rayito").
@@ -118,6 +140,21 @@ El sistema de distribución de leads es el corazón operativo de **Lead Flow**. 
     *   **Badge "SIGUIENTE":** Identifica visualmente al vendedor que recibirá el próximo lead entrante, permitiendo al equipo prepararse para la acción.
     *   **Badge "OUT":** Indica claramente quién está fuera de la rotación actual, permitiendo una gestión de turnos eficiente.
 4.  **Sincronización de Datos:** Cada cambio en la disponibilidad del equipo se refleja instantáneamente en el dashboard mediante un sistema de hidratación de datos optimizado, garantizando que el "Siguiente en línea" sea siempre preciso.
+ 
+---
+ 
+### ➕ Nuevo Lead: Creación y Validación Inteligente
+ 
+El sistema permite la captura manual de prospectos a través de una interfaz optimizada que garantiza la integridad de los datos desde el primer segundo.
+ 
+![Creación de Nuevo Lead](./frontend/public/docs/nuevo_lead.png)
+ 
+#### Tecnología y Funcionamiento (Deep Dive):
+*   **Arquitectura de Formulario (Formik + Yup):** Utilizamos **Formik** para la gestión de estados complejos y **Yup** para la validación declarativa de esquemas. Esto garantiza que ningún dato mal formado llegue al servidor.
+*   **Persistencia de Borradores:** Implementa `FormikPersist` para guardar el estado del formulario en `localStorage`. Si el usuario navega fuera o refresca la página, los datos ingresados no se pierden.
+*   **Validación de Identidad (Double Anchor):** Al intentar crear un lead, el sistema ejecuta una búsqueda cruzada instantánea en la base de datos para detectar si el prospecto ya existe (por `original_email` o teléfono), evitando la creación de registros duplicados.
+*   **Normalización de Datos:** El frontend procesa automáticamente los códigos de país y limpia los formatos telefónicos antes de la inyección en la base de datos.
+*   **Disparo de Reparto Automático:** Una vez validado, el lead es procesado por el motor de **Round Robin** e inyectado inmediatamente en el flujo de trabajo del vendedor asignado.
 
 
 ---
