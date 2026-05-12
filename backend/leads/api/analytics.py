@@ -185,6 +185,10 @@ class DashboardStatsView(APIView):
             leads_via_api = leads_qs.filter(webhook_logs__isnull=False).distinct().count()
             leads_manual = total_leads_count - leads_via_api
 
+            # 8. Métricas de Marketing Globales (Calculadas)
+            total_budget = Campaign.objects.filter(is_active=True).aggregate(total=Sum('budget'))['total'] or 0
+            global_conversion = (total_leads_count / visits_count * 100) if visits_count > 0 else 0
+
             data = {
                 "total_leads": total_leads_count,
                 "leads_via_api": leads_via_api,
@@ -199,6 +203,8 @@ class DashboardStatsView(APIView):
                 "stale_leads_count": master_stats["stale_count"],
                 "funnel_data": funnel_data,
                 "visits_over_time": visits_over_time,
+                "global_conversion": round(global_conversion, 1),
+                "total_budget": total_budget,
                 "status": "healthy"
             }
             return Response(data)

@@ -47,16 +47,21 @@ class PropertySerializer(serializers.ModelSerializer):
 class CampaignSerializer(serializers.ModelSerializer):
     """Representación de una campaña comercial (ej: Inversión 2024)."""
     properties_details = PropertySerializer(source="properties", many=True, read_only=True)
+    leads_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Campaign
         fields = [
             "id", "name", "slug", "budget", "is_active", 
             "start_date", "end_date", "properties", "properties_details", 
+            "leads_count",
             "brochure_title", "brochure_description", "brochure_features",
             "created_at"
         ]
         read_only_fields = ["id", "created_at"]
+
+    def get_leads_count(self, obj):
+        return obj.leads.count()
 
 
 # ─── Historial de Eventos ────────────────────────────────────────────────────

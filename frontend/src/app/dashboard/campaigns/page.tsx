@@ -26,23 +26,27 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { useDashboardData } from "@/hooks/useDashboardData";
+
 export default function CampaignsPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [search, setSearch] = useState("");
+
+  const { stats, loading: loadingStats } = useDashboardData(token, user);
 
   const fetchCampaigns = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
+    setLoadingCampaigns(true);
     try {
       const data = await getCampaigns(token);
       setCampaigns(data.results || []);
     } catch (err) {
       console.error("Error fetching campaigns:", err);
     } finally {
-      setLoading(false);
+      setLoadingCampaigns(false);
     }
   }, [token]);
 
@@ -54,6 +58,11 @@ export default function CampaignsPage() {
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const formatBudget = (budget: number) => {
+    if (budget >= 1000) return `$${(budget / 1000).toFixed(1)}k`;
+    return `$${budget}`;
+  };
+
   return (
     <div className="space-y-8 animate-fadeIn pb-12">
       
@@ -61,8 +70,18 @@ export default function CampaignsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 stagger-children">
         <MiniCard icon={Target} label="Campañas" value={campaigns.length} color="#3b82f6" />
         <MiniCard icon={Activity} label="En Ejecución" value={campaigns.filter(c => c.is_active).length} color="#10b981" />
-        <MiniCard icon={TrendingUp} label="Conversión Global" value="8.4%" color="#f59e0b" trend="+0.5%" />
-        <MiniCard icon={Zap} label="Inversión Estimada" value="$12.4k" color="#6366f1" />
+        <MiniCard 
+          icon={TrendingUp} 
+          label="Conversión Global" 
+          value={stats ? `${stats.global_conversion}%` : "0%"} 
+          color="#f59e0b" 
+        />
+        <MiniCard 
+          icon={Zap} 
+          label="Presupuesto Total" 
+          value={stats ? formatBudget(stats.total_budget) : "$0"} 
+          color="#6366f1" 
+        />
       </div>
 
       {/* ── Header Section ── */}
@@ -97,7 +116,7 @@ export default function CampaignsPage() {
 
       {/* ── Campaigns Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 stagger-children">
-        {loading ? (
+        {loadingCampaigns || loadingStats ? (
           <div className="col-span-full py-40 flex flex-col items-center gap-4">
             <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando Motores...</p>
@@ -160,7 +179,7 @@ export default function CampaignsPage() {
                 <div className="flex items-center justify-between pt-6 border-t border-white/[0.04]">
                   <div className="flex flex-col">
                     <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Prospectos</span>
-                    <span className="text-lg font-black text-white">458</span>
+                    <span className="text-lg font-black text-white">{campaign.leads_count || 0}</span>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-slate-600 group-hover:text-white group-hover:bg-blue-600 transition-all">
                     <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
