@@ -17,6 +17,7 @@ import { DashboardFeed } from "@/components/dashboard/DashboardFeed";
 import { TeamSection } from "@/components/dashboard/TeamSection";
 import { DashboardTopDrawer } from "@/components/dashboard/DashboardTopDrawer";
 import { DashboardRightSidebar, type DashboardView } from "@/components/dashboard/DashboardRightSidebar";
+import HistoryDock from "@/components/HistoryDock";
 
 export default function DashboardPage() {
   const { token, user } = useAuth();
@@ -95,6 +96,7 @@ export default function DashboardPage() {
               onViewChange={setActiveView} 
             />
             <DashboardTopDrawer stats={stats} />
+            <HistoryDock />
           </>,
           document.body
         )
