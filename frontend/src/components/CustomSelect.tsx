@@ -84,20 +84,19 @@ export default function CustomSelect({
       <div
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "input-premium cursor-pointer flex items-center justify-between gap-2 group select-none",
+          "input-premium cursor-pointer flex items-center justify-between gap-3 group select-none",
           isOpen && "border-blue-500/50 shadow-lg shadow-blue-500/10",
-          variant === "badge" && selectedOption?.badgeClass && cn("py-1 h-auto", selectedOption.badgeClass),
-          icon && "pl-12"
+          variant === "badge" && selectedOption?.badgeClass && cn("py-1 h-auto", selectedOption.badgeClass)
         )}
       >
-        <div className="flex items-center gap-2 overflow-hidden">
+        <div className="flex items-center gap-2.5 overflow-hidden">
           {icon && (
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-blue-400 transition-colors">
+            <div className="shrink-0 text-slate-500 group-hover:text-blue-400 transition-colors">
               {icon}
             </div>
           )}
           <span className={cn(
-            "truncate",
+            "truncate text-xs font-bold",
             !selectedOption && "text-slate-500",
             variant === "badge" && "font-black"
           )}>
@@ -105,7 +104,7 @@ export default function CustomSelect({
           </span>
         </div>
         <ChevronDown className={cn(
-          "w-4 h-4 text-slate-500 transition-transform duration-300",
+          "w-3.5 h-3.5 text-slate-500 transition-transform duration-300 shrink-0",
           isOpen && "rotate-180 text-blue-400"
         )} />
       </div>

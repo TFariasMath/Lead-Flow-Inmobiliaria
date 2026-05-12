@@ -221,22 +221,23 @@ El **Modo Quirófano** es la herramienta de última instancia para garantizar qu
  
 ---
  
-### 👤 Ficha del Lead: El Centro de Mando Operativo
- 
-La ficha individual es el corazón de la gestión. Diseñada bajo una estética *ultra-moderna*, permite al vendedor tener una visión de 360 grados de cada oportunidad sin perder el contexto técnico.
- 
-![Ficha del Lead](./frontend/public/docs/lead.png)
- 
-#### 🧬 Anatomía de la Ficha:
-*   **Motor de Resolución de Identidad (Double Anchor):** Gestión dual entre el `original_email` (inmutable) y el `contact_email` (comercial) para evitar duplicados históricos.
-*   **Timeline de Interacciones Dinámico:** Línea de tiempo vertical que registra cada punto de contacto, con capacidad de inspeccionar el JSON crudo original para auditoría técnica.
-*   **Historial de Cambios (Audit Trail):** Registro de auditoría que muestra exactamente qué campos fueron modificados, por quién y en qué fecha, con visualización de diferencias (diff).
-*   **Gestión de Scoring y Tracking:** Visualización de parámetros UTM y asignación dinámica de vendedores mediante roles (RBAC).
- 
-#### 🛠️ Tecnología de Interfaz:
-*   **Formularios Atómicos:** Gestionados con **Formik** y validados con **Yup** para integridad total de datos.
-*   **Animaciones de Capa:** Transiciones suaves entre Timeline e Historial mediante **Tailwind CSS**.
-*   **RBAC Integrado:** La visibilidad de campos sensibles y acciones de edición cambian dinámicamente según el rol del usuario (Admin vs Vendedor).
+### 🚀 Módulo de Leads: Centro de Gestión Comercial
+
+Este módulo es la herramienta principal de trabajo diario. Está diseñada para centralizar todos los prospectos y permitir una gestión rápida y eficiente del ciclo de vida de cada venta.
+
+![Listado de Leads](./imagenes/lead.png)
+
+#### 🏗️ Estructura y Funcionamiento:
+*   **Filtros y Segmentación:** Permite buscar por texto y filtrar por estado, fuente de origen (landing pages) y vendedor asignado. Incluye un acceso rápido para leads "estancados" (sin actividad en las últimas 24 horas).
+*   **Listado Virtualizado:** Utiliza `@tanstack/react-virtual` para gestionar cientos de registros sin perder rendimiento, asegurando un desplazamiento suave y una carga inmediata.
+*   **Visualización Dual:** El usuario puede alternar entre una tabla detallada para gestión masiva y una vista Kanban para el seguimiento visual del flujo de ventas.
+*   **Edición Rápida:** Los estados y asignaciones se pueden modificar directamente desde la lista, lo que agiliza la actualización del pipeline sin necesidad de navegar a otras pantallas.
+*   **Acciones por Lote:** Permite seleccionar múltiples registros para reasignar vendedores o cambiar estados de forma masiva.
+
+#### 🛠️ Tecnología Utilizada:
+*   **Frontend:** React y Next.js con una arquitectura de hooks personalizados para separar la lógica de los componentes.
+*   **Sincronización:** Uso de **SWR** para mantener los datos actualizados en tiempo real y **useSearchParams** para que los filtros se reflejen en la URL.
+*   **Diseño:** Interfaz oscura basada en **Tailwind CSS**, enfocada en la claridad de los indicadores de estado y la densidad de información.
  
 ---
  

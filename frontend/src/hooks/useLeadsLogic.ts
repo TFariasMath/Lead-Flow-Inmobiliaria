@@ -52,6 +52,7 @@ export function useLeadsLogic() {
   const { data: sourcesData } = useData<PaginatedResponse<Source>>("/sources");
   const { data: campaignsData } = useData<PaginatedResponse<Campaign>>("/campaigns");
   const { data: usersData } = useData<User[]>("/users");
+  const { data: dashboardStats, mutate: mutateStats } = useData<any>("/dashboard/stats");
 
   useEffect(() => {
     const autoId = searchParams.get("id");
@@ -183,6 +184,8 @@ export function useLeadsLogic() {
     toggleSelectAll,
     toggleSelect,
     handleExportCSV,
-    leadsData
+    leadsData,
+    dashboardStats,
+    mutateStats
   };
 }
