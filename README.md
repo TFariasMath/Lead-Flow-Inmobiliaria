@@ -94,7 +94,14 @@ El dashboard principal ha sido diseñado bajo una filosofía de **Control Situac
 #### 🎴 Navegación Inmersiva y Paneles de Control
 El sistema utiliza una arquitectura de paneles deslizables (*Drawers*) diseñados para mantener el enfoque operativo mientras se accede a capas profundas de datos:
 
-*   **Sidebar (Navegación Primaria - Eje Central):** Ubicado de forma persistente a la izquierda, actúa como la columna vertebral del sistema. Desde aquí se orquesta el movimiento entre los módulos core (Gestión de Leads, Configuración de Campañas y Catálogo de Propiedades). Implementa una navegación inteligente con estados activos que mantienen al usuario ubicado en todo momento.
+*   **Sidebar (Navegación Primaria - Eje Central):** Una pieza de ingeniería visual diseñada bajo el concepto de **"Macro-Módulos"**. No es una barra estática, sino una interfaz dinámica que se oculta y revela mediante un área de disparo (*trigger*) sensible al movimiento.
+    *   **Estructura y Estética:** Implementa un diseño *Glassmorphism Pro* con fondo ultra-oscuro y desenfoque *backdrop-blur-3xl*. Cuenta con una jerarquía vertical clara: Perfil de Usuario en la cima, Macro-Grupos operativos al centro y branding de marca en la base.
+    *   **Navegación por Macro-Grupos:**
+        *   **Módulo Gestión (`leads`):** Centraliza el Dashboard, el Listado Maestro de leads y el acceso al Formulario de Alta (Formik+Yup).
+        *   **Módulo Marketing (`marketing`):** (Admin Only) Orquesta Landing Pages dinámicas, Campañas de Brochures PDF y el Catálogo de Propiedades.
+        *   **Módulo Laboratorio (`lab`):** (Admin Only) Espacio técnico para analíticas de rendimiento, Email Sandbox y Webhook Logs (Modo Quirófano).
+        *   **Módulo Ajustes (`config`):** (Admin Only) Control total sobre Usuarios y Roles (RBAC).
+    *   **Funcionalidades Inteligentes:** Incluye *Active Indicators* visuales para ubicación espacial, flyouts de perfil para gestión de sesión y *Data Prefetching* automático al hacer hover sobre los módulos para una carga instantánea.
 *   **Right Sidebar (Panel de Contexto Operativo):** Desliza desde la derecha para ofrecer una visión en tiempo real del "ahora" del negocio. Alberga el **Performance Node**, donde se gestiona la disponibilidad del equipo y el estado del Round Robin, junto con un **Feed de Actividad** que registra cada interacción crítica a medida que ocurre.
 *   **Top Drawer (Métricas de Tráfico - Análisis Elevado):** Invocado desde la parte superior, este panel despliega el análisis técnico del pulso digital. Permite auditar el rendimiento de cada landing page y visualizar picos de tráfico sin necesidad de abandonar la lista de trabajo actual, ideal para supervisiones rápidas.
 *   **Dashboard Dock (Historial Rápido - Memoria de Trabajo):** Situado en la esquina inferior derecha, funciona como una "memoria de acceso rápido". Registra automáticamente los últimos leads visitados, permitiendo saltar de vuelta a una negociación previa con un solo clic, eliminando la necesidad de re-busquedas constantes.
