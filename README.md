@@ -1,6 +1,6 @@
-# Lead Flow - Enterprise Real Estate CRM & Ingestion Suite
+# Lead Flow
 
-**Lead Flow** es una plataforma de grado empresarial diseñada para la gestión de inversiones inmobiliarias a gran escala. No es solo un CRM, sino una suite completa de ingeniería de datos que centraliza la captura, resolución de identidad y distribución de prospectos comerciales desde múltiples canales digitales.
+**Lead Flow** es una plataforma diseñada para la gestión de inversiones inmobiliarias a gran escala. Es una suite completa de ingeniería de datos que centraliza la captura, resolución de identidad y distribución de prospectos comerciales desde múltiples canales digitales.
 
 ---
 
