@@ -171,6 +171,24 @@ Para mantener un control total sobre el flujo de datos, **Lead Flow** implementa
  
 ---
  
+### 🏗️ Arquitectura de Resiliencia (Bajo el Capó)
+ 
+La robustez de **Lead Flow** no es accidental; es el resultado de una arquitectura diseñada para soportar alta concurrencia y picos de tráfico masivos.
+ 
+#### 1. Ingesta Atómica de Webhooks
+Cuando un bit toca el servidor, se activa un protocolo de tres capas:
+*   **Aislamiento (Isolation):** El webhook se guarda inmediatamente como un `WebhookLog` crudo. El sistema responde `200 OK` en <50ms para evitar timeouts del proveedor externo (Meta, Google).
+*   **Procesamiento Asíncrono:** La lógica pesada se delega a **Django Q (Workers)**, permitiendo que el backend siga recibiendo datos mientras los procesos previos se ejecutan en segundo plano.
+*   **Bloqueo de Base de Datos (Select For Update):** Para evitar que dos webhooks del mismo lead al mismo milisegundo creen duplicados, el sistema usa bloqueos de fila (`FOR UPDATE`) en PostgreSQL. El primer proceso "atrapa" al lead y los demás deben esperar en cola.
+ 
+#### 2. Resolución de Identidad (Double Anchor)
+El motor de búsqueda utiliza un sistema de **Anclas de Identidad** (Email y Teléfono) con lógica de unión (`Q OR`). Esto permite que un lead sea identificado correctamente incluso si cambia su punto de contacto principal entre una sesión y otra.
+ 
+#### 3. Motor Round Robin Determinista
+La asignación no es aleatoria. El sistema consulta el `RoundRobinState` bloqueando el registro de estado para garantizar que el puntero de asignación sea único y equitativo, incluso si entran 100 leads simultáneamente.
+ 
+---
+ 
 ### 🩺 Recuperación Crítica (Modo Quirófano)
  
 El **Modo Quirófano** es la herramienta de última instancia para garantizar que ningún lead se pierda por problemas de formato o cambios inesperados en las APIs externas.
