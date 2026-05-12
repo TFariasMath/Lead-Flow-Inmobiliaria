@@ -79,7 +79,7 @@ Para fines de evaluación y pruebas en el entorno local, se han pre-configurado 
 *   **Administrador Maestro:** 
     *   **Terminal ID:** `admin`
     *   **Security Key:** `123`
-*   **Agentes de Ventas:** El sistema cuenta con perfiles de vendedores (`maria`, `carlos`, `ana` con clave `123`), aunque sus vistas específicas están en proceso de refinamiento final para alcanzar el estándar "quirúrgico" del dashboard principal.
+*   **Agentes de Ventas:** El sistema cuenta con perfiles de vendedores (`maria`, `carlos`, `ana` con clave `123`), aunque sus vistas específicas están en proceso de desarrollo.
 
 ---
 
