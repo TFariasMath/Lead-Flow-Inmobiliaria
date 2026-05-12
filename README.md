@@ -291,6 +291,33 @@ Este módulo permite transformar proyectos de construcción en activos digitales
 
 ---
 
+### 📂 Ecosistema de Marketing e Inventario
+
+El sistema organiza la captación y el inventario de forma circular para asegurar que cada lead reciba la información exacta que busca:
+
+#### 🎯 Campañas: El Eje Central
+La **Campaña** es la entidad que define la estrategia. Centraliza el presupuesto y, lo más importante, el **catálogo de activos** que se quiere promocionar. 
+*   **Contenido Dinámico:** La campaña define los textos y beneficios que se inyectarán en los Brochures PDF.
+*   **Relación con Inventario:** Una campaña puede agrupar múltiples propiedades (ej: "Especial Inversión 2024").
+
+#### 🌐 Landing Pages: Puntos de Captura
+Cada campaña puede tener múltiples **Landing Pages** activas simultáneamente. Esto permite realizar pruebas A/B o segmentar por canal:
+*   **Personalización Visual:** Cada landing define su propio color primario, imágenes y estructura de beneficios.
+*   **Vínculo Técnico:** Al estar asociada a una campaña, cualquier lead que entre por la landing recibirá automáticamente el catálogo de propiedades de dicha campaña.
+
+#### 🏠 Propiedades: El Catálogo Maestro
+Es el inventario físico del CRM. Cada propiedad es un activo digital completo con:
+*   **Datos Financieros:** ROI estimado, inversión mínima y fechas de entrega.
+*   **Geolocalización:** Coordenadas exactas que el motor de PDF usa para generar mapas de ubicación automáticos.
+*   **Vínculo con Campañas:** Una misma propiedad puede participar en diferentes campañas de marketing de forma independiente.
+
+#### 🔄 El Flujo de Datos
+1.  **Captura:** El usuario llega a una **Landing Page** y deja sus datos.
+2.  **Vinculación:** El sistema crea el **Lead** y le asigna la **Campaña** y la **Fuente** de esa landing.
+3.  **Entrega:** El motor de automatización detecta la campaña, extrae las **Propiedades** vinculadas a ella y genera el PDF personalizado que se le envía al lead por correo.
+
+---
+
 ## 🛠️ Guía de Instalación y Despliegue
 
 ### Requisitos Previos
