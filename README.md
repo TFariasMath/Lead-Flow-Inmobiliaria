@@ -163,9 +163,7 @@ Este módulo es la herramienta principal de trabajo diario. Está diseñada para
 *   **Acciones por Lote:** Permite seleccionar múltiples registros para reasignar vendedores o cambiar estados de forma masiva.
 
 #### 🛠️ Tecnología Utilizada:
-*   **Frontend:** React y Next.js con una arquitectura de hooks personalizados para separar la lógica de los componentes.
 *   **Sincronización:** Uso de **SWR** para mantener los datos actualizados en tiempo real y **useSearchParams** para que los filtros se reflejen en la URL.
-*   **Diseño:** Interfaz oscura basada en **Tailwind CSS**, enfocada en la claridad de los indicadores de estado y la densidad de información.
 
 ---
 
