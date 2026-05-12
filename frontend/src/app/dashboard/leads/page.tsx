@@ -97,193 +97,207 @@ function LeadsListContent() {
   const totalPages = Math.ceil(totalCount / 20);
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-10">
+    <div className="space-y-8 animate-fadeIn pb-10 px-2">
       
       {/* ── Metric Strip ── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard 
           icon={Activity} 
-          label="Contactos Totales" 
+          label="Total Leads" 
           value={totalCount} 
-          color="#3b82f6" 
+          color="#6366f1" 
           onClick={() => { setStatusFilter(""); setTodayFilter(false); setStaleFilter(false); setPage(1); }}
         />
         <MetricCard 
           icon={Zap} 
           label="Nuevos Hoy" 
           value={leadsData?.count && todayFilter ? leadsData.count : "..."} 
-          color="#0ea5e9" 
-          trend="+12%" 
+          color="#06b6d4" 
+          trend="+12.5%" 
           active={todayFilter}
           onClick={() => { setTodayFilter(!todayFilter); setStatusFilter(""); setStaleFilter(false); setPage(1); }}
         />
         <MetricCard 
           icon={Target} 
-          label="Sin Atender" 
+          label="En Espera" 
           value={statusFilter === "nuevo" ? totalCount : "..."} 
           color="#f59e0b" 
           active={statusFilter === "nuevo"}
           onClick={() => { setStatusFilter(statusFilter === "nuevo" ? "" : "nuevo"); setTodayFilter(false); setStaleFilter(false); setPage(1); }}
         />
-        <MetricCard icon={MousePointer2} label="CTR Promedio" value="4.2%" color="#10b981" />
+        <MetricCard 
+          icon={ShieldCheck} 
+          label="Cierres Ganados" 
+          value="24" 
+          color="#10b981" 
+          trend="Pro"
+        />
       </div>
 
-      {/* ── Header ── */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="section-title">Listado de Leads</h1>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Gestión de oportunidades comerciales</p>
+      {/* ── Header Area ── */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-white tracking-tighter">
+            Lead <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Forge</span>
+          </h1>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-[0.3em] flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            Centro de Control Operativo
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          {staleFilter && (
-            <button 
-              onClick={() => { setStaleFilter(false); setPage(1); }}
-              className="px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase flex items-center gap-2 hover:bg-red-500/20 transition-all"
-            >
-              <AlertTriangle className="w-3 h-3" /> Leads Estancados Activo
-              <span className="opacity-60">✕</span>
-            </button>
-          )}
-          <div className="flex items-center bg-slate-900/80 backdrop-blur-md p-1 rounded-xl border border-white/10 mr-2 shadow-inner">
+
+        <div className="flex flex-wrap items-center gap-3">
+           <div className="flex items-center bg-slate-900/60 backdrop-blur-xl p-1.5 rounded-2xl border border-white/5 shadow-2xl">
             <button 
               onClick={() => setView('table')}
               className={cn(
-                "p-2 rounded-lg transition-all duration-300 flex items-center gap-2", 
+                "px-4 py-2 rounded-xl transition-all duration-500 flex items-center gap-2", 
                 view === 'table' 
-                  ? "bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] ring-1 ring-white/20" 
+                  ? "bg-blue-600 text-white shadow-[0_10px_20px_-5px_rgba(37,99,235,0.5)]" 
                   : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
               )}
-              title="Vista de Tabla"
             >
               <LayoutList className="w-4 h-4" />
-              {view === 'table' && <span className="text-[10px] font-black uppercase tracking-tighter pr-1">Tabla</span>}
+              <span className="text-[10px] font-black uppercase tracking-widest">Lista</span>
             </button>
             <button 
               onClick={() => setView('kanban')}
               className={cn(
-                "p-2 rounded-lg transition-all duration-300 flex items-center gap-2", 
+                "px-4 py-2 rounded-xl transition-all duration-500 flex items-center gap-2", 
                 view === 'kanban' 
-                  ? "bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] ring-1 ring-white/20" 
+                  ? "bg-blue-600 text-white shadow-[0_10px_20px_-5px_rgba(37,99,235,0.5)]" 
                   : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
               )}
-              title="Vista Kanban"
             >
               <Kanban className="w-4 h-4" />
-              {view === 'kanban' && <span className="text-[10px] font-black uppercase tracking-tighter pr-1">Pipeline</span>}
+              <span className="text-[10px] font-black uppercase tracking-widest">Pipeline</span>
             </button>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleExportCSV}
-              className="btn-ghost flex items-center gap-2 group"
-            >
-              <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              <span className="text-xs">Exportar CSV</span>
-            </button>
-          </div>
-          <button onClick={() => router.push("/dashboard/leads/new")} className="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center hover:bg-orange-500 transition-all shadow-[0_0_20px_rgba(234,88,12,0.3)]">
+
+          <button
+            onClick={handleExportCSV}
+            className="h-12 px-5 rounded-2xl bg-white/5 border border-white/5 text-white hover:bg-white/10 hover:border-white/10 transition-all flex items-center gap-2 group"
+          >
+            <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+            <span className="text-xs font-bold">Exportar</span>
+          </button>
+
+          <button 
+            onClick={() => router.push("/dashboard/leads/new")} 
+            className="h-12 px-6 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-white flex items-center gap-2 hover:shadow-[0_10px_30px_-10px_rgba(234,88,12,0.5)] hover:scale-105 transition-all"
+          >
             <Plus className="w-5 h-5" />
+            <span className="text-sm font-bold">Nuevo Lead</span>
           </button>
         </div>
       </div>
 
-      {/* ── Filter Bar ── */}
-      <div className="space-y-3">
-        {/* Search Row */}
-        <div className="input-icon-wrapper group">
-          <Search className="w-4 h-4 text-slate-500 group-focus-within:text-orange-500 transition-colors" />
-          <input
-            type="text"
-            placeholder="Buscar por email, nombre o teléfono..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="input-premium input-premium-icon h-12"
-          />
-        </div>
+      {/* ── Advanced Filter Console ── */}
+      <div className="p-6 bg-slate-900/40 backdrop-blur-2xl border border-white/5 rounded-[2rem] space-y-6 shadow-2xl">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 relative group">
+            <div className="absolute inset-0 bg-blue-500/5 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+            <div className="relative flex items-center">
+              <Search className="absolute left-4 w-5 h-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+              <input
+                type="text"
+                placeholder="Buscar por email, nombre, teléfono o ID..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="w-full h-14 pl-12 pr-6 bg-slate-950/40 border border-white/5 rounded-2xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all"
+              />
+            </div>
+          </div>
 
-        {/* Action Selectors Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Status Filter */}
-          <CustomSelect
-            value={statusFilter}
-            onChange={(val) => { setStatusFilter(val); setPage(1); }}
-            options={[
-              { value: "", label: "Todos los Estados" },
-              ...STATUS_OPTIONS.map(opt => ({ 
-                value: opt, 
-                label: STATUS_LABELS[opt] || opt,
-                badgeClass: STATUS_BADGE_MAP[opt]
-              }))
-            ]}
-            icon={<Activity className="w-4 h-4" />}
-          />
+          <div className="flex flex-wrap gap-3">
+             <CustomSelect
+              value={statusFilter}
+              onChange={(val) => { setStatusFilter(val); setPage(1); }}
+              options={[
+                { value: "", label: "Cualquier Estado" },
+                ...STATUS_OPTIONS.map(opt => ({ 
+                  value: opt, 
+                  label: STATUS_LABELS[opt] || opt,
+                  badgeClass: STATUS_BADGE_MAP[opt]
+                }))
+              ]}
+              className="min-w-[180px]"
+              icon={<Activity className="w-4 h-4 text-blue-400" />}
+            />
 
-          {/* Source Filter */}
-          <CustomSelect
-            value={sourceFilter}
-            onChange={(val) => { setSourceFilter(val); setPage(1); }}
-            options={[
-              { value: "", label: "Todas las Fuentes" },
-              ...(sourcesData?.results || []).map(s => ({ value: s.id.toString(), label: s.name }))
-            ]}
-            icon={<Zap className="w-4 h-4 text-orange-500" />}
-          />
+            <CustomSelect
+              value={sourceFilter}
+              onChange={(val) => { setSourceFilter(val); setPage(1); }}
+              options={[
+                { value: "", label: "Todas las Fuentes" },
+                ...(sourcesData?.results || []).map(s => ({ value: s.id.toString(), label: s.name }))
+              ]}
+              className="min-w-[180px]"
+              icon={<Zap className="w-4 h-4 text-orange-400" />}
+            />
 
-          {/* User/Vendor Filter */}
-          <CustomSelect
-            value={userFilter}
-            onChange={(val) => { setUserFilter(val); setPage(1); }}
-            options={[
-              { value: "", label: "Todos los Vendedores" },
-              ...(usersData || []).map(u => ({ value: u.id.toString(), label: `${u.first_name || u.username}` }))
-            ]}
-            icon={<ShieldCheck className="w-4 h-4 text-emerald-500" />}
-          />
+            <CustomSelect
+              value={userFilter}
+              onChange={(val) => { setUserFilter(val); setPage(1); }}
+              options={[
+                { value: "", label: "Vendedores" },
+                ...(usersData || []).map(u => ({ value: u.id.toString(), label: `${u.first_name || u.username}` }))
+              ]}
+              className="min-w-[180px]"
+              icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />}
+            />
 
-          {/* Stale Filter Button */}
-          <button
-            onClick={() => { setStaleFilter(!staleFilter); setPage(1); }}
-            className={cn(
-              "h-12 px-4 rounded-xl border flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all",
-              staleFilter 
-                ? "bg-red-500/20 border-red-500/40 text-red-500 shadow-lg shadow-red-500/10" 
-                : "bg-slate-900/50 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10"
-            )}
-          >
-            <AlertTriangle className={cn("w-3.5 h-3.5", staleFilter ? "animate-pulse" : "opacity-40")} />
-            Leads Estancados
-          </button>
+            <button
+              onClick={() => { setStaleFilter(!staleFilter); setPage(1); }}
+              className={cn(
+                "h-14 px-6 rounded-2xl border flex items-center justify-center gap-3 transition-all duration-500",
+                staleFilter 
+                  ? "bg-red-500/10 border-red-500/40 text-red-500 shadow-lg shadow-red-500/20" 
+                  : "bg-slate-950/40 border-white/5 text-slate-500 hover:border-white/10"
+              )}
+            >
+              <AlertTriangle className={cn("w-4 h-4", staleFilter ? "animate-pulse" : "opacity-40")} />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Estancados</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ── View Content ── */}
+      {/* ── View Content ── */}
       {view === 'table' ? (
-        <div className="glass-container rounded-[1.5rem] overflow-hidden flex flex-col h-[600px] mx-6">
+        <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] overflow-hidden flex flex-col h-[650px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.8)]">
           <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-x-auto custom-scrollbar">
             {/* ── Table Header ── */}
-            <div className="flex items-center border-b border-white/5 py-4 bg-slate-900/50 sticky top-0 z-40 backdrop-blur-md min-w-full w-max">
-              <div className="w-12 h-full flex items-center justify-center shrink-0 sticky left-0 z-50 bg-[#080e1e] border-r border-white/5 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.5)]">
-                <button onClick={toggleSelectAll} className="text-slate-700 hover:text-slate-500 transition-colors">
+            <div className="flex items-center border-b border-white/[0.04] py-5 bg-[#080e1e]/80 sticky top-0 z-40 backdrop-blur-xl min-w-full w-max">
+              <div className="w-12 h-full flex items-center justify-center shrink-0 sticky left-0 z-50 bg-[#080e1e] border-r border-white/5">
+                <button onClick={toggleSelectAll} className="text-slate-600 hover:text-blue-400 transition-colors">
                   {selectedIds.size === leads.length && leads.length > 0 ? <CheckSquare className="w-4 h-4 text-blue-500" /> : <Square className="w-4 h-4" />}
                 </button>
               </div>
-              {visibleColumns.has("name") && <div className="w-[250px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest sticky left-12 z-50 bg-[#080e1e] border-r border-white/10 shadow-[8px_0_15px_-5px_rgba(0,0,0,0.6)]">Lead / Nombre</div>}
-              {visibleColumns.has("status") && <div className="w-[160px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Estado</div>}
-              {visibleColumns.has("email") && <div className="w-[220px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Correo Electrónico</div>}
-              {visibleColumns.has("phone") && <div className="w-[180px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Teléfono</div>}
-              <div className="w-[100px] shrink-0 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Acciones</div>
+              {visibleColumns.has("name") && <div className="w-[280px] shrink-0 px-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] sticky left-12 z-50 bg-[#080e1e] border-r border-white/10">Prospecto / Calidad</div>}
+              {visibleColumns.has("status") && <div className="w-[160px] shrink-0 px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Estado Pipeline</div>}
+              {visibleColumns.has("email") && <div className="w-[220px] shrink-0 px-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Identidad Digital</div>}
+              {visibleColumns.has("phone") && <div className="w-[180px] shrink-0 px-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Contacto</div>}
+              <div className="w-[100px] shrink-0 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Acciones</div>
             </div>
 
             <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar relative min-w-full w-max">
               <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                 {loading && leads.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-32 gap-4">
-                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando...</p>
+                  <div className="flex flex-col items-center justify-center py-40 gap-6">
+                    <div className="relative">
+                      <div className="w-12 h-12 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+                      <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse" />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] animate-pulse">Sincronizando Leads...</p>
                   </div>
                 ) : leads.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-32">
-                    <p className="text-sm font-bold text-slate-500">No se encontraron leads</p>
+                  <div className="flex flex-col items-center justify-center py-40">
+                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                      <Activity className="w-8 h-8 text-slate-700" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-500">No se encontraron leads con estos criterios</p>
                   </div>
                 ) : (
                   rowVirtualizer.getVirtualItems().map((virtualRow) => {
@@ -314,11 +328,29 @@ function LeadsListContent() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-8 py-4 border-t border-white/[0.04] bg-white/[0.01]">
-              <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Total: {totalCount} leads</p>
-              <div className="flex gap-2">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/5 disabled:opacity-20 transition-all hover:bg-white/5"><ChevronLeft className="w-4 h-4" /></button>
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/5 disabled:opacity-20 transition-all hover:bg-white/5"><ChevronRight className="w-4 h-4" /></button>
+            <div className="flex items-center justify-between px-10 py-5 border-t border-white/[0.04] bg-[#080e1e]/60 backdrop-blur-xl">
+              <div className="flex items-center gap-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.15em]">Mostrando {leads.length} de {totalCount} Oportunidades</p>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setPage(p => Math.max(1, p - 1))} 
+                  disabled={page === 1} 
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 disabled:opacity-20 transition-all hover:bg-white/10 hover:border-white/10 text-white"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="flex items-center px-4 bg-white/5 rounded-xl border border-white/5">
+                  <span className="text-[11px] font-black text-white">{page} <span className="text-slate-600 mx-1">/</span> {totalPages}</span>
+                </div>
+                <button 
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
+                  disabled={page === totalPages} 
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 disabled:opacity-20 transition-all hover:bg-white/10 hover:border-white/10 text-white"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
             </div>
           )}
