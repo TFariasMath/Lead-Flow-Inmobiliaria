@@ -48,15 +48,11 @@ El sistema busca coincidencias en AMBOS campos antes de decidir si crea un nuevo
 
 ---
 
-## 🚀 Funcionalidades Elite
-
-### 📧 Automatización y Scoring
+## 📧 Automatización y Scoring
 - **Dynamic Scoring**: Cada lead recibe un puntaje (0-100) basado en la completitud de su perfil (Teléfono: 40pts, Email: 30pts, etc.).
-- **Nurturing Automático**: Si un lead es "Hot" (Score > 70), el sistema dispara inmediatamente una tarea asíncrona para enviar un **Welcome Email** personalizado.
-- **Alertas Proactivas**: El sistema detecta leads "Estancados" (sin cambios en 24h) y lanza alertas visuales en el dashboard.
 
-### 📄 Generación de Catálogos (Brochure Engine)
-- **PDF Dinámico**: El sistema toma los datos del lead, la campaña y las propiedades vinculadas para generar un **Brochure PDF de alta calidad** usando `xhtml2pdf`.
+## 📄 Generación de Catálogos (Brochure Engine)
+- **PDF Dinámico**: El sistema toma los datos del lead, la campaña y las propiedades vinculadas para generar un **Brochure PDF** usando `xhtml2pdf`.
 - **Mapas Estáticos**: Integración con Mapbox API para inyectar mapas de ubicación exactos en los documentos PDF generados.
 
 ### 🔄 Distribución Equitativa (Round Robin)
