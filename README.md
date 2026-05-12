@@ -150,77 +150,9 @@ stateDiagram-v2
     *   **Badge "SIGUIENTE":** Identifica visualmente al vendedor que recibirá el próximo lead entrante, permitiendo al equipo prepararse para la acción.
     *   **Badge "OUT":** Indica claramente quién está fuera de la rotación actual, permitiendo una gestión de turnos eficiente.
 4.  **Sincronización de Datos:** Cada cambio en la disponibilidad del equipo se refleja instantáneamente en el dashboard mediante un sistema de hidratación de datos optimizado, garantizando que el "Siguiente en línea" sea siempre preciso.
- 
+
 ---
- 
-### ➕ Nuevo Lead: Creación y Validación Inteligente
- 
-El sistema permite la captura manual de prospectos a través de una interfaz optimizada que garantiza la integridad de los datos desde el primer segundo.
- 
-![Creación de Nuevo Lead](./frontend/public/docs/nuevo_lead.png)
- 
-#### Tecnología y Funcionamiento (Deep Dive):
-*   **Arquitectura de Formulario (Formik + Yup):** Utilizamos **Formik** para la gestión de estados complejos y **Yup** para la validación declarativa de esquemas. Esto garantiza que ningún dato mal formado llegue al servidor.
-*   **Persistencia de Borradores:** Implementa `FormikPersist` para guardar el estado del formulario en `localStorage`. Si el usuario navega fuera o refresca la página, los datos ingresados no se pierden.
-*   **Validación de Identidad (Double Anchor):** Al intentar crear un lead, el sistema ejecuta una búsqueda cruzada instantánea en la base de datos para detectar si el prospecto ya existe (por `original_email` o teléfono), evitando la creación de registros duplicados.
-*   **Normalización de Datos:** El frontend procesa automáticamente los códigos de país y limpia los formatos telefónicos antes de la inyección en la base de datos.
-*   **Disparo de Reparto Automático:** Una vez validado, el lead es procesado por el motor de **Round Robin** e inyectado inmediatamente en el flujo de trabajo del vendedor asignado.
- 
----
- 
-### 📊 Auditoría de Tráfico (Webhook Logs)
- 
-Para mantener un control total sobre el flujo de datos, **Lead Flow** implementa una consola de auditoría técnica que registra cada interacción desde fuentes externas.
- 
-![Webhook Logs](./frontend/public/docs/webhook_log.png)
- 
-#### Funcionamiento de la Consola:
-*   **Monitoreo en Tiempo Real:** Lista cronológica de todas las peticiones entrantes (Facebook, Google Ads, Landing Pages).
-*   **Filtrado por Estado:** Permite identificar rápidamente peticiones `PENDING`, `SUCCESS` o `FAILED` para detectar anomalías en la comunicación.
-*   **Trazabilidad de Errores:** En caso de fallo, la consola expone el error técnico exacto reportado por el servidor, facilitando el diagnóstico sin necesidad de revisar logs de servidor pesados.
- 
----
- 
-### 🏗️ Arquitectura de Resiliencia (Bajo el Capó)
- 
-La robustez de **Lead Flow** no es accidental; es el resultado de una arquitectura diseñada para soportar alta concurrencia y picos de tráfico masivos.
- 
-#### 1. Ingesta Atómica de Webhooks
-Cuando un bit toca el servidor, se activa un protocolo de tres capas:
-*   **Aislamiento (Isolation):** El webhook se guarda inmediatamente como un `WebhookLog` crudo. El sistema responde `200 OK` en <50ms para evitar timeouts del proveedor externo (Meta, Google).
-*   **Procesamiento Asíncrono:** La lógica pesada se delega a **Django Q (Workers)**, permitiendo que el backend siga recibiendo datos mientras los procesos previos se ejecutan en segundo plano.
-*   **Bloqueo de Base de Datos (Select For Update):** Para evitar que dos webhooks del mismo lead al mismo milisegundo creen duplicados, el sistema usa bloqueos de fila (`FOR UPDATE`) en PostgreSQL. El primer proceso "atrapa" al lead y los demás deben esperar en cola.
- 
-#### 2. Resolución de Identidad (Double Anchor System)
-El motor de búsqueda utiliza un sistema de **Doble Ancla** para resolver el problema de la mutación de datos de contacto, garantizando que un prospecto sea reconocido incluso años después de su primer contacto.
- 
-*   **Ancla Inmutable (`original_email`):** Se captura en la primera interacción y es de solo lectura. Funciona como la "huella genética" del lead y es la clave primaria lógica para la unificación (**Búsqueda hacia el pasado**).
-*   **Ancla Fluida (`contact_email`):** Es el correo que el vendedor edita para la gestión comercial activa. Permite que el sistema reconozca al lead si este re-ingresa usando una identidad que el vendedor ya "mapeó" manualmente (**Búsqueda en el presente**).
- 
-**Sinergia de la lógica `Q(OR)`:**
-1.  **Reconocimiento por Origen:** Si el lead vuelve a usar su correo de hace 3 años (aunque el vendedor lo haya cambiado en la ficha), el sistema lo encuentra por su "huella genética" (`original_email`).
-2.  **Reconocimiento por Evolución:** Si el lead entra con un nuevo correo corporativo que el vendedor registró ayer en la ficha de contacto, el sistema lo identifica inmediatamente por su "identidad evolucionada" (`contact_email`).
- 
-En ambos escenarios, el sistema evita el duplicado y anexa la nueva interacción al historial existente, manteniendo la integridad del **Customer Journey** completo.
- 
-#### 3. Motor Round Robin Determinista
-La asignación no es aleatoria. El sistema consulta el `RoundRobinState` bloqueando el registro de estado para garantizar que el puntero de asignación sea único y equitativo, incluso si entran 100 leads simultáneamente.
- 
----
- 
-### 🩺 Recuperación Crítica (Modo Quirófano)
- 
-El **Modo Quirófano** es la herramienta de última instancia para garantizar que ningún lead se pierda por problemas de formato o cambios inesperados en las APIs externas.
- 
-![Modo Quirófano](./frontend/public/docs/modo_quirofano.png)
- 
-#### La Solución a Problemas Técnicos:
-1.  **Intervención Directa:** Cuando un lead falla por datos mal formados, el administrador puede abrir el registro y acceder al JSON crudo.
-2.  **Edición Quirúrgica:** Permite modificar el contenido del mensaje recibido directamente en la interfaz para corregir campos faltantes o errores de sintaxis.
-3.  **Reprocesamiento Forzado:** Al guardar los cambios, el sistema permite re-ejecutar la lógica de creación de leads sobre el dato corregido, recuperando la oportunidad comercial de forma instantánea.
- 
----
- 
+
 ### 🚀 Módulo de Leads: Centro de Gestión Comercial
 
 Este módulo es la herramienta principal de trabajo diario. Está diseñada para centralizar todos los prospectos y permitir una gestión rápida y eficiente del ciclo de vida de cada venta.
@@ -238,34 +170,98 @@ Este módulo es la herramienta principal de trabajo diario. Está diseñada para
 *   **Frontend:** React y Next.js con una arquitectura de hooks personalizados para separar la lógica de los componentes.
 *   **Sincronización:** Uso de **SWR** para mantener los datos actualizados en tiempo real y **useSearchParams** para que los filtros se reflejen en la URL.
 *   **Diseño:** Interfaz oscura basada en **Tailwind CSS**, enfocada en la claridad de los indicadores de estado y la densidad de información.
- 
+
 ---
- 
+
+### ➕ Nuevo Lead: Creación y Validación Inteligente
+
+El sistema permite la captura manual de prospectos a través de una interfaz optimizada que garantiza la integridad de los datos desde el primer segundo.
+
+![Creación de Nuevo Lead](./frontend/public/docs/nuevo_lead.png)
+
+#### Tecnología y Funcionamiento (Deep Dive):
+*   **Arquitectura de Formulario (Formik + Yup):** Utilizamos **Formik** para la gestión de estados complejos y **Yup** para la validación declarativa de esquemas. Esto garantiza que ningún dato mal formado llegue al servidor.
+*   **Persistencia de Borradores:** Implementa `FormikPersist` para guardar el estado del formulario en `localStorage`. Si el usuario navega fuera o refresca la página, los datos ingresados no se pierden.
+*   **Validación de Identidad (Double Anchor):** Al intentar crear un lead, el sistema ejecuta una búsqueda cruzada instantánea en la base de datos para detectar si el prospecto ya existe (por `original_email` o teléfono), evitando la creación de registros duplicados.
+*   **Normalización de Datos:** El frontend procesa automáticamente los códigos de país y limpia los formatos telefónicos antes de la inyección en la base de datos.
+*   **Disparo de Reparto Automático:** Una vez validado, el lead es procesado por el motor de **Round Robin** e inyectado inmediatamente en el flujo de trabajo del vendedor asignado.
+
+---
+
+### 📊 Auditoría de Tráfico (Webhook Logs)
+
+Para mantener un control total sobre el flujo de datos, **Lead Flow** implementa una consola de auditoría técnica que registra cada interacción desde fuentes externas.
+
+![Webhook Logs](./frontend/public/docs/webhook_log.png)
+
+#### Funcionamiento de la Consola:
+*   **Monitoreo en Tiempo Real:** Lista cronológica de todas las peticiones entrantes (Facebook, Google Ads, Landing Pages).
+*   **Filtrado por Estado:** Permite identificar rápidamente peticiones `PENDING`, `SUCCESS` o `FAILED` para detectar anomalías en la comunicación.
+*   **Trazabilidad de Errores:** En caso de fallo, la consola expone el error técnico exacto reportado por el servidor, facilitando el diagnóstico sin necesidad de revisar logs de servidor pesados.
+
+---
+
+### 🏗️ Arquitectura de Resiliencia (Bajo el Capó)
+
+La robustez de **Lead Flow** no es accidental; es el resultado de una arquitectura diseñada para soportar alta concurrencia y picos de tráfico masivos.
+
+#### 1. Ingesta Atómica de Webhooks
+Cuando un bit toca el servidor, se activa un protocolo de tres capas:
+*   **Aislamiento (Isolation):** El webhook se guarda inmediatamente como un `WebhookLog` crudo. El sistema responde `200 OK` en <50ms para evitar timeouts del proveedor externo (Meta, Google).
+*   **Procesamiento Asíncrono:** La lógica pesada se delega a **Django Q (Workers)**, permitiendo que el backend siga recibiendo datos mientras los procesos previos se ejecutan en segundo plano.
+*   **Bloqueo de Base de Datos (Select For Update):** Para evitar que dos webhooks del mismo lead al mismo milisegundo creen duplicados, el sistema usa bloqueos de fila (`FOR UPDATE`) en PostgreSQL. El primer proceso "atrapa" al lead y los demás deben esperar en cola.
+
+#### 2. Resolución de Identidad (Double Anchor System)
+El motor de búsqueda utiliza un sistema de **Doble Ancla** para resolver el problema de la mutación de datos de contacto, garantizando que un prospecto sea reconocido incluso años después de su primer contacto.
+
+*   **Ancla Inmutable (`original_email`):** Se captura en la primera interacción y es de solo lectura. Funciona como la "huella genética" del lead y es la clave primaria lógica para la unificación (**Búsqueda hacia el pasado**).
+*   **Ancla Fluida (`contact_email`):** Es el correo que el vendedor edita para la gestión comercial activa. Permite que el sistema reconozca al lead si este re-ingresa usando una identidad que el vendedor ya "mapeó" manualmente (**Búsqueda en el presente**).
+
+**Sinergia de la lógica `Q(OR)`:**
+1.  **Reconocimiento por Origen:** Si el lead vuelve a usar su correo de hace 3 años (aunque el vendedor lo haya cambiado en la ficha), el sistema lo encuentra por su "huella genética" (`original_email`).
+2.  **Reconocimiento por Evolución:** Si el lead entra con un nuevo correo corporativo que el vendedor registró ayer en la ficha de contacto, el sistema lo identifica inmediatamente por su "identidad evolucionada" (`contact_email`).
+
+En ambos escenarios, el sistema evita el duplicado y anexa la nueva interacción al historial existente, manteniendo la integridad del **Customer Journey** completo.
+
+#### 3. Motor Round Robin Determinista
+La asignación no es aleatoria. El sistema consulta el `RoundRobinState` bloqueando el registro de estado para garantizar que el puntero de asignación sea único y equitativo, incluso si entran 100 leads simultáneamente.
+
+---
+
+### 🩺 Recuperación Crítica (Modo Quirófano)
+
+El **Modo Quirófano** es la herramienta de última instancia para garantizar que ningún lead se pierda por problemas de formato o cambios inesperados en las APIs externas.
+
+![Modo Quirófano](./imagenes/modo_quirofano.png)
+
+#### La Solución a Problemas Técnicos:
+1.  **Intervención Directa:** Cuando un lead falla por datos mal formados, el administrador puede abrir el registro y acceder al JSON crudo.
+2.  **Edición Quirúrgica:** Permite modificar el contenido del mensaje recibido directamente en la interfaz para corregir campos faltantes o errores de sintaxis.
+3.  **Reprocesamiento Forzado:** Al guardar los cambios, el sistema permite re-ejecutar la lógica de creación de leads sobre el dato corregido, recuperando la oportunidad comercial de forma instantánea.
+
+---
+
 ### 🚀 En Desarrollo: Catálogo de Activos Inmobiliarios
- 
+
 Este módulo es el núcleo del inventario de la plataforma. Permite transformar proyectos de construcción en activos digitales listos para ser comercializados mediante brochures dinámicos y landing pages.
- 
-![Catálogo de Propiedades](./frontend/public/docs/propiedades.png)
- 
+
+![Catálogo de Propiedades](./imagenes/propiedades.png)
+
 #### Visualización Estratégica:
-![Ficha de Propiedad](./frontend/public/docs/propiedad.png)
-![Distribución Geográfica](./frontend/public/docs/mapa.png)
-![Detalle de Ubicación](./frontend/public/docs/mapa0.png)
- 
+![Ficha de Propiedad](./imagenes/propiedad.png)
+![Distribución Geográfica](./imagenes/mapa.png)
+![Detalle de Ubicación](./imagenes/mapa0.png)
+
 #### Características Técnicas y Arquitectura:
 *   **Geolocalización Inteligente (Mapbox Inside):** El formulario integra la API de **Mapbox Geocoding**. A medida que se escribe la dirección, el sistema sugiere ubicaciones reales e inyecta automáticamente las coordenadas de latitud y longitud.
 *   **Motor de Métricas Financieras:** Gestión de retornos de inversión (ROI) proyectados y montos mínimos de inversión que se inyectan dinámicamente en los PDFs de venta.
 *   **Gestión de Atributos (Amenities):** Sistema de etiquetado dinámico (Tags) almacenado como JSON, permitiendo flexibilidad total en las características del proyecto.
 *   **Media Asset Library:** Integración con una biblioteca centralizada de medios para garantizar la calidad visual en todos los brochures generados.
- 
+
 #### Stack Tecnológico:
 *   **Frontend:** Next.js + Tailwind CSS con estados de alta precisión.
 *   **Mapas:** Mapbox GL JS / Places API para normalización de direcciones.
 *   **Backend:** Modelos de Django con soporte para campos JSON y geocoordenadas.
- 
----
-
-
 
 ---
 
