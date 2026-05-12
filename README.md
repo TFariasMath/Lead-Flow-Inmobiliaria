@@ -265,4 +265,24 @@ bash run_linux.sh
 - `/scripts`: Automatización de base de datos y scripts de stress test.
 
 ---
+ 
+### 🚀 En Desarrollo: Catálogo de Activos Inmobiliarios
+ 
+Este módulo es el núcleo del inventario de la plataforma. Permite transformar proyectos de construcción en activos digitales listos para ser comercializados mediante brochures dinámicos y landing pages.
+ 
+![Catálogo de Propiedades](./frontend/public/docs/propiedades.png)
+ 
+#### Características Técnicas y Arquitectura:
+*   **Geolocalización Inteligente (Mapbox Inside):** El formulario integra la API de **Mapbox Geocoding**. A medida que se escribe la dirección, el sistema sugiere ubicaciones reales e inyecta automáticamente las coordenadas de latitud y longitud.
+*   **Motor de Métricas Financieras:** Gestión de retornos de inversión (ROI) proyectados y montos mínimos de inversión que se inyectan dinámicamente en los PDFs de venta.
+*   **Gestión de Atributos (Amenities):** Sistema de etiquetado dinámico (Tags) almacenado como JSON, permitiendo flexibilidad total en las características del proyecto.
+*   **Media Asset Library:** Integración con una biblioteca centralizada de medios para garantizar la calidad visual en todos los brochures generados.
+ 
+#### Stack Tecnológico:
+*   **Frontend:** Next.js + Tailwind CSS con estados de alta precisión.
+*   **Mapas:** Mapbox GL JS / Places API para normalización de direcciones.
+*   **Backend:** Modelos de Django con soporte para campos JSON y geocoordenadas.
+ 
+ 
+---
 **Lead Flow Engineering** &copy; 2026 - *The Future of Real Estate Data Management*
