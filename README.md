@@ -83,25 +83,19 @@ Para fines de evaluación y pruebas en el entorno local, se han pre-configurado 
 
 ---
 
-### 🖥️ Dashboard
+### 🖥️ Dashboard Estratégico: El Poder de la Vista Única
 
-El dashboard principal ha sido diseñado para ser minimalista.
+El dashboard principal ha sido diseñado bajo una filosofía de **Control Situacional**, eliminando la fricción de la navegación tradicional para convertir los datos en decisiones instantáneas.
 
 ![Dashboard Overview](./frontend/public/docs/dashboard1.png)
 
-#### 🚀 Filosofía "Zero Scroll" (Control Total de un Vistazo)
-A diferencia de los CRM convencionales donde la información está enterrada bajo pestañas o scroll infinito, en **Lead Flow** la información no se busca, se presenta.
+#### 🎴 Navegación Inmersiva y Paneles de Control
+El sistema utiliza una arquitectura de paneles deslizables (*Drawers*) que permiten profundizar en la información sin abandonar la vista principal:
 
-*   **El Concepto:** El dashboard actúa como la **cabina de un mando** o una consola de monitoreo de misión. El objetivo es mantener la "Conciencia Situacional" (*Situational Awareness*) en todo momento: si un gerente debe hacer scroll para ver si su equipo está rindiendo, ya perdiste el pulso de la operación.
-*   **El Objetivo:** Reducir la carga cognitiva. El cerebro procesa patrones y métricas mucho más rápido cuando el layout es estático, predecible y está contenido dentro del campo visual del usuario.
-
-#### 🎴 Arquitectura de Capas Dinámicas (Slides)
-Para mantener esta limpieza visual sin sacrificar profundidad, la información se organiza en **capas de información intercambiables** que el usuario puede invocar desde la consola de navegación:
-
-1.  **Capa de Tráfico (Traffic Node):** Despliega un análisis exhaustivo del pulso digital del negocio. Permite visualizar picos de interés, rendimiento por landing page y volumen de visitas en series temporales de alta fidelidad.
-2.  **Capa de Pipeline (Conversion Node):** Transforma el inventario de leads en un flujo visual. Aquí se monitorea el **Flujo de Conversión** y el estatus de maduración de los prospectos, permitiendo identificar cuellos de botella en tiempo real.
-3.  **Capa de Equipo (Performance Node):** Es el centro de mando del capital humano. Permite ver el rendimiento individual, gestionar el estado del **Round Robin** y alternar la disponibilidad de los agentes con un solo clic.
-4.  **Capa de Historial (Audit Node):** El "Diario de Vuelo" del sistema. Registra cronológicamente cada interacción, cambio de estado y resolución de identidad, garantizando una trazabilidad total "quirúrgica".
+*   **Sidebar (Navegación Primaria):** Ubicado a la izquierda, gestiona el acceso a los módulos principales (Leads, Campañas, Propiedades). Es el eje central de movimiento del sistema.
+*   **Right Sidebar (Panel de Contexto):** Despliega información operativa en tiempo real, como el rendimiento del equipo y el estado de disponibilidad del Round Robin.
+*   **Top Drawer (Métricas de Tráfico):** Un panel que desliza desde la parte superior para mostrar análisis de tráfico y rendimiento de landing pages sin obstruir la vista de trabajo.
+*   **Dashboard Dock (Historial Rápido):** Ubicado en la esquina inferior derecha, permite el acceso inmediato a los últimos prospectos consultados, facilitando la multitarea.
 
 ![Dashboard Detalle](./frontend/public/docs/dashboard2.png)
 
