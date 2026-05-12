@@ -155,6 +155,29 @@ El sistema permite la captura manual de prospectos a través de una interfaz opt
 *   **Validación de Identidad (Double Anchor):** Al intentar crear un lead, el sistema ejecuta una búsqueda cruzada instantánea en la base de datos para detectar si el prospecto ya existe (por `original_email` o teléfono), evitando la creación de registros duplicados.
 *   **Normalización de Datos:** El frontend procesa automáticamente los códigos de país y limpia los formatos telefónicos antes de la inyección en la base de datos.
 *   **Disparo de Reparto Automático:** Una vez validado, el lead es procesado por el motor de **Round Robin** e inyectado inmediatamente en el flujo de trabajo del vendedor asignado.
+ 
+---
+ 
+### 🩺 Modo Quirófano: Ingesta Resiliente y Recuperación de Datos
+ 
+La arquitectura de **Lead Flow** está diseñada bajo el principio de "Pérdida Cero". El **Modo Quirófano** es el centro de control técnico donde se gestiona la salud de la entrada de datos.
+ 
+![Webhook Logs](./frontend/public/docs/webhook_log.png)
+![Modo Quirófano](./frontend/public/docs/modo_quirofano.png)
+ 
+#### Arquitectura de Robustez:
+1.  **Captura en Dos Etapas (Staging Ingestion):**
+    *   **Nivel 1 (Ingesta):** El webhook llega al endpoint y se guarda inmediatamente como un `WebhookLog` en estado `PENDING`. El sistema responde con un `200 OK` al servicio externo en menos de 50ms.
+    *   **Nivel 2 (Procesamiento):** Un worker asíncrono (**Django Q**) toma el log, valida la identidad (Double Anchor) y ejecuta la lógica de negocio.
+2.  **Tolerancia a Fallos Estructurales:**
+    *   Si el JSON recibido es inválido o el servicio externo cambió su esquema, el log cambia a estado `FAILED` y se captura el *stacktrace* completo del error.
+3.  **Intervención en "Quirófano":**
+    *   **Auditoría Técnica:** Los administradores pueden inspeccionar el payload crudo y el error asociado.
+    *   **Corrección en Caliente:** El sistema permite **editar el JSON directamente** desde la interfaz para corregir inconsistencias técnicas.
+    *   **Reprocesamiento Atómico:** Con un solo clic, el lead es re-inyectado en el motor de distribución sin perder su contexto original ni generar duplicados.
+ 
+#### Por qué es Robusto:
+Esta arquitectura soluciona el problema de los "leads perdidos" por errores de red o cambios de API. Al desacoplar la **recepción** del **procesamiento**, garantizamos que el sistema sea inmune a picos de tráfico y errores de validación, permitiendo recuperaciones quirúrgicas de datos sin intervención en el código.
 
 
 ---
