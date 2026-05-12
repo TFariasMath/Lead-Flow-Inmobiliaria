@@ -353,12 +353,50 @@ bash run_linux.sh
 
 ---
 
-## 📂 Estructura del Proyecto
+### 📂 Estructura Detallada del Proyecto
 
-- `/backend`: Core Django, API REST, Services (Webhooks, Distribution).
-- `/frontend`: Next.js UI, Kanban, Virtualized Grid, Dashboards.
-- `/tools`: Lead Forge Pro (Streamlit).
-- `/scripts`: Automatización de base de datos y scripts de stress test.
+El ecosistema está organizado en módulos desacoplados para facilitar el mantenimiento y el escalado:
+
+#### 1. 🐍 `/backend` (Núcleo Django)
+Es el motor de inteligencia y persistencia de datos.
+*   **`/config`**: Ajustes maestros del servidor (Base de datos, Seguridad JWT, Django Q).
+*   **`/leads`**: La aplicación principal del CRM.
+    *   **`/api`**: Endpoints REST para webhooks, analíticas y gestión de prospectos.
+    *   **`/migrations`**: Historial de cambios en la base de datos PostgreSQL.
+    *   **`/templates`**: Plantillas HTML para la generación de Brochures PDF.
+    *   `models.py`: Definición de la estructura de datos (Leads, Campañas, Propiedades).
+    *   `tasks.py`: Lógica de automatización asíncrona (envío de correos, procesamiento de webhooks).
+    *   `emails.py`: Motor de composición de correos electrónicos.
+    *   `utils_pdf.py`: Utilidad para transformar HTML en documentos PDF.
+*   `manage.py`: Consola de administración del backend.
+
+#### 2. ⚛️ `/frontend` (Interfaz Next.js)
+Plataforma visual de alta densidad informativa.
+*   **`/src/app`**: Estructura de rutas (Dashboard, Leads, Marketing, Configuración).
+*   **`/src/components`**: Biblioteca de componentes UI (MetricCards, CustomSelect, Sidebar, Tablas).
+*   **`/src/hooks`**: Lógica de cliente (SWR para datos, `useLeadsLogic` para filtros).
+*   **`/src/lib`**: Clientes de API y configuraciones de librerías externas.
+*   **`/public`**: Activos estáticos y documentación visual.
+
+#### 3. 🧪 `/messaging-lab` (Laboratorio de Comunicaciones)
+Repositorio compartido de activos de mensajería.
+*   **`/templates`**: Plantillas HTML maestras para correos de bienvenida y alertas a vendedores.
+
+#### 4. 🛡️ `/tools` (Utilidades de Ingeniería)
+Herramientas de soporte y auditoría.
+*   **`/lead-generator`**: Contiene `lead_forge.py`, el probador de webhooks y generador de carga.
+
+#### 5. 📜 `/scripts` (Automatización)
+*   `setup_enterprise.ps1`: Script de instalación automática en Windows.
+*   `check_db.py`: Diagnóstico de salud de la base de datos PostgreSQL.
+*   `seed_roles.py`: Inicializador de permisos y roles del sistema.
+
+#### 6. 🖼️ `/imagenes`
+Almacén de capturas y activos visuales para la documentación.
+
+#### 7. 📁 Raíz del Proyecto
+*   `run_crm.bat`: Script de un solo clic para iniciar todo el ecosistema (Backend + Frontend + Workers).
+*   `leadflow_backup.sql`: Volcado limpio de la base de datos (Template).
 
 ---
 **Lead Flow Engineering** &copy; 2026 - *The Future of Real Estate Data Management*
