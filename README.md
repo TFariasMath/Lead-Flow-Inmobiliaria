@@ -62,6 +62,30 @@ El sistema busca coincidencias en AMBOS campos antes de decidir si crea un nuevo
 
 ---
 
+## 🎮 Módulos y Experiencia de Usuario
+
+### 🔐 Autenticación y Seguridad (Acceso al Nodo)
+
+El acceso al sistema está blindado mediante una interfaz de **"Terminal de Nodo"**, diseñada para proyectar seguridad y control desde el primer contacto.
+
+![Acceso al Nodo](./frontend/public/docs/login.png)
+
+*   **Autenticación JWT:** Implementa un sistema de tokens asíncronos (JSON Web Tokens) para una comunicación *stateless* y segura.
+*   **Control de Acceso Basado en Roles (RBAC):** El sistema identifica automáticamente si el usuario es un **Administrador de Nodo** o un **Agente de Ventas**, redirigiendo dinámicamente al dashboard correspondiente.
+*   **Estética Cyber-Industrial:** Panel de acceso con efectos de Glassmorphism, tipografía técnica y micro-animaciones de alta fidelidad.
+*   **Seguridad Blindada:** Cifrado de credenciales y protección de sesión bajo estándares de grado empresarial.
+
+#### 🔑 Credenciales de Acceso (Entorno de Desarrollo)
+
+Para fines de evaluación y pruebas en el entorno local, se han pre-configurado las siguientes llaves de acceso:
+
+*   **Administrador Maestro:** 
+    *   **Terminal ID:** `admin`
+    *   **Security Key:** `123`
+*   **Agentes de Ventas:** El sistema cuenta con perfiles de vendedores (`maria`, `carlos`, `ana` con clave `123`), aunque sus vistas específicas están en proceso de refinamiento final para alcanzar el estándar "quirúrgico" del dashboard principal.
+
+---
+
 ## 🛠️ Guía de Instalación y Despliegue
 
 ### Requisitos Previos

@@ -62,7 +62,11 @@ export default function DashboardPage() {
       case "TRAFFIC":
         return <TrafficChart data={stats.visits_over_time || []} />;
       case "PIPELINE":
-        return <AnalyticsCharts stats={stats} />;
+        return (
+          <div className="h-full overflow-y-auto custom-scrollbar pr-2">
+            <AnalyticsCharts stats={stats} />
+          </div>
+        );
       case "TEAM":
         return (
           <div className="max-w-3xl h-full overflow-y-auto custom-scrollbar pr-2">

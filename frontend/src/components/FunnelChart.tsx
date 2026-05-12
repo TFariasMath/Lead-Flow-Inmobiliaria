@@ -35,9 +35,9 @@ export default function FunnelChart({ data }: FunnelChartProps) {
 
   // Layout constants
   const nodeW = 160;
-  const nodeH = 52;
-  const gapY = 18;
-  const totalH = data.length * nodeH + (data.length - 1) * gapY + 20;
+  const nodeH = 50;
+  const gapY = 14;
+  const totalH = data.length * nodeH + (data.length - 1) * gapY + 40;
   const centerX = 190;
 
   return (

@@ -76,9 +76,9 @@ export function AnalyticsCharts({ stats }: AnalyticsChartsProps) {
         <div className="flex items-center justify-between mb-6">
           <div>
             <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">
-              Volumen de Leads
+              Volumen Operativo
             </p>
-            <h2 className="text-xl font-black text-white">Distribución por Estado</h2>
+            <h2 className="text-xl font-black text-white">Estatus del Pipeline</h2>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
             <Activity className="w-3 h-3 text-emerald-400" />
@@ -166,9 +166,9 @@ export function AnalyticsCharts({ stats }: AnalyticsChartsProps) {
       <div className="col-span-12 lg:col-span-5 glass-card rounded-3xl p-6 border border-white/5">
         <div className="mb-4">
           <p className="text-[10px] font-black text-violet-400 uppercase tracking-[0.2em] mb-1">
-            Flujo de Conversión
+            Análisis de Progresión
           </p>
-          <h2 className="text-xl font-black text-white">Pipeline en Vivo</h2>
+          <h2 className="text-xl font-black text-white">Flujo de Conversión</h2>
         </div>
         <FunnelChart data={funnelData} />
       </div>

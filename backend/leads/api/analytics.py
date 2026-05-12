@@ -110,7 +110,8 @@ class DashboardStatsView(APIView):
                 else:
                     visits_count = LandingPage.objects.aggregate(total=Sum('visits_count'))['total'] or 0
 
-            # 5. Datos para el Embudo (Reutilizamos los datos de master_stats)
+            # 5. Datos para el Embudo (Lógica Acumulativa)
+            # Un lead en "Cierre Ganado" cuenta para todos los pasos anteriores.
             funnel_stages = [
                 (Lead.Status.NUEVO, "Nuevo"),
                 (Lead.Status.CONTACTADO, "Contactado"),
@@ -118,10 +119,20 @@ class DashboardStatsView(APIView):
                 (Lead.Status.PROPUESTA_ENVIADA, "Propuesta Enviada"),
                 (Lead.Status.CIERRE_GANADO, "Cierre Ganado"),
             ]
-            funnel_data = [{
-                "label": label,
-                "value": master_stats.get(f"status_{status_val}", 0)
-            } for status_val, label in funnel_stages]
+            
+            funnel_data = []
+            cumulative_count = 0
+            # Iteramos en reversa para acumular
+            temp_funnel = []
+            for status_val, label in reversed(funnel_stages):
+                count = master_stats.get(f"status_{status_val}", 0)
+                cumulative_count += count
+                temp_funnel.append({
+                    "label": label.upper(),
+                    "value": cumulative_count
+                })
+            
+            funnel_data = list(reversed(temp_funnel))
 
             # 6. Datos temporales para Gráficos de Líneas (Tráfico y Leads)
             from django.db.models.functions import TruncDay
@@ -233,7 +244,7 @@ class PerformanceAnalyticsView(APIView):
                 "is_next_in_line": False # Calculado abajo
             })
             
-        # 8. Identificar quién sigue en el Round Robin
+        # 8. Identificar quién sigue en el Round Robin (Lógica Blindada)
         active_vendors_ids = [
             v.id for v in User.objects.filter(
                 is_active=True, 
@@ -242,19 +253,31 @@ class PerformanceAnalyticsView(APIView):
             ).order_by('id')
         ]
         
+        next_vendor_id = None
         if active_vendors_ids:
             state = RoundRobinState.get_state()
-            next_vendor_id = active_vendors_ids[0]
+            last_id = state.last_assigned_user_id
             
-            if state.last_assigned_user_id in active_vendors_ids:
-                last_index = active_vendors_ids.index(state.last_assigned_user_id)
+            # Si el último asignado ya no está disponible, el siguiente es el primero de la lista
+            if last_id not in active_vendors_ids:
+                next_vendor_id = active_vendors_ids[0]
+            else:
+                # Si está disponible, buscamos el índice y pasamos al siguiente (con rotación)
+                last_index = active_vendors_ids.index(last_id)
                 next_index = (last_index + 1) % len(active_vendors_ids)
                 next_vendor_id = active_vendors_ids[next_index]
             
+            # Aplicar el badge solo si el usuario está en la lista de datos y es el calculado
             for v_data in data:
+                # Un usuario pausado NUNCA puede ser el siguiente
+                if not v_data.get("is_available", False):
+                    v_data["is_next_in_line"] = False
+                    continue
+                    
                 if v_data["vendor_id"] == next_vendor_id:
                     v_data["is_next_in_line"] = True
-                    break
+                else:
+                    v_data["is_next_in_line"] = False
             
         # Ordenar el ranking: mejores vendedores primero
         data.sort(key=lambda x: x["conversion_rate"], reverse=True)

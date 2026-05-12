@@ -40,6 +40,56 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
   });
 
   const [newAmenity, setNewAmenity] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // 🔍 Mapbox Address Autocomplete Logic
+  useEffect(() => {
+    const query = formData.address;
+    if (!query || query.length < 5) {
+      setSuggestions([]);
+      return;
+    }
+
+    const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    if (!token) return;
+
+    const delayDebounceFn = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&autocomplete=true&limit=5&language=es`
+        );
+        const data = await response.json();
+        setSuggestions(data.features || []);
+      } catch (err) {
+        console.error("Mapbox Error:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [formData.address]);
+
+  const handleSelectSuggestion = (feature: any) => {
+    const [lng, lat] = feature.center;
+    
+    // Intentar extraer la ciudad/región para el campo 'location'
+    const context = feature.context || [];
+    const city = context.find((c: any) => c.id.startsWith('place'))?.text || "";
+    const country = context.find((c: any) => c.id.startsWith('country'))?.text || "";
+    const locationStr = [city, country].filter(Boolean).join(", ");
+
+    setFormData({
+      ...formData,
+      address: feature.place_name,
+      latitude: lat,
+      longitude: lng,
+      location: locationStr || formData.location
+    });
+    setSuggestions([]);
+  };
 
   useEffect(() => {
     if (property) {
@@ -214,15 +264,41 @@ export default function PropertyEditor({ property, isOpen, token, onClose, onSuc
                  </div>
                </div>
 
-               <div className="space-y-2">
-                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dirección Completa</label>
-                 <input
-                   value={formData.address || ""}
-                   onChange={e => setFormData({...formData, address: e.target.value})}
-                   placeholder="Ej: Av. Costanera 123, Oficina 402"
-                   className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50"
-                 />
-               </div>
+                <div className="space-y-2 relative">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
+                    <span>Dirección Completa</span>
+                    {isSearching && <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
+                  </label>
+                  <div className="relative">
+                    <input
+                      value={formData.address || ""}
+                      onChange={e => setFormData({...formData, address: e.target.value})}
+                      placeholder="Ej: Av. Costanera 123, Oficina 402"
+                      className="w-full bg-slate-900/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all"
+                    />
+                    
+                    {/* Suggestions Dropdown */}
+                    {suggestions.length > 0 && (
+                      <div className="absolute z-[110] left-0 right-0 mt-2 bg-[#0f172a]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-fadeIn">
+                        {suggestions.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => handleSelectSuggestion(s)}
+                            className="w-full px-5 py-3 text-left hover:bg-blue-600/10 transition-colors border-b border-white/5 last:border-0 group"
+                          >
+                            <p className="text-xs font-black text-white line-clamp-1 group-hover:text-blue-400 transition-colors">
+                              {s.text}
+                            </p>
+                            <p className="text-[9px] text-slate-500 font-bold uppercase truncate mt-0.5">
+                              {s.place_name}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
                <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Latitud</label>

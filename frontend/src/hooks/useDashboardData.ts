@@ -87,12 +87,10 @@ export function useDashboardData(token: string | null, user: any) {
   const handleToggleAvailability = async (vendorId: number) => {
     if (!token) return;
     try {
-      const result = await toggleVendorAvailability(token, vendorId);
-      setPerformance((prev) =>
-        prev.map((v) =>
-          v.vendor_id === vendorId ? { ...v, is_available: result.is_available } : v
-        )
-      );
+      await toggleVendorAvailability(token, vendorId);
+      // Re-fetch everything to ensure 'is_next_in_line' is correctly updated by the server
+      const updatedPerf = await getPerformanceAnalytics(token);
+      setPerformance(updatedPerf);
     } catch (err) {
       console.error("Error toggling availability:", err);
     }
