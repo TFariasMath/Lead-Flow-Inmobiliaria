@@ -73,7 +73,44 @@ El acceso al sistema está blindado mediante una interfaz de **"Terminal de Nodo
 *   **Autenticación JWT:** Implementa un sistema de tokens asíncronos (JSON Web Tokens) para una comunicación *stateless* y segura.
 *   **Control de Acceso Basado en Roles (RBAC):** El sistema identifica automáticamente si el usuario es un **Administrador de Nodo** o un **Agente de Ventas**, redirigiendo dinámicamente al dashboard correspondiente.
 *   **Estética Cyber-Industrial:** Panel de acceso con efectos de Glassmorphism, tipografía técnica y micro-animaciones de alta fidelidad.
-*   **Seguridad Blindada:** Cifrado de credenciales y protección de sesión bajo estándares de grado empresarial.
+
+---
+
+### 🖥️ Dashboard Estratégico (Modo Quirófano)
+
+El dashboard principal ha sido diseñado bajo la filosofía de **"Modo Quirófano"**: una interfaz de alta fidelidad, libre de distracciones y con latencia cero, donde cada métrica es accionable.
+
+![Dashboard Overview](./frontend/public/docs/dashboard1.png)
+
+#### Características del Diseño:
+*   **Layout "Zero Scroll":** Toda la información crítica (tráfico, pipeline, rendimiento de equipo) está visible en una sola pantalla, optimizada para monitores de alta resolución.
+*   **Visualización de Datos Dinámica:**
+    *   **Estatus del Pipeline (Bar Chart):** Distribución en tiempo real de la carga de trabajo por estado de lead.
+    *   **Flujo de Conversión (Funnel Chart):** Análisis acumulativo de la tasa de progresión de los prospectos a través del embudo de ventas.
+    *   **Monitoreo de Tráfico:** Gráficos de series temporales para detectar picos de interés en las landing pages.
+*   **Aesthetic & UX:** Uso extensivo de *Glassmorphism*, paletas de colores armonizadas (Cian/Violeta) y micro-interacciones que brindan una experiencia de usuario premium y fluida.
+
+![Dashboard Detalle](./frontend/public/docs/dashboard2.png)
+
+---
+
+### 🔄 Reparto Inteligente (Round Robin Pro)
+
+El sistema de distribución de leads es el corazón operativo de **Lead Flow**. Utiliza un algoritmo de **Round Robin Determinista** que garantiza un reparto equitativo y transparente entre el equipo de ventas.
+
+![Round Robin Management](./frontend/public/docs/round_robin.png)
+
+#### Mecanismo de Funcionamiento:
+1.  **Algoritmo de Rotación:** El sistema mantiene un puntero global (`RoundRobinState`) que apunta al último vendedor que recibió un lead. El siguiente prospecto se asigna automáticamente al siguiente vendedor en la lista circular.
+2.  **Gestión de Disponibilidad en Tiempo Real:** 
+    *   Los administradores pueden activar o desactivar vendedores del flujo de reparto con un solo clic (botón de "Rayito").
+    *   Si un vendedor está en modo **"OUT"** (Pausado), el sistema lo salta automáticamente y busca al siguiente disponible, asegurando que ningún lead quede sin atención.
+3.  **Visibilidad Total (Next in Line):**
+    *   **Badge "SIGUIENTE":** Identifica visualmente al vendedor que recibirá el próximo lead entrante, permitiendo al equipo prepararse para la acción.
+    *   **Badge "OUT":** Indica claramente quién está fuera de la rotación actual, permitiendo una gestión de turnos eficiente.
+4.  **Sincronización de Datos:** Cada cambio en la disponibilidad del equipo se refleja instantáneamente en el dashboard mediante un sistema de hidratación de datos optimizado, garantizando que el "Siguiente en línea" sea siempre preciso.
+
+---
 
 #### 🔑 Credenciales de Acceso (Entorno de Desarrollo)
 
