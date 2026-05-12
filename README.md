@@ -221,6 +221,25 @@ El **Modo Quirófano** es la herramienta de última instancia para garantizar qu
  
 ---
  
+### 👤 Ficha del Lead: El Centro de Mando Operativo
+ 
+La ficha individual es el corazón de la gestión. Diseñada bajo una estética *ultra-moderna*, permite al vendedor tener una visión de 360 grados de cada oportunidad sin perder el contexto técnico.
+ 
+![Ficha del Lead](./frontend/public/docs/lead.png)
+ 
+#### 🧬 Anatomía de la Ficha:
+*   **Motor de Resolución de Identidad (Double Anchor):** Gestión dual entre el `original_email` (inmutable) y el `contact_email` (comercial) para evitar duplicados históricos.
+*   **Timeline de Interacciones Dinámico:** Línea de tiempo vertical que registra cada punto de contacto, con capacidad de inspeccionar el JSON crudo original para auditoría técnica.
+*   **Historial de Cambios (Audit Trail):** Registro de auditoría que muestra exactamente qué campos fueron modificados, por quién y en qué fecha, con visualización de diferencias (diff).
+*   **Gestión de Scoring y Tracking:** Visualización de parámetros UTM y asignación dinámica de vendedores mediante roles (RBAC).
+ 
+#### 🛠️ Tecnología de Interfaz:
+*   **Formularios Atómicos:** Gestionados con **Formik** y validados con **Yup** para integridad total de datos.
+*   **Animaciones de Capa:** Transiciones suaves entre Timeline e Historial mediante **Tailwind CSS**.
+*   **RBAC Integrado:** La visibilidad de campos sensibles y acciones de edición cambian dinámicamente según el rol del usuario (Admin vs Vendedor).
+ 
+---
+ 
 ### 🚀 En Desarrollo: Catálogo de Activos Inmobiliarios
  
 Este módulo es el núcleo del inventario de la plataforma. Permite transformar proyectos de construcción en activos digitales listos para ser comercializados mediante brochures dinámicos y landing pages.
