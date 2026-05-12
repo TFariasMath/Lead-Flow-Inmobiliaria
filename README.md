@@ -241,6 +241,47 @@ El **Modo Quirófano** es la herramienta de última instancia para garantizar qu
 
 ---
 
+### 🛡️ Lead Forge Pro: Nodo de Resiliencia y Auditoría
+
+**Lead Forge Pro** no es solo un generador de datos; es una consola de ingeniería diseñada para certificar la robustez del sistema bajo condiciones extremas. Actúa como un agente externo que simula el tráfico real de internet para poner a prueba la lógica de negocio y la infraestructura del CRM.
+
+#### 🏗️ Propósito y Filosofía
+En un entorno de producción, los leads llegan desde múltiples APIs externas (Meta, Google, Calendly) con formatos impredecibles y en ráfagas de alta concurrencia. **Lead Forge Pro** permite anticipar fallos mediante:
+*   **Simulación de Tráfico Sintético:** Generación de perfiles realistas mediante la librería `Faker` (localización multilingüe).
+*   **Certificación de Lógica:** Pruebas de "fuego" para el sistema de **Doble Ancla**, asegurando que la de-duplicación funcione incluso si los datos llegan desordenados.
+*   **Stress Testing (Chaos Mode):** Capacidad de inundar el backend con hasta 100 hilos concurrentes para medir el punto de ruptura del servidor.
+
+#### 🧬 Módulos de Auditoría
+
+1.  **Inyector Multi-Fuente (Emulación de Canales):**
+    Este módulo no envía datos planos; emula los **objetos JSON reales** de proveedores específicos:
+    *   **Calendly:** Simula eventos de agendamiento con estructuras anidadas complejas.
+    *   **Mailchimp:** Emula webhooks de marketing con campos "merges" dinámicos.
+    *   **Direct API:** Prueba la ingesta cruda del CRM.
+    *   *Métrica:* Permite visualizar la **latencia de respuesta** del backend por cada fuente.
+
+2.  **Laboratorio de Identidad (Doble Ancla):**
+    Diseñado para certificar la unificación de leads. Permite realizar un "Ataque de Identidad" donde se envía el mismo lead desde dos fuentes distintas (ej. primero Mailchimp, luego Calendly). El administrador puede verificar en tiempo real si el CRM fue capaz de reconocer al individuo y anexar la actividad a una sola ficha, evitando la contaminación de la base de datos con duplicados.
+
+3.  **Stress Hydra (Pruebas de Carga Masiva):**
+    Utiliza un motor de ejecución paralela (`concurrent.futures`) para lanzar ataques de volumen (100 a 1000 leads). 
+    *   **RPS (Requests per Second):** Mide el rendimiento de ingesta bruta.
+    *   **P99 Latency:** Identifica el tiempo de respuesta del 1% de las peticiones más lentas, crucial para detectar cuellos de botella en PostgreSQL o en los workers de Django Q.
+
+#### 🔌 Conectividad y Flujo de Datos
+La herramienta opera de forma independiente al CRM, conectándose exclusivamente a través del **Webhook Gateway** (`/api/v1/webhooks/receive/`). 
+*   **Handshake de Seguridad:** La consola realiza un monitoreo constante (*System Pulse*) mediante peticiones GET al backend para asegurar que la conexión está "Healthy" antes de iniciar cualquier prueba de carga.
+*   **Arquitectura Desacoplada:** Al ser una aplicación en **Streamlit**, puede ejecutarse desde una máquina externa para simular latencia de red real, ofreciendo una visión objetiva del rendimiento del servidor de producción.
+
+#### 🛠️ Cómo Ejecutar
+Para iniciar la consola de resiliencia:
+```bash
+cd tools/lead-generator
+streamlit run lead_forge.py
+```
+
+---
+
 ### 🚀 En Desarrollo: Catálogo de Activos Inmobiliarios
 
 Este módulo es el núcleo del inventario de la plataforma. Permite transformar proyectos de construcción en activos digitales listos para ser comercializados mediante brochures dinámicos y landing pages.
