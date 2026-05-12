@@ -4,6 +4,7 @@ import React from "react";
 import { BarChart3, Clock, ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Lead } from "@/lib/api";
+import { useHistory } from "@/hooks/useHistory";
 
 interface DashboardFeedProps {
   stats: any;
@@ -12,6 +13,7 @@ interface DashboardFeedProps {
 
 export function DashboardFeed({ stats, recentLeads }: DashboardFeedProps) {
   const router = useRouter();
+  const { addVisit } = useHistory();
 
   return (
     <div className="grid grid-cols-12 gap-5">
@@ -28,15 +30,14 @@ export function DashboardFeed({ stats, recentLeads }: DashboardFeedProps) {
         </div>
         <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
           {stats.leads_by_source?.map((s: any, i: number) => {
-            const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null;
             return (
               <div
                 key={i}
                 className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center text-xs">
-                    {medal || <span className="text-[10px] font-black text-slate-600">#{i + 1}</span>}
+                  <div className="w-7 h-7 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center">
+                    <span className="text-[10px] font-black text-slate-500 group-hover:text-amber-500 transition-colors">#{i + 1}</span>
                   </div>
                   <div>
                     <p className="text-xs font-black text-white uppercase">{s.name}</p>
@@ -85,7 +86,10 @@ export function DashboardFeed({ stats, recentLeads }: DashboardFeedProps) {
               <div
                 key={lead.id}
                 className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/[0.03] transition-all cursor-pointer group border border-transparent hover:border-white/5"
-                onClick={() => router.push(`/dashboard/leads?selected=${lead.id}`)}
+                onClick={() => {
+                  addVisit(lead);
+                  router.push(`/dashboard/leads?selected=${lead.id}`);
+                }}
                 style={{ animationDelay: `${idx * 80}ms` }}
               >
                 <div className="w-9 h-9 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center text-[10px] font-bold text-white group-hover:bg-orange-600 group-hover:border-orange-500/30 transition-all">

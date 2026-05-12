@@ -57,7 +57,7 @@ export default function CampaignEditorPage() {
   const [saving, setSaving] = useState(false);
   const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [propertySearch, setPropertySearch] = useState("");
 

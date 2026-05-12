@@ -11,9 +11,11 @@ import {
   type VendorPerformance,
   type Lead,
 } from "@/lib/api";
+import { useHistory } from "@/hooks/useHistory";
 
 export function useDashboardData(token: string | null, user: any) {
   const router = useRouter();
+  const { addVisit } = useHistory();
   const [stats, setStats] = useState<any>(null);
   const [performance, setPerformance] = useState<VendorPerformance[]>([]);
   const [recentLeads, setRecentLeads] = useState<Lead[]>([]);
@@ -73,8 +75,10 @@ export function useDashboardData(token: string | null, user: any) {
                 title: "Nuevo Lead Capturado",
                 message: `${latestLead.first_name} ${latestLead.last_name} ingresó desde ${latestLead.first_source_name}`,
                 type: "success",
-                onClick: () =>
-                  router.push(`/dashboard/leads?selected=${latestLead.id}`),
+                onClick: () => {
+                  addVisit(latestLead);
+                  router.push(`/dashboard/leads?selected=${latestLead.id}`);
+                },
               });
             }
           }
@@ -82,7 +86,7 @@ export function useDashboardData(token: string | null, user: any) {
         .catch(console.error);
     }, 30000);
     return () => clearInterval(interval);
-  }, [token, lastLeadId, router]);
+  }, [token, lastLeadId, router, addVisit]);
 
   const handleToggleAvailability = async (vendorId: number) => {
     if (!token) return;
