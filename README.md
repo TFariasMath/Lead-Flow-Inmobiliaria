@@ -73,6 +73,14 @@ El acceso al sistema está blindado mediante una interfaz de **"Terminal de Nodo
 *   **Autenticación JWT:** Implementa un sistema de tokens asíncronos (JSON Web Tokens) para una comunicación *stateless* y segura.
 *   **Control de Acceso Basado en Roles (RBAC):** El sistema identifica automáticamente si el usuario es un **Administrador de Nodo** o un **Agente de Ventas**, redirigiendo dinámicamente al dashboard correspondiente.
 
+#### 🔑 Credenciales de Acceso (Entorno de Desarrollo)
+Para fines de evaluación y pruebas en el entorno local, se han pre-configurado las siguientes llaves de acceso:
+
+*   **Administrador Maestro:** 
+    *   **Terminal ID:** `admin`
+    *   **Security Key:** `123`
+*   **Agentes de Ventas:** El sistema cuenta con perfiles de vendedores (`maria`, `carlos`, `ana` con clave `123`), aunque sus vistas específicas están en proceso de refinamiento final para alcanzar el estándar "quirúrgico" del dashboard principal.
+
 ---
 
 ### 🖥️ Dashboard Estratégico: El Poder de la Vista Única
@@ -115,16 +123,6 @@ El sistema de distribución de leads es el corazón operativo de **Lead Flow**. 
     *   **Badge "OUT":** Indica claramente quién está fuera de la rotación actual, permitiendo una gestión de turnos eficiente.
 4.  **Sincronización de Datos:** Cada cambio en la disponibilidad del equipo se refleja instantáneamente en el dashboard mediante un sistema de hidratación de datos optimizado, garantizando que el "Siguiente en línea" sea siempre preciso.
 
----
-
-#### 🔑 Credenciales de Acceso (Entorno de Desarrollo)
-
-Para fines de evaluación y pruebas en el entorno local, se han pre-configurado las siguientes llaves de acceso:
-
-*   **Administrador Maestro:** 
-    *   **Terminal ID:** `admin`
-    *   **Security Key:** `123`
-*   **Agentes de Ventas:** El sistema cuenta con perfiles de vendedores (`maria`, `carlos`, `ana` con clave `123`), aunque sus vistas específicas están en proceso de refinamiento final para alcanzar el estándar "quirúrgico" del dashboard principal.
 
 ---
 
